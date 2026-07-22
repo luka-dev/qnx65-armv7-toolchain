@@ -17,14 +17,14 @@ armv7 (32-bit).** No existing port pairs the libc-call model with 32-bit ARM, so
 the asm bridge `sys_qnx_arm.s` is **written from scratch** (darwin/arm64's
 `sys_libc.go` + `sys_darwin_arm64.s` are the closest mechanism reference).
 
-## Assets → role  (same VM as rust-qnx65)
+## Assets → role
 | Asset | Use |
 |---|---|
-| QNX x86 VM `root@192.168.64.16` (`../../qnx_ssh.sh`) | 6.5 armv7 toolchain: `arm-unknown-nto-qnx6.5.0eabi-gcc-4.4.2`, `ntoarm-ld 2.19`, sysroot `/usr/qnx650/target/qnx6/armle-v7`. Source of **all struct/constant values** for `defs_qnx_arm.go` and the **external linker** (Go emits `.o`, QNX gcc links the ELF). |
+| QNX 6.5 SDP toolchain (in this image: `arm-unknown-nto-qnx6.5.0eabi-gcc` + binutils 2.19 + `target/qnx6/armle-v7` sysroot) | Source of **all struct/constant values** for `defs_qnx_arm.go`, and the **external linker** (Go emits `.o`, the QNX gcc links the ELF). |
 | `Tools/qnx-gl-passthrough` QEMU (cortex-a15, real procnto + libc.so.3) | on-device test bed — same one rust-qnx65 used for its milestones. |
 | `Refferences/qnx_source` (QNX 6.3.0 src) | reference for libc struct layouts / ucontext / sigset. |
 
-## libc symbol reality (measured on the VM, 2026-07)
+## libc symbol reality (measured on QNX 6.5, 2026-07)
 libc.so.3 has almost everything the runtime needs: `pthread_create`,
 `pthread_key_*`, `sem_*`(check), `mmap`, `munmap`, `sigaction`, `sigprocmask`,
 `clock_gettime`, `nanosleep`, `posix_spawn`, sockets. Missing (shim in Go/asm):
@@ -80,8 +80,8 @@ libc.so.3 has almost everything the runtime needs: `pthread_create`,
       ⚠ **M3 blocker found**: the internal linker emits NO `DT_NEEDED libc.so.3` and
       no dynamic symbols — `//go:cgo_import_dynamic` isn't wired to real dynamic
       imports for Hqnx yet (`.dynamic` STRSZ=1, 0 relocs). So the binary loads its
-      interp but can't resolve libc. Fix path = external link via the QNX arm gcc on
-      the VM (`-linkmode=external -extld=…`, the rust-qnx65 approach) OR finish
+      interp but can't resolve libc. Fix path = external link via the QNX arm gcc
+      (`-linkmode=external -extld=…`, the rust-qnx65 approach) OR finish
       internal dynimport wiring. Next milestone.
 - [x] **Milestone 2.95 — internal dynamic linking to libc.so.3 works** (2026-07):
       the DT_NEEDED gap is fixed via three changes (QNX/armv7 is the first 32-bit
@@ -105,7 +105,7 @@ Create the OS layer (clone solaris/aix template, retarget to arm, real QNX value
 
 | File | Contents | Hard? |
 |---|---|---|
-| `defs_qnx_arm.go` / `defs1_qnx_arm.go` | signal nums, `_NSIG`, `_SIG*`, mmap/errno consts, `sigset`, `siginfo`, `mcontext`/`ucontext`, `timespec` — **exact values from VM sysroot headers** | medium (mechanical but must be exact) |
+| `defs_qnx_arm.go` / `defs1_qnx_arm.go` | signal nums, `_NSIG`, `_SIG*`, mmap/errno consts, `sigset`, `siginfo`, `mcontext`/`ucontext`, `timespec` — **exact values from the 6.5 sysroot headers** | medium (mechanical but must be exact) |
 | `sys_qnx_arm.s` | ARM asm bridge runtime→libc (`asmcgocall`→`libcall`), `rt0`, `sigtramp`, `tlsg` | **HARD — new code, no arm template** |
 | `os_qnx.go` / `os2_qnx.go` / `os3_qnx.go` | `mOS`, `semacreate/sleep/wakeup` (libc sem or pthread cond), `osinit`, `newosproc` via `pthread_create`, `sigprocmask`, `minit/unminit` | HARD |
 | `signal_qnx.go` / `signal_qnx_arm.go` | `sigctxt` type + register accessors off ucontext | medium |
@@ -125,7 +125,7 @@ Milestone ladder after this (mirrors rust-qnx65):
 ## Reproduce Milestone 1
 ```
 cd goroot/src
-export GOROOT="$(cd .. && pwd)" GOROOT_BOOTSTRAP=/opt/homebrew/Cellar/go/1.26.4/libexec
+export GOROOT="$(cd .. && pwd)" GOROOT_BOOTSTRAP=<a Go 1.26 install>   # the image downloads it
 ./make.bash                       # rebuild toolchain with qnx plumbing
 cd "$GOROOT"
 printf 'package main\nfunc main(){ println("hi") }\n' > /tmp/hw.go
@@ -322,7 +322,7 @@ sockets, then interface enumeration, then start building Tailscale itself agains
 toolchain.
 
 ## ✅ MILESTONE 6 (2026-07) — VALIDATED ON THE REAL MHI2q HEAD UNIT; full std builds
-Ran Go binaries directly on the actual Audi head unit (root@10.173.189.1):
+Ran Go binaries directly on the actual MHI2q head unit:
 `QNX mmx 6.5.0 APQ8064 armle` (Qualcomm Snapdragon, Harman MHI2q), io-pkt-v6-hc live.
 
 **TCP works end to end on real hardware:**

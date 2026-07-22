@@ -14,8 +14,8 @@ we add a *target* and cross-build from the dev box. The QNX assets are the
 ## Assets → role
 | Asset | Use |
 |---|---|
-| **QNX x86 VM** `root@192.168.64.16` (`../../qnx_ssh.sh`) | the ONLY ready 6.5 armv7 toolchain: `arm-unknown-nto-qnx6.5.0eabi-gcc-4.4.2` + `ntoarm-ld` 2.19 + `/usr/qnx650/target/qnx6/armle-v7` sysroot + `mkifs`. Host is **QNX x86** ⇒ toolchain runs only on the VM. Env: `QNX_HOST=/usr/qnx650/host/qnx6/x86 QNX_TARGET=/usr/qnx650/target/qnx6`. |
-| ~~qnx66 / qnx800 / QNX~~ | rejected: qnx66 = un-installed 6.6 ISO (gcc 4.6, wrong ver, ABI risk); qnx800 = QNX 8 aarch64 (diff OS gen); QNX/ = Software Center installer. None beat the VM for a 6.5-armv7 target. |
+| **QNX 6.5 SDP toolchain** (in this image: `arm-unknown-nto-qnx6.5.0eabi-gcc` + binutils 2.19 + `target/qnx6/armle-v7` sysroot + `mkifs`) | the linker + sysroot the Rust target links against (Rust doesn't host on QNX; rustc emits objects, the QNX gcc links the ELF). |
+| ~~qnx66 / qnx800~~ | rejected: qnx66 = 6.6 (gcc 4.6, wrong ver, ABI risk); qnx800 = QNX 8 aarch64 (diff OS gen). Neither fits a 6.5-armv7 target. |
 | **`Tools/qnx-gl-passthrough`** QEMU harness | the on-device test bed: `qemu-system-arm -M virt -cpu cortex-a15` (armv7-A, runs our armv7 `.so`), boots real `procnto-smp` + `libc.so.3`, IFS has `sh`/`ls`/`cat`/`pidin`. dlopen milestone runs here — no real HU needed. |
 | QNX 6.3.0 source | reference for libc struct layouts / syscall shims **only if** full `std` is attempted |
 
@@ -52,20 +52,12 @@ Prove on-device Rust loads *at all* before building anything else.
 - Loads + runs → on-device Rust is real; scope `std` later only if needed.
 - Loader/emutls rejects it → learned cheaply, before any std work.
 
-## Linking strategy: rustc on Mac emits objects, LINK on the QNX x86 VM
-Rust doesn't host on QNX, and the 6.5 toolchain is QNX-x86-only. So:
-`cargo` (Mac) → `.o` → `arm-unknown-nto-qnx6.5.0eabi-gcc-4.4.2 -shared` (VM) → `.so`.
-Known-correct 6.5 linker, zero ABI risk. Wrap into a scp+ssh `linker` script only
-after the manual smoke test passes — until then, 2 steps by hand.
-
-## Milestone-1 loop (reuses qnx-gl-passthrough — no new infra)
-1. Mac: `cargo +nightly rustc -Z build-std=core,alloc --target ./armv7-unknown-nto-qnx650.json --release --crate-type staticlib` → emit `.o`/`.a`.
-2. `scp` objects → VM → `arm-unknown-nto-qnx6.5.0eabi-gcc-4.4.2 -shared -o libdltest.so …`.
-3. Clone `qnx-gl-passthrough/dmminimal-virt.build` → `dltest.build`: drop `dmminimal`, add
-   a ~20-line C harness (`dlopen("libdltest.so"); call extern-C fn; display_msg result`) + our `.so`.
-4. `mkifs dltest.build dltest.bin` on the VM, boot in QEMU, read `-serial stdio`.
-- loads + prints → on-device Rust real; scope `std` only if no_std insufficient.
-- rejected (loader/emutls) → learned cheaply, before any std work.
+## Build flow (in this image)
+Rust doesn't host on QNX, so rustc (linux/amd64) emits objects and the **in-image
+QNX gcc links the ELF**. `build_std.sh` wraps it: `cargo build -Z build-std=std`
+with `-C linker=qnx-cc` (the linker shim → `arm-unknown-nto-qnx6.5.0eabi-gcc`).
+No external VM — the 6.5 toolchain now lives in the image. On-device validation
+uses the `qnx-gl-passthrough` QEMU (cortex-a15, real procnto + libc.so.3).
 
 ## Status
 - [x] cross-sysroot located: `/usr/qnx650` armle-v7 (QNX 6.5.0), qcc variant `gcc_ntoarmv7le`
@@ -160,18 +152,12 @@ after the manual smoke test passes — until then, 2 steps by hand.
       (≈15KB/binary + one ~2-3MB .so) would need manually building the std dylib; only worth it with
       many Rust binaries, not a single hook/.so.
 
-## Reproduce milestone 1
+## Reproduce (in this image)
+```sh
+# full-std binary — build_std compiles std + links via the in-image QNX gcc
+build-std <crate-dir>
+# -> <crate-dir>/target/armv7-unknown-nto-qnx650/release/<crate>  (ARM QNX ELF)
 ```
-# Mac: build no_std staticlib for the target
-cd dltest && rustup run nightly cargo build -Z build-std=core -Z json-target-spec \
-  --target ../armv7-unknown-nto-qnx650.json --release
-# VM (root@192.168.64.16): link .so, compile harness, mkifs  (see git history for the exact cmds)
-#   arm-unknown-nto-qnx6.5.0eabi-gcc -shared -Wl,-urust_probe -o libdltest.so <obj>
-#   qcc -Vgcc_ntoarmv7le -O2 -o dltest_run dltest_run.c
-#   mkifs -v dltest.build dltest.bin
-# Mac: boot + read serial
-qemu-system-arm -M virt,memory-backend=mem -m 2048 -cpu cortex-a15 -icount shift=auto,sleep=off \
-  -object memory-backend-file,id=mem,size=2048M,mem-path=/tmp/qnx.ram,share=on \
-  -device loader,file=./dltest.bin,addr=0x40200000,force-raw=on,cpu-num=0 \
-  -display none -serial file:/tmp/dltest_serial.log -monitor none
-```
+On-device: package the binary into an IFS with `mkifs` and boot it in QEMU
+(`qemu-system-arm -M virt -cpu cortex-a15`) — see the `qnx-gl-passthrough`
+harness for the `.build` + boot invocation (real procnto + libc.so.3).
