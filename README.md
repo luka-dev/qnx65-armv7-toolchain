@@ -180,9 +180,11 @@ arm-unknown-nto-qnx6.5.0eabi-gcc -shared -Wl,-u<exported_symbol> \
   -o libfoo.so target/armv7-unknown-nto-qnx650/release/libfoo.a -lc
 ```
 
-`rust/rust-toolchain.toml` pins `nightly` + `rust-src`, so you don't type
-`+nightly`/`-Z` toolchain flags. Full `std` is not available (QNX is not a Rust
-target); this is `no_std` + `core`/`alloc` today.
+`rust/rust-toolchain.toml` pins a **dated nightly** (`nightly-2026-07-21`) +
+`rust-src`, so you don't type `+nightly`/`-Z` toolchain flags and builds don't
+drift with the floating channel. **Stable can't build this** — `-Z build-std`
+and `-Z json-target-spec` are nightly-only. Full `std` is not available (QNX is
+not a Rust target); this is `no_std` + `core`/`alloc` today.
 
 ---
 
@@ -307,6 +309,16 @@ docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 **Build arg**
 - `GO_BOOTSTRAP` (default `go1.26.4`) — the official Go release fetched from
   `go.dev/dl` to bootstrap `make.bash`.
+
+**Reproducibility / pinning**
+- Base image pinned by **digest** (`debian:bullseye-slim@sha256:…`).
+- Rust nightly pinned by **date** in `rust/rust-toolchain.toml` (rustup verifies
+  component checksums).
+- Go bootstrap pinned by the `GO_BOOTSTRAP` version arg.
+- GCC 4.9.4 ships as a prebuilt binary under `sdp/host` (built by the separate
+  `qnx-gcc49` bring-up); it is not rebuilt here.
+- Not pinned: `apt` package versions (float with the Debian mirror) and the
+  `rustup`/crate downloads. For a hermetic build, vendor those too.
 
 **Partial builds** (handy while iterating):
 

@@ -14,7 +14,8 @@
 #             sh -c 'cd proj && GOOS=qnx GOARCH=arm GOARM=7 go build ./...'
 
 # ─────────────────────────────── base: QNX 6.5 + GCC 4.9 ───────────────────────
-FROM --platform=linux/amd64 debian:bullseye-slim AS qnx-gcc
+# Pinned by digest for reproducible builds (bullseye-slim as of 2026-07).
+FROM --platform=linux/amd64 debian:bullseye-slim@sha256:cba95a21c96c1f5fc2470081829363eed57706634f7dc26e8c6712934303d57a AS qnx-gcc
 # i386: QNX binutils (as/ld) are 32-bit x86. gmp/mpfr/mpc: GCC 4.9 host binaries
 # link them. gcc: host C compiler for Cargo build scripts/proc-macros (NOT the
 # QNX cross-gcc). curl/ca-certificates/xz: fetch Go bootstrap + rustup.

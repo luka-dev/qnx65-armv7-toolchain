@@ -1,3 +1,6 @@
 [toolchain]
-channel = "nightly"
+# Pinned nightly for reproducibility. build-std + json-target-spec are nightly-
+# only (-Z flags) — stable cannot build this target. rustup verifies component
+# checksums on download. Bump deliberately, not by floating "nightly".
+channel = "nightly-2026-07-21"
 components = ["rust-src"]
