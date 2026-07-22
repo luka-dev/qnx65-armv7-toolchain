@@ -1,16 +1,16 @@
 .DS_Store
 installLog.txt
 
-# Go build outputs — make.bash regenerates these; only src/ + lib/ are vendored.
+# Go build outputs - make.bash regenerates these; only src/ + lib/ are vendored.
 go/bin/
 go/pkg/
 
-# Toolchains dropped into tools/ are large third-party binaries — keep the repo
+# Toolchains dropped into tools/ are large third-party binaries - keep the repo
 # for the recipe, not the blobs. Track structure via tools/.keep + README.
 tools/*/
 !tools/.keep
 
-# NOTE: do NOT add target/ or *.so/*.a here — the QNX sysroot (sdp/target/qnx6/…)
+# NOTE: do NOT add target/ or *.so/*.a here - the QNX sysroot (sdp/target/qnx6/...)
 # and its libraries live in this repo and must stay tracked.
 
 # Rust unwind shim: .a/.o rebuilt from shim/unwind_shim.c at image build

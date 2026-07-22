@@ -258,7 +258,7 @@ pub fn current_exe() -> io::Result<PathBuf> {
         } else {
             // The program was probably found in the PATH. Instead of trying to
             // find it again (which might not succeed if PATH has changed), just
-            // return the program name – this function is best-effort anyway.
+            // return the program name - this function is best-effort anyway.
             Ok(PathBuf::from(OsStr::from_bytes(argv0)))
         }
     }

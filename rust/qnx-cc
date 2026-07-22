@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Linker shim for the Rust std target, in-image version: cargo invokes it as the
 # target linker (`-C linker=`); forward argv straight to the QNX 6.5 gcc in this
-# image — no nested docker.
+# image - no nested docker.
 #  - QNX 6.5 gcc ships only static libgcc.a (no libgcc_s.so) + rustc uses
 #    -nodefaultlibs, so remap -lgcc_s -> -lgcc.
 #  - -nodefaultlibs makes the spec drop the target sysroot -L; add it back.

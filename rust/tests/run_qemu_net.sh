@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Like run_qemu.sh but brings up the QNX io-pkt TCP/IP stack (loopback) before
 # launching the test. io-pkt on the hand-built qemu-virt BSP needs CACHE_MSYNC=1
-# (else cache_init dlopen's a nonexistent cache-*.so and dies ESRCH — see no_std M2b).
+# (else cache_init dlopen's a nonexistent cache-*.so and dies ESRCH - see no_std M2b).
 # Usage: ./run_qemu_net.sh <path-to-arm-binary>
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

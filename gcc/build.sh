@@ -18,7 +18,7 @@ rm -rf "$WORK"; mkdir -p "$WORK/obj"
 tar -C "$WORK" -xjf "$SRC_TAR"
 SRC="$WORK/gcc-4.9.4"
 
-# apply the arm-nto-qnx port (config.gcc stanza, arm/nto.h, arm.md, libstdc++ …)
+# apply the arm-nto-qnx port (config.gcc stanza, arm/nto.h, arm.md, libstdc++ ...)
 bash "$PORT/apply.sh" "$SRC"
 
 cd "$WORK/obj"
@@ -37,7 +37,7 @@ make -j"$J" all-gcc
 
 # wchar_t fix: fixincludes regenerates include-fixed/stdlib.h from the QNX
 # sysroot on every all-gcc; <malloc.h> pre-sets _GCC_WCHAR_T without the typedef
-# so bare <stdlib.h> drops wchar_t in C — force the undef. (Idempotent.)
+# so bare <stdlib.h> drops wchar_t in C - force the undef. (Idempotent.)
 F="$WORK/obj/gcc/include-fixed/stdlib.h"
 if [ -f "$F" ] && ! grep -q wchar-fix "$F"; then
   sed -i 's|#if defined(__WCHAR_T)|#undef _GCC_WCHAR_T /* wchar-fix: <malloc.h> pre-set the guard w/o the typedef; force it */\n#if defined(__WCHAR_T)|' "$F"
@@ -54,7 +54,7 @@ for t in as ld ar nm ranlib strip objcopy objdump readelf; do
   ln -sf "$QNX_HOST/usr/bin/$TGT-$t" "$TB/$t"
 done
 
-# strip the x86-64 host binaries (cc1/cc1plus/lto1/drivers) — saves ~250 MB
+# strip the x86-64 host binaries (cc1/cc1plus/lto1/drivers) - saves ~250 MB
 find "$PREFIX" -type f -exec sh -c \
   'file "$1" | grep -q "ELF 64-bit.*x86-64" && strip "$1" 2>/dev/null || true' _ {} \;
 

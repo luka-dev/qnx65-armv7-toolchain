@@ -30,7 +30,7 @@ cat <<EOF
     SYSNAME=nto
     PATH=/proc/boot
     LD_LIBRARY_PATH=/proc/boot:/lib
-    # entropy source for std's RandomState (HashMap) — /dev/urandom -> QNX random
+    # entropy source for std's RandomState (HashMap) - /dev/urandom -> QNX random
     random -t
     waitfor /dev/random 4
     procmgr_symlink /dev/random /dev/urandom

@@ -22,7 +22,7 @@ echo "libc nto fork -> $REG"
 
 # --- 2) std source: 32-bit time_t fixes (idempotent perl, guarded on marker)
 # Patch the ACTIVE toolchain's std src (rustc respects rust-toolchain.toml), not
-# a random `find` hit — the image may hold more than one nightly, and build-std
+# a random `find` hit - the image may hold more than one nightly, and build-std
 # reads the one selected here.
 STD="$(rustc --print sysroot)/lib/rustlib/src/rust/library/std/src/sys"
 [ -d "$STD" ] || { echo "rustlib std src not found at $STD (need rust-src component)"; exit 1; }
@@ -43,7 +43,7 @@ perl -0pi -e 's/SystemTime::new\(self\.stat\.st_mtim\.tv_sec,/SystemTime::new(se
 cp "$HERE/port/patches/std_random_unix_legacy.rs" "$STD/random/unix_legacy.rs"
 
 # current_exe: QNX 6.5 has no /proc/self/exefile; use libc _cmdname (reads the
-# AT_EXEFILE auxv — works on 6.5 and 7.x). (stored copy is source of truth.)
+# AT_EXEFILE auxv - works on 6.5 and 7.x). (stored copy is source of truth.)
 cp "$HERE/port/patches/std_paths_unix.rs" "$STD/paths/unix.rs"
 
 echo "std time_t + random + current_exe patches -> $STD"
