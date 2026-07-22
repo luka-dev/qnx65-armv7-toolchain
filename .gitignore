@@ -12,3 +12,7 @@ tools/*/
 
 # NOTE: do NOT add target/ or *.so/*.a here — the QNX sysroot (sdp/target/qnx6/…)
 # and its libraries live in this repo and must stay tracked.
+
+# Rust unwind shim: .a/.o rebuilt from shim/unwind_shim.c at image build
+rust/shim/*.o
+rust/shim/*.a
