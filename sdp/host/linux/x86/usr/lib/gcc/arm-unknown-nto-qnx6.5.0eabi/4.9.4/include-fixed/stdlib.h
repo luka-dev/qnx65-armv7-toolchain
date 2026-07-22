@@ -67,6 +67,7 @@ typedef __SIZE_TYPE__ size_t;
 #undef __SIZE_T
 #endif
 
+#undef _GCC_WCHAR_T /* wchar-fix: <malloc.h> pre-set the guard w/o the typedef; force it (QNX Dinkum x fixincludes) */
 #if defined(__WCHAR_T)
 #if !defined(_GCC_WCHAR_T) && ! defined(__cplusplus)
 #define _GCC_WCHAR_T
