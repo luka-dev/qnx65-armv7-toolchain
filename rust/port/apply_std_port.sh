@@ -41,5 +41,10 @@ perl -0pi -e 's/SystemTime::new\(self\.stat\.st_mtim\.tv_sec,/SystemTime::new(se
 # random: QNX /dev/random EAGAINs before its pool is primed + no /dev/urandom;
 # replace fill_bytes with a WouldBlock-retrying version (stored copy is source of truth).
 cp "$HERE/port/patches/std_random_unix_legacy.rs" "$STD/random/unix_legacy.rs"
-echo "std time_t + random patches -> $STD"
+
+# current_exe: QNX 6.5 has no /proc/self/exefile; use libc _cmdname (reads the
+# AT_EXEFILE auxv — works on 6.5 and 7.x). (stored copy is source of truth.)
+cp "$HERE/port/patches/std_paths_unix.rs" "$STD/paths/unix.rs"
+
+echo "std time_t + random + current_exe patches -> $STD"
 echo "done. now: ./build_std.sh <crate-dir>"
