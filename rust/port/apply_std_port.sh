@@ -9,17 +9,23 @@
 # Std source patches (time_t is u32 on 6.5 armv7, std assumes i64) applied below.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# In-image these point at /opt/{cargo,rustup}; on a dev box they default to $HOME.
+CARGO="${CARGO_HOME:-$HOME/.cargo}"
+RUSTUP="${RUSTUP_HOME:-$HOME/.rustup}"
 
 # --- 1) libc: sync our nto fork into the registry copy build-std actually reads
-REG=$(find "$HOME/.cargo/registry/src" -maxdepth 2 -type d -name 'libc-0.2.185' | head -1)
+REG=$(find "$CARGO/registry/src" -maxdepth 2 -type d -name 'libc-0.2.185' | head -1)
 [ -n "$REG" ] || { echo "libc-0.2.185 not in cargo registry; run a build once first"; exit 1; }
 cp "$HERE/vendor/libc/src/unix/nto/arm.rs" "$REG/src/unix/nto/arm.rs"
 cp "$HERE/vendor/libc/src/unix/nto/mod.rs" "$REG/src/unix/nto/mod.rs"
 echo "libc nto fork -> $REG"
 
 # --- 2) std source: 32-bit time_t fixes (idempotent perl, guarded on marker)
-STD=$(find "$HOME/.rustup/toolchains" -type d -path '*library/std/src/sys' | head -1)
-[ -n "$STD" ] || { echo "rustlib std src not found (need rust-src component)"; exit 1; }
+# Patch the ACTIVE toolchain's std src (rustc respects rust-toolchain.toml), not
+# a random `find` hit — the image may hold more than one nightly, and build-std
+# reads the one selected here.
+STD="$(rustc --print sysroot)/lib/rustlib/src/rust/library/std/src/sys"
+[ -d "$STD" ] || { echo "rustlib std src not found at $STD (need rust-src component)"; exit 1; }
 
 # time.rs: TIMESPEC_MAX_CAPPED uses `as i64` -> width-agnostic `as _`
 perl -0pi -e 's/(tv_sec: \(u64::MAX \/ NSEC_PER_SEC\) as )i64/$1_/;
