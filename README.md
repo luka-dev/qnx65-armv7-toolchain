@@ -4,7 +4,7 @@
 6.5.0 `armle-v7` — no QNX VM, no external SDP install.**
 
 Everything is assembled from source in one multi-stage `docker build`: the QNX
-6.5 SDP tree with a modern **GCC 4.9.4** (full C++11/14) in place of the stock
+6.5 SDP tree with a modern **GCC 4.9.4** (full C++11, partial C++14) in place of the stock
 4.4.2, a from-scratch **`GOOS=qnx` Go 1.26 port**, and a **nightly Rust**
 `build-std` target — all three linking through the same QNX toolchain.
 
@@ -45,7 +45,7 @@ docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 
 | Language | Compiler | Standard | Invocation | Output |
 |----------|----------|----------|------------|--------|
-| C / C++  | **GCC 4.9.4** (custom-built, replaces SDP 4.4.2) | C99 / **C++11 & C++14** | `arm-unknown-nto-qnx6.5.0eabi-{gcc,g++}` | ELF 32-bit ARM QNX exe/`.so` |
+| C / C++  | **GCC 4.9.4** (custom-built, replaces SDP 4.4.2) | C99 / **C++11** + partial C++14 | `arm-unknown-nto-qnx6.5.0eabi-{gcc,g++}` | ELF 32-bit ARM QNX exe/`.so` |
 | Go       | **Go 1.26.4**, `GOOS=qnx GOARCH=arm` port | full `gc` toolchain | `GOOS=qnx GOARCH=arm GOARM=7 go build` | ELF 32-bit ARM QNX exe |
 | Rust     | **nightly** rustc + `build-std` | `no_std` (core + alloc) | `cargo build -Z build-std=… --target …json` | static/`cdylib`, linked by the QNX gcc |
 
@@ -257,9 +257,12 @@ The stock SDP compiler was **fully replaced** by a custom GCC 4.9.4 built for th
 same `arm-unknown-nto-qnx6.5.0eabi` target (see [qnx-gcc49](#related-projects)).
 It reuses the SDP's binutils 2.19 and the 6.5 sysroot, and lives exactly where
 4.4.2 did (`usr/bin` drivers, `usr/lib/gcc/.../4.9.4`, `usr/libexec/gcc/.../4.9.4`).
-Gains: full **C++11/14**, better ARM/NEON codegen, `<thread>`/`<chrono>`/atomics —
+Gains: full **C++11** and most of **C++14** (generic lambdas, return-type
+deduction, `make_unique`, `<thread>`/`<chrono>`/atomics), better ARM/NEON codegen —
 while keeping the pre-C++11 libstdc++ ABI so output stays compatible with the 6.5
-device libraries.
+device libraries. C++14 is GCC 4.9's experimental level (`__cplusplus = 201300L`;
+**no variable templates**, those need GCC 5); there is **no C++17**. For a newer
+standard you'd build a newer GCC against this sysroot (as `qnx-gcc49` did for 4.9).
 
 ### <a name="why-no-qcc"></a>No `qcc`
 `qcc` exists to select among **multiple** {arch × compiler version × C++ library}
@@ -378,7 +381,8 @@ Package binaries into a bootable image with the QNX `mkifs`/`mkefs` tools.
 
 ## Status & limitations
 
-- **C/C++** — complete. C99 + C++11/14, verified building and linking.
+- **C/C++** — C99 + full C++11 + partial C++14 (GCC 4.9, `__cplusplus=201300L`;
+  no variable templates, no C++17). Verified building and linking.
 - **Go** — the `GOOS=qnx` port compiles and the full stdlib builds for `qnx/arm`;
   internal-link binaries are produced. Full on-device runtime coverage (cgo,
   external-link defaults) is the ongoing work of the upstream port.
