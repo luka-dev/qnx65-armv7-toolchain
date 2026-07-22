@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Linker shim: cargo invokes this as the target linker; forward argv into the
+# QNX 6.5 gcc inside docker. /Users/luka is mounted at the same path so cargo's
+# absolute .rlib/.o paths resolve unchanged.
+#  - QNX 6.5 gcc ships only static libgcc.a (no libgcc_s.so) + rustc uses
+#    -nodefaultlibs, so remap -lgcc_s -> -lgcc.
+#  - -nodefaultlibs makes the 4.4.2 spec drop the target sysroot -L; add it back.
+#  - ARM EHABI libgcc has _Unwind_GetIP only as an inline; std wants the symbol,
+#    so link our shim archive (shim/libqnxunwind.a) that defines it.
+HERE="$(cd "$(dirname "$0")" && pwd)"
+SYSLIB=/opt/qnx650/target/qnx6/armle-v7/lib
+args=()
+for a in "$@"; do
+  case "$a" in
+    -lgcc_s) args+=("-lgcc") ;;
+    *) args+=("$a") ;;
+  esac
+done
+exec docker run --rm --platform=linux/amd64 \
+  -v /Users/luka:/Users/luka -w "$PWD" "${QNX_IMAGE:-qnx65-armv7}" \
+  arm-unknown-nto-qnx6.5.0eabi-gcc -L "$SYSLIB" "${args[@]}" "$HERE/shim/libqnxunwind.a"
