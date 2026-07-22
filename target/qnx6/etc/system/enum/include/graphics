@@ -1,0 +1,7 @@
+#
+# macro definitions for graphics
+#
+	
+all
+	set(IODISPLAY_CMD, io-display)
+

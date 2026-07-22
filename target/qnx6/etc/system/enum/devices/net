@@ -1,0 +1,512 @@
+#
+# Definitions for net devices
+#
+
+# Make sure ionet starts even if there is no network card (for 127.1)
+device(none, .type=$(ISA_TYPE_NETWORK))
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	
+# ne1000/ne2000 devices
+device(isa, .type=$(ISA_TYPE_NETWORK), .subtype=$(ISA_NETWORK_ETHER), .progif=00)
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+	mount(-Tio-pkt "-oioport=0x$(ioport)" /lib/dll/devn-ne2000.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+	
+device(pci, ven=$(PCI_VEND_REALTEK), dev=8029)
+device(pci, ven=$(PCI_VEND_WINBOND), dev=0940)		#89C940
+device(pci, ven=$(PCI_VEND_POWERMATIC), dev=1401)	#Compex RL2000
+device(pci, ven=$(PCI_VEND_KTI), dev=3000)			#ET32P2
+device(pci, ven=$(PCI_VEND_NETVIN), dev=5000)		#NV5000SC
+device(pci, ven=$(PCI_VEND_VIA), dev=0926)			#82C926
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-ne2000.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+device(pcmcia, ven=$(PCCARD_VEND_DLINK), dev=021b)
+device(pcmcia, ven=$(PCCARD_VEND_SOCKET), dev=000d)	#PCMCIA LPE
+device(pcmcia, ven=$(PCCARD_VEND_SOCKET), dev=0075)	#CF+ LPE
+device(pcmcia, .type=$(PCCARD_TYPE_NETWORK) .subtype=$(PCCARD_NETWORK_ETHER), .progif=$(PCCARD_NETWORK_ETHER_NE2000))
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+# assume pcmcia only have one ethernet card for now so en0 is always used
+#	mount(-Tio-pkt "-oioport=0x$(ioport),irq=$(irq)" /lib/dll/devn-ne2000.so, "/dev/io-net/en$(netnum)")
+	mount(-Tio-pkt "-oioport=0x$(ioport),irq=$(irq)" /lib/dll/devn-ne2000.so, "/dev/io-net/en0")
+	use(symbolic=netmgr)
+
+device(cardbus, ven=10b7, dev=5157)
+device(cardbus, ven=10b7, dev=5257)
+device(cardbus, ven=10b7, dev=6560)
+device(cardbus, ven=10b7, dev=6562)
+device(cardbus, ven=10b7, dev=6564)
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+# assume cardbus only have one ethernet card for now so en0 is always used
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-el900.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+device(cardbus, ven=8086, dev=1229)
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+# assume cardbus only have one ethernet card for now so en0 is always used
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-speedo.so, "/dev/io-net/en$(netnum)") 
+	use(symbolic=netmgr)
+
+device(cardbus, ven=1011, dev=0019)
+device(cardbus, ven=$(PCI_VEND_ABOCOM), dev=ab02)	# Abocom FE2500
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+# assume cardbus only have one ethernet card for now so en0 is always used
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-tulip.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+device(cardbus, ven=10b8, dev=0006)
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+# assume cardbus only have one ethernet card for now so en0 is always used
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-epic.so, "/dev/io-net/en$(netnum)")
+#	mount(-Tio-pkt "-opci=$(index)" /lib/dll/devn-epic.so, "/dev/io-net/en0")
+	use(symbolic=netmgr)
+	
+device(cardbus, ven=115d, dev=0003)
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+# assume cardbus only have one ethernet card for now so en0 is always used
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-tulip.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+# AMD PCnet devices
+device(pci, ven=$(PCI_VEND_AMD), dev=2000)
+device(pci, ven=$(PCI_VEND_AMD), dev=2001)
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-pcnet.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+# 21x4x devices
+device(pci, ven=$(PCI_VEND_DEC), dev=0002)		# 21040 10 mbits
+device(pci, ven=$(PCI_VEND_DEC), dev=0008)		# 21140 SMC
+device(pci, ven=$(PCI_VEND_DEC), dev=0009)		# 21240 10/100 mbits
+device(pci, ven=$(PCI_VEND_DEC), dev=0014)		# 21041 newer 10 mbits
+device(pci, ven=$(PCI_VEND_DEC), dev=0019)		# 21143
+device(pci, ven=$(PCI_VEND_LITEON), dev=0002)	# 168 PNIC
+device(pci, ven=$(PCI_VEND_LITEON), dev=0168)	# 168 PNICX
+device(pci, ven=$(PCI_VEND_ADMTEK), dev=0981)	# AN981 Admtek 
+device(pci, ven=$(PCI_VEND_ADMTEK), dev=0985)	# AN985 Admtek 
+device(pci, ven=$(PCI_VEND_INTEL), dev=0039)	# Intel 21145 
+#device(pci, ven=$(PCI_VEND_ABOCOM), dev=ab02)	# Abocom FE2500
+device(pci, ven=$(PCI_VEND_MACRONIX), dev=0531)	# Macronix MX98715
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-tulip.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+# 90x devices
+device(pci, ven=$(PCI_VEND_3COM), dev=9000)		# 900
+device(pci, ven=$(PCI_VEND_3COM), dev=9050)		# 905
+device(pci, ven=$(PCI_VEND_3COM), dev=9055)		# 905B
+device(pci, ven=$(PCI_VEND_3COM), dev=9058)		# COMBO
+device(pci, ven=$(PCI_VEND_3COM), dev=9200)
+device(pci, ven=$(PCI_VEND_3COM), dev=9202)
+device(pci, ven=$(PCI_VEND_3COM), dev=9001)
+device(pci, ven=$(PCI_VEND_3COM), dev=9051)
+device(pci, ven=$(PCI_VEND_3COM), dev=9056)
+device(pci, ven=$(PCI_VEND_3COM), dev=9004)
+device(pci, ven=$(PCI_VEND_3COM), dev=9005)
+device(pci, ven=$(PCI_VEND_3COM), dev=9006)
+device(pci, ven=$(PCI_VEND_3COM), dev=900a)
+device(pci, ven=$(PCI_VEND_3COM), dev=905a)
+device(pci, ven=$(PCI_VEND_3COM), dev=9800)
+device(pci, ven=$(PCI_VEND_3COM), dev=6055)
+device(pci, ven=$(PCI_VEND_3COM), dev=9805)
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-el900.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+device(pci, ven=$(PCI_VEND_REALTEK), dev=8139)	# RTL 8139
+device(pci, ven=$(PCI_VEND_ACCTON), dev=1211)	# SMC 1211
+device(pci, ven=$(PCI_VEND_DLINK), dev=1300)	# D-Link DFE530TX+
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-rtl.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+device(pci, ven=$(PCI_VEND_REALTEK), dev=8169)	# RTL 8169
+device(pci, ven=$(PCI_VEND_REALTEK), dev=8167)	# RTL 8169SC
+device(pci, ven=$(PCI_VEND_REALTEK), dev=8168)	# RTL 8168/8111
+device(pci, ven=$(PCI_VEND_REALTEK), dev=8136)	# RTL 8136/8101
+device(pci, ven=$(PCI_VEND_LINKSYS), dev=1032)  # LINKSYS 8139
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devnp-rtl8169.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+device(pci, ven=$(PCI_VEND_INTEL), dev=1029)	# Intel 82559
+device(pci, ven=$(PCI_VEND_INTEL), dev=1030)	# Intel 82559
+device(pci, ven=$(PCI_VEND_INTEL), dev=1031)	# Integrated into 82801CAM
+device(pci, ven=$(PCI_VEND_INTEL), dev=1032)	# Integrated into 82801CAM
+device(pci, ven=$(PCI_VEND_INTEL), dev=1033)	# Integrated into 82801CAM
+device(pci, ven=$(PCI_VEND_INTEL), dev=1034)	# Integrated into 82801CAM
+device(pci, ven=$(PCI_VEND_INTEL), dev=1035)	# Integrated into 82801CAM
+device(pci, ven=$(PCI_VEND_INTEL), dev=1036)	# Integrated into 82801CAM
+device(pci, ven=$(PCI_VEND_INTEL), dev=1037)	# Integrated into 82801CAM
+device(pci, ven=$(PCI_VEND_INTEL), dev=1038)	# Integrated into 82801CAM
+device(pci, ven=$(PCI_VEND_INTEL), dev=1039)	# Integrated into 82801BD
+device(pci, ven=$(PCI_VEND_INTEL), dev=103a)	# Integrated into 82801BD
+device(pci, ven=$(PCI_VEND_INTEL), dev=103b)	# Integrated into 82801BD
+device(pci, ven=$(PCI_VEND_INTEL), dev=103c)	# Integrated into 82801BD
+device(pci, ven=$(PCI_VEND_INTEL), dev=103d)	# Integrated into 82801BD
+device(pci, ven=$(PCI_VEND_INTEL), dev=103e)	# Integrated into 82801BD
+device(pci, ven=$(PCI_VEND_INTEL), dev=1050)	# Intel 82562EZ
+device(pci, ven=$(PCI_VEND_INTEL), dev=1051)	# Intel 82562EZ
+device(pci, ven=$(PCI_VEND_INTEL), dev=1052)	# Intel 82562EZ
+device(pci, ven=$(PCI_VEND_INTEL), dev=1053)	# Intel 82562EZ
+device(pci, ven=$(PCI_VEND_INTEL), dev=1054)	# Intel 82562EZ
+device(pci, ven=$(PCI_VEND_INTEL), dev=1055)	# Intel 82562EZ
+device(pci, ven=$(PCI_VEND_INTEL), dev=1059)	# Intel 82562EZ
+device(pci, ven=$(PCI_VEND_INTEL), dev=1064)	# Intel 82562ET
+device(pci, ven=$(PCI_VEND_INTEL), dev=1065)	# Intel 82562ET_VE
+device(pci, ven=$(PCI_VEND_INTEL), dev=1066)	# Intel 82562EM_LOM
+device(pci, ven=$(PCI_VEND_INTEL), dev=1067)	# Intel 82562EM_VM
+device(pci, ven=$(PCI_VEND_INTEL), dev=1068)	# Intel 82562ET_LOM
+device(pci, ven=$(PCI_VEND_INTEL), dev=1069)	# Intel 82562EM
+device(pci, ven=$(PCI_VEND_INTEL), dev=1092)	# Intel 82562GZ
+device(pci, ven=$(PCI_VEND_INTEL), dev=1094)	# Intel 82562G
+device(pci, ven=$(PCI_VEND_INTEL), dev=1209)	# Intel 82559ER
+device(pci, ven=$(PCI_VEND_INTEL), dev=1229)	# Intel 82559 PRO/100
+device(pci, ven=$(PCI_VEND_INTEL), dev=2449)	# Intel 82559VE
+device(pci, ven=$(PCI_VEND_INTEL), dev=2459)	# Intel 82559B
+device(pci, ven=$(PCI_VEND_INTEL), dev=245d)	# Intel 82559C
+device(pci, ven=$(PCI_VEND_INTEL), dev=27dc)	# Intel 82562GZ
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devnp-speedo.so, )
+	use(symbolic=netmgr)
+
+#Intel E1000
+device(pci, ven=$(PCI_VEND_INTEL), dev=1000)	# Intel 82542 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1001)	# Intel 82543GC Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1004)	# Intel 82543GC Fiber Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1008)	# Intel 82544EI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1009)	# Intel 82544EI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=100c)	# Intel 82544GC Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=100d)	# Intel 82544GC Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=100e)	# Intel 82540EM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=100f)	# Intel 82545EM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1010)	# Intel 82546EB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1011)	# Intel 82545EM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1012)	# Intel 82546EB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1013)	# Intel 82541EI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1014)	# Intel 82541ER Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1015)	# Intel 82540EM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1016)	# Intel 82540EP Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1017)	# Intel 82540EP Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1018)	# Intel 82541EI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1019)	# Intel 82541EI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=101a)	# Intel 82547EI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=101d)	# Intel 82546EB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=101e)	# Intel 82540EP Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1026)	# Intel 82545GM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1027)	# Intel 82545GM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1028)	# Intel 82545GM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1049)	# Intel ICH8_IGP_M Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=104a)	# Intel 82566DM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=104b)	# Intel 82566DC Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=104c)	# Intel ICH8_IFE Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=104d)	# Intel 82566MC Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=105e)	# Intel 82571EB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=105f)	# Intel 82571EB_1 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1060)	# Intel 82571EB_2 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1075)	# Intel 82541GI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1076)	# Intel 82541GI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1077)	# Intel 82541GI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1078)	# Intel 82541ER Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1079)	# Intel 82546GB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=107a)	# Intel 82546GB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=107b)	# Intel 82546GB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=107c)	# Intel 82541PI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=107d)	# Intel 82572EI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=107e)	# Intel 82572EI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=107f)	# Intel 82572EI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=108a)	# Intel 82546EB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=108b)	# Intel 82573V Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=108c)	# Intel 82573E Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1096)	# Intel 82563 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1098)	# Intel 82563_BX Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1099)	# Intel 82546GB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=109a)	# Intel 82573L Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10a4)	# Intel 82571EB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10a5)	# Intel 82571EB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10a7)	# Intel 82575EB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10a9)	# Intel 82575EB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10b5)	# Intel 82546GB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10b9)	# Intel 82572EI Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10ba)	# Intel 80003ES2LAN Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10bb)	# Intel 80003ES2LAN Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10bc)	# Intel 82571EB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10bd)	# Intel ICH9_IGP Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10bf)	# Intel ICH9_IGP Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10c0)	# Intel ICH9_IFE Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10c2)	# Intel ICH9_IFE_G Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10c3)	# Intel ICH9_IFE_GT Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10c4)	# Intel ICH8_IFE_GT Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10c5)	# Intel ICH8_IFE_G Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10c9)	# Intel 82576 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10cb)	# Intel ICH9_IGP_M_V Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10cc)	# Intel ICH10_R_BM_LM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10cd)	# Intel ICH10_R_BM_LF Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10ce)	# Intel ICH10_R_BM_V Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10d3)	# Intel 82574L Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10d5)	# Intel 82571PT Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10d6)	# Intel 82575GB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10d9)	# Intel 82571EB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10da)	# Intel 82571EB Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10de)	# Intel ICH10_D_BM_LM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10df)	# Intel ICH10_D_BM_LF Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10e5)	# Intel ICH9_BM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10e6)	# Intel 82576 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10e7)	# Intel 82576 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10e8)	# Intel 82576 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10ea)	# Intel 82577LM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10eb)	# Intel 82577LC Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10ef)	# Intel 82578DM Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10f0)	# Intel 82578DC Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=10f5)	# Intel ICH9_IGP_M_AMT Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1501)	# Intel ICH8_82567V_3 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=150c)	# Intel 82583V Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=150e)	# Intel 82580_COPPER Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=150f)	# Intel 82580_FIBER Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1510)	# Intel 82580_SERDES Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1511)	# Intel 82580_SGMII Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=1516)	# Intel 82580_COPPER_DUAL Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=151d)	# Intel 82580_ER Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=151e)	# Intel 82580_ER_DUAL Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=294c)	# Intel ICH9_IGP_C Gigabit
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devnp-e1000.so, )
+	use(symbolic=netmgr)
+
+#EP80579 gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=5040)	# Intel EP80579 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=5041)	# Intel EP80579 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=5042)	# Intel EP80579 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=5043)	# Intel EP80579 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=5044)	# Intel EP80579 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=5045)	# Intel EP80579 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=5046)	# Intel EP80579 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=5047)	# Intel EP80579 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=5048)	# Intel EP80579 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=5049)	# Intel EP80579 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=504a)	# Intel EP80579 Gigabit
+device(pci, ven=$(PCI_VEND_INTEL), dev=504b)	# Intel EP80579 Gigabit
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devnp-i80579.so, )
+	use(symbolic=netmgr)
+
+# SMC 9432TX (epic)
+device(pci, ven=$(PCI_VEND_STANDARD), dev=0005)
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-epic.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+# SiS 900
+device(pci, ven=$(PCI_VEND_SIS), dev=0900)
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-sis9.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+    # VIA-RHINE
+device(pci, ven=$(PCI_VEND_VIA), dev=3042)		# RHINE
+device(pci, ven=$(PCI_VEND_VIA), dev=6100)		# RHINE II
+device(pci, ven=$(PCI_VEND_VIA), dev=3043)		# DLINK DE530TX
+device(pci, ven=$(PCI_VEND_VIA), dev=3065)		# RHINE III
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-via-rhine.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+#Davicom
+device(pci, ven=$(PCI_VEND_DAVICOM), dev=9102)		# DM9102
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-dm9102.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1600)	# Broadcom 5752 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1601)	# Broadcom 5752M Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1644)	# Broadcom 5700 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1645)	# Broadcom 5701 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1646)	# Broadcom 5702 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1647)	# Broadcom 5703 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1648)	# Broadcom 5704C Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=164a)	# Broadcom 5706 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=164d)	# Broadcom 5702FE Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1653)	# Broadcom 5705 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1654)	# Broadcom 5705_2 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1659)	# Broadcom 5721 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=165a)	# Broadcom 5722 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=165d)	# Broadcom 5705M Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=165e)	# Broadcom 5705M Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=166a)	# Broadcom 5780 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=166b)	# Broadcom 5780S Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=166e)	# Broadcom 5705F Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1673)	# Broadcom 5755M Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1674)	# Broadcom 5756ME Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1677)	# Broadcom 5751 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=167a)	# Broadcom 5754 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=167b)	# Broadcom 5755 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=167d)	# Broadcom 5751M Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=167e)	# Broadcom 5751F Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1680)	# Broadcom 5761E Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1693)	# Broadcom 5787M Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1696)	# Broadcom 5782 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=169b)	# Broadcom 5787 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=169c)	# Broadcom 5788 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=169d)	# Broadcom 5789 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=16a6)	# Broadcom 5702X Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=16a7)	# Broadcom 5703X Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=16a8)	# Broadcom 5704S Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=16aa)	# Broadcom 5706S Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=16c6)	# Broadcom 5702A3 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=16c7)	# Broadcom 5703XB Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=16dd)	# Broadcom 5781 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=16f7)	# Broadcom 5753 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=16fd)	# Broadcom 5753M Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=16fe)	# Broadcom 5753F Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=170d)	# Broadcom 5901 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=170e)	# Broadcom 5901_2 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1712)	# Broadcom 5906 Gigabit
+device(pci, ven=$(PCI_VEND_BROADCOM), dev=1713)	# Broadcom 5906M Gigabit
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	uniq(netnum, devn-en, 0)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devn-tigon3.so, "/dev/io-net/en$(netnum)")
+	use(symbolic=netmgr)
+
+#Marvell Yukon
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4340)		#YUKON-II 88E8021CU
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4341)		#YUKON-II 88E8022CU
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4342)		#YUKON-II 88E8061CU
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4343)		#YUKON-II 88E8062CU
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4344)		#YUKON-II 88E8021X
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4346)		#YUKON-II 88E8021X
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4347)		#YUKON-II 88E8062X
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4350)		#YUKON 88E8035
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4351)		#YUKON 88E8036
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4352)		#YUKON 88E8038
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4353)		#YUKON 88E8039
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4356)		#YUKON 88E8039
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4360)		#YUKON 88E8052
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4361)		#YUKON 88E8050
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4362)		#YUKON 88E8053
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4363)		#YUKON 88E8055
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4364)		#YUKON 88E8056
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4365)		#YUKON 
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4366)		#YUKON 88EC036
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4367)		#YUKON 88EC032
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4368)		#YUKON 88EC034
+device(pci, ven=$(PCI_VEND_MARVELL), dev=4369)		#YUKON 88EC042
+device(pci, ven=$(PCI_VEND_MARVELL), dev=436a)		#YUKON 88EC055
+device(pci, ven=$(PCI_VEND_DLINK),   dev=4001)		#DGE-550SX
+device(pci, ven=$(PCI_VEND_DLINK),   dev=4b00)		#DGE-560T
+device(pci, ven=$(PCI_VEND_DLINK),   dev=4b02)		#DGE-560SX
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devnp-msk.so, )
+	use(symbolic=netmgr)
+
+device(pci, ven=$(PCI_VEND_RALINK),   dev=0201)		#RT2560 802.11b/g
+device(pci, ven=$(PCI_VEND_RALINK),   dev=0301)		#RT2561S
+device(pci, ven=$(PCI_VEND_RALINK),   dev=0302)		#RT2561
+device(pci, ven=$(PCI_VEND_RALINK),   dev=0401)		#RT2661
+	tag(devn)
+	append(legacy, ",nonet")
+	requires($(IOPKT_CMD),)
+	waitfor (/dev/socket)
+	mount(-Tio-pkt "-opci=$(index),vid=0x$(ven),did=0x$(dev)" /lib/dll/devnp-ral.so, )
+	use(symbolic=netmgr)
+
+
+#	Handle any net type device that doesn't match...
+device(pnpbios, .type=$(PNPBIOS_TYPE_NETWORK))
+	echo(net bus=pnpbios devid=$(devid) type=$(type) subclass=$(subtype) progif=$(progif), /etc/system/trap/unknown)
+device(pci, .class=$(PCI_CLASS_NETWORK))
+	echo(net bus=pci ven=$(ven) dev=$(dev) class=$(class) subclass=$(subclass) progif=$(progif) subven=$(subven) subsys=$(subsys), /etc/system/trap/unknown)
+
+
+# SMC2209 dongle
+device(usb, ven=0b95,dev=1720)
+        requires($(IOPKT_CMD),)
+        waitfor(/dev/socket)
+        driver (mount -Tio-pkt devn-asix.so)
+        start(netmanager)
+
+device(symbolic=netmgr)
+	start(netmanager)

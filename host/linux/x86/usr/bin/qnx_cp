@@ -1,0 +1,107 @@
+#! /usr/bin/env ksh
+#
+#ifdef __USAGE
+#QNX cp wrapper script
+#
+#	This script takes all command lines and passes them through
+#	to the native cp utility, except -c, which creates any
+#	missing destination paths (QNX).
+#endif
+
+#osname=`uname -s`
+#if test ! $osname = SunOS; then
+#        echo Invalid os $osname.
+#        echo This script is only meant to run on Solaris.
+#        echo Exiting.
+#        exit
+#fi
+
+#
+# Set up some defaults
+#
+
+create_dest_path="no"
+multiple_files="no"
+command_line_args=""
+srcs=""
+dest=""
+
+#
+# Parse command line args
+#
+
+while [ $# -gt 0 ] ; do
+
+# Get the first arg, and shuffle later
+        option=$1
+
+# parse args
+	case $option in
+	-\?)
+	echo "QNX cp wrapper script"
+	echo
+	echo "	This script takes all command lines and passes them through"
+	echo "	to the native cp utility, except -c, which creates any"
+	echo "	missing destination paths (QNX)."
+		exit
+		;;
+	-*)
+		case $option in
+		*c*)
+			create_dest_path="yes" 
+			option=`echo $option | sed 's/c//g'`
+			if test "$option" = "-" ; then
+				option=""
+			fi
+			;;
+		*n*)
+			# For backward compatibility, support -n
+			option=`echo $option | sed 's/n/u/g'`
+			;;
+		esac
+		command_line_args="$command_line_args $option" 
+		;;
+	*)	
+		if test -z "$srcs" ; then
+			srcs=$option
+		else
+			if test -z "$dest" ; then
+				dest=$option
+			else
+				srcs="$srcs $dest"
+				multiple_files="yes"
+				dest=$option
+			fi
+		fi
+		;;
+	esac
+
+# shuffle args at the end
+        shift
+done
+
+# Strip everything away but the last slash (if it exists) and replace it with 
+# an "m".  If the result is only "m" then this means the entry ended with a
+# trailing slash and is a directory, so treat it like the multiple files case
+lastslash=`echo $dest | sed 's_.*/_m_g'`
+if test $lastslash = "m" ; then
+	multiple_files="yes"
+fi
+
+#
+# Handle any of the qnx options, currently just '-c'
+#
+
+if test $create_dest_path = "yes"; then
+	if test ! -z "$dest" ; then
+		if test $multiple_files = "no"; then
+			newdir=`dirname $dest`
+		else
+			newdir=$dest
+		fi
+		if test ! -d $newdir; then
+			mkdir -p $newdir
+		fi
+	fi
+fi
+cp $command_line_args $srcs $dest

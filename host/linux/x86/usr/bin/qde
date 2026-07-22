@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+export PATH=$QNX_HOST/usr/bin:$PATH
+IDE_QNX_HOST=`dirname $0`/../../
+export LD_LIBRARY_PATH=$QNX_HOST/usr/lib:$LD_LIBRARY_PATH
+$IDE_QNX_HOST/usr/qde/eclipse/qde "$@"

@@ -1,0 +1,12 @@
+#
+# Definitions for printer devices
+#
+
+device(symbolic=spooler)
+	requires(@printer)
+	start(spooler -d$(path),)
+
+device(lptenum, .class=$(PAR_CLASS_PRINTER))
+#	start(spooler -d$(path), -P$(pnpstr))
+#	use(symbolic=spooler)
+	tag("null")

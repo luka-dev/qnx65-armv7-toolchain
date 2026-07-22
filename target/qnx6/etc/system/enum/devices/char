@@ -1,0 +1,51 @@
+#
+# Definitions for character devices
+#
+
+device(pnpbios, .type=$(PNPBIOS_TYPE_COMM), .subtype=$(PNPBIOS_COMM_SERIAL))
+device(isa, .type=$(ISA_TYPE_COMM), .subtype=$(ISA_COMM_SERIAL), .progif=00)
+device(pcmcia, .type=$(PCCARD_TYPE_COMM), .subtype=$(PCCARD_COMM_SERIAL), .progif=$(PCCARD_COMM_SERIAL_IF))
+	append(legacy, ",chkser,$+ioport=$(ioport)+7,irq=$(irq)$-")
+	uniq(sernum, devc-ser, 1)
+	driver(devc-ser8250 $(SER_OPTIONS), "-u$(sernum) $(ioport),$(irq)")
+	waitfor(/dev/ser$(sernum))
+	enumerator(ser /dev/ser$(sernum))
+
+device(pcmcia, ven=016c, dev=0006)
+	append(legacy, ",chkser,$+ioport=$(ioport)+7,irq=$(irq)$-")
+	uniq(sernum, devc-ser, 1)
+	driver(devc-ser8250 $(SER_OPTIONS), "-u$(sernum) $(ioport),$(irq)")
+	waitfor(/dev/ser$(sernum))
+	enumerator(ser /dev/ser$(sernum))
+
+device(pnpbios, .type=$(PNPBIOS_TYPE_COMM), .subtype=$(PNPBIOS_COMM_PARALLEL))
+device(isa, .type=$(ISA_TYPE_COMM), .subtype=$(ISA_COMM_PARALLEL), .progif=00)
+	tag(printer)
+	append(legacy, ",nopar")
+	uniq(parnum, devc-par, 1)
+	driver(devc-par $(PAR_OPTIONS) -p0x$(ioport),)
+	waitfor(/dev/par$(parnum))
+	enumerator(par /dev/par$(parnum))
+	use(symbolic=spooler path=/dev/par$(parnum))
+
+device(pnpbios, .type=$(PNPBIOS_TYPE_INPUT), .subtype=$(PNPBIOS_INPUT_KEYBOARD))
+	append(legacy, ",nokb")
+	tag(console)
+	requires(devc-con-hid,$(CONSOLE_OPTIONS))
+
+device(pci, ven=$(PCI_VEND_SEALEVEL), dev=7161)
+device(pci, ven=$(PCI_VEND_SEALEVEL), dev=7801)
+device(pci, ven=$(PCI_VEND_SIIG),     dev=2082)
+device(pci, ven=$(PCI_VEND_OXFORD),   dev=950a)
+device(pci, ven=$(PCI_VEND_OXFORD),   dev=9501)
+device(pci, ven=$(PCI_VEND_OXFORD),   dev=9511)
+	uniq(sernum, devc-ser, 1)
+	driver (devc-serpci "vid=0x$(ven),did=0x$(dev),pci=$(index) -u$(sernum)", $(SER_OPTIONS) )
+
+#	Handle any char type device that doesn't match...
+device(pnpbios, .type=$(PNPBIOS_TYPE_COMM))
+device(pnpbios, .type=$(PNPBIOS_TYPE_INPUT))
+	echo(char bus=pnpbios devid=$(devid) type=$(type) subclass=$(subtype) progif=$(progif), /etc/system/trap/unknown)
+device(pci, .class=$(PCI_CLASS_COMM))
+device(pci, .class=$(PCI_CLASS_INPUT))
+	echo(char bus=pci ven=$(ven) dev=$(dev) class=$(class) subclass=$(subclass) progif=$(progif) subven=$(subven) subsys=$(subsys), /etc/system/trap/unknown)

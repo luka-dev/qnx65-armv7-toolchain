@@ -1,0 +1,2 @@
+#!/bin/sh
+$QNX_HOST/unsupported/python25/bin/python $QNX_HOST/usr/bin/applypatch.py $*

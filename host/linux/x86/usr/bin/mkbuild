@@ -1,0 +1,135 @@
+#!/usr/bin/env ksh
+
+#ifdef __USAGE
+#Build one or more projects in the IDE workspace, producing the same results as an interactive build in the IDE.
+#
+#Usage:
+#%C -ws <workspace> [options]
+#%C [-project] <full project path>  [options]
+#%C -ws <workspace> -projects <project1,project2> [options]
+#
+#Where <project> is the project name for one of project types supported by the IDE:
+# Makefile project, QNX project, Managed project, and Container project.
+#Options:
+# -stopOnError - stop on the first compile error (not valid for full workspace builds)
+# -targets <target1[,target2...]> - make targets - build, clean, rebuild or custom make target 
+# -variant <variant> - the build variant (see below)
+#    For a Managed project - the variant is the same as the configuration. If it is not assigned, the default will be used.
+#    For a QNX project - the variant is either "All", "Enabled", or platform/type (i.e. x86/release).
+#    For a container project - the variant is any defined container configuration.
+#    For a workspace - the variant is not used. The default variant for each project will be used.
+#    For multiple projects - the defined variant for each project is used (the project must understand the variant).
+#Note: No spaces are allowed for project names, as well as in the list of projects or targets.
+#Environment:
+# QDE=<path> can be used to override the default IDE installation location ($QNX_HOST/usr/qde)
+#endif
+#
+
+if [ $# -eq 0 ] ; then
+    exec use $0
+fi
+
+function add_path {
+        case $PATH in
+        *:$1:*|$1:*|*:$1)       ;;
+        *)              PATH=$1:$PATH;;
+        esac
+}
+
+function add_libpath {
+        case $LD_LIBRARY_PATH in
+        *:$1:*|$1:*|*:$1)       ;;
+        *)              LD_LIBRARY_PATH=$1:$LD_LIBRARY_PATH;;
+        esac
+}
+
+function error {
+  echo $* 1>&2
+  exit 1
+}
+
+QDE=${QDE:-$QNX_HOST/usr/qde}
+WINDOWS=0
+
+while [ $# -gt 0 ] ; do
+  option="$1"
+  case "$option" in 
+      -stopOnError) 
+            ARGS="$ARGS" "$option"
+            ;;
+      -win) 
+            WINDOWS=1            
+            ;;
+      -*) 
+            if [ $# -eq 1 ] ;  then
+              echo "Argument is required for $option"
+              exit
+            fi
+            shift
+            operand=$1
+            case "$operand" in 
+              -*) 
+                echo "Argument is required for $option"
+                exit ;;
+            esac
+            case "$option" in 
+              -ws|-workspace)
+                if [ "x$WORKSPACE" != "x" ] ; then
+                  echo 'Workspace defined twice'
+                  exit
+                fi  
+                WORKSPACE="$operand"
+                operand=""
+                ;;
+              -project)
+                PROJECT="$operand"
+                operand=""
+                ;;
+              *)
+                operand="$option $operand"
+                ;;
+            esac      
+            if [ "$operand" != "" ]; then
+                   ARGS="$ARGS $operand"
+            fi
+        ;;
+      *)
+        PROJECT="$1"
+        ;;
+    esac
+  shift
+done
+
+# If WS has not been defined yet, try to extract it from the first PROJECT name
+if [ "x$WORKSPACE" = x ] ; then
+  WORKSPACE=`echo "$PROJECT" | sed -e 's?[/\\]$??' -e 's/[\/\\][^\/\\]*$//'`
+  PROJECT=`echo "$PROJECT" | sed -e 's/[\/\\]$//' -e 's/.*[\/\\]//'`   
+  if [ "x$WORKSPACE" = x -o "$WORKSPACE" = "$PROJECT" ]; then
+    error "Workspace is not set and cannot be derived"
+  fi
+fi
+
+if [ "$PROJECT" != "" ]; then
+ ARGS="$ARGS -project $PROJECT"
+fi
+
+#
+# Setup paths for the JVM we include with eclipse
+#
+JVMDIR=$QDE/eclipse/jre/bin
+add_path $JVMDIR
+add_libpath $JVMDIR
+
+echo WORKSPACE is $WORKSPACE
+
+#
+# Start the jvm
+#
+if [ $WINDOWS -eq 0 ]; then
+START="${QDE}/eclipse/qde"
+else
+START="${QDE}/eclipse/eclipsec.exe"
+fi
+echo "$START"  -nosplash -application com.qnx.tools.ide.qde.commandline.launcher.cmdLineBuilder -consoleLog -data "${WORKSPACE}" ${ARGS} 
+"$START"  -nosplash -application com.qnx.tools.ide.qde.commandline.launcher.cmdLineBuilder -consoleLog -data "${WORKSPACE}" ${ARGS} 
+

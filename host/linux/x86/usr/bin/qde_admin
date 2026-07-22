@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+#Use this script only to update shared installation 
+#(i.e. install new eclipse plugins or update momentics plugins)
+export PATH=$QNX_HOST/usr/bin:$PATH
+IDE_QNX_HOST=`dirname $0`/../..
+export LD_LIBRARY_PATH=$QNX_HOST/usr/lib:$LD_LIBRARY_PATH
+$IDE_QNX_HOST/usr/qde/eclipse/qde -vmargs -Declipse.p2.data.area=$IDE_QNX_HOST/usr/qde/eclipse/p2/

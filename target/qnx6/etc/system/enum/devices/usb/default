@@ -1,0 +1,5 @@
+#Catches any unmatched device insertions
+	
+#device(usb)
+#	echo("No match found for USB device ven=$(ven), dev=$(dev), class=$(class), busno=$(busno), devno=$(devno), cfg=$(cfg), iface=$(iface), msven=$(msven), mscomp=$(mscomp), mssubcomp=$(mssubcomp)" )
+

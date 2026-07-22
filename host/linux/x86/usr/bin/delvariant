@@ -1,0 +1,49 @@
+#! /usr/bin/env ksh
+#ifdef __USAGE
+#%C    - delete a OS/CPU/VARIANT directory structure from a source tree
+#
+#%C    [[<os_name>] <cpu_name>] <variant_name>
+#
+#Where:
+#    <os_name>      is the name of the os to add. E.g qnx4, solaris, ...
+#    <cpu_name>     is the name of the cpu to add. E.g. mips, ppc, x86, ...
+#    <variant_name> is the name of the variant to add. E.g. "o", "a.be", ...
+#
+#%C searchs from the CWD down in the directory tree, looking for 
+#Makefiles with the line:
+#
+#	 "LIST=OS"		(if three parms specified) 
+#	 "LIST=CPU"		(if two parms specified) 
+#	 "LIST=VARIANT"	(if one parm specified) 
+#
+#in them. When it finds one, it ...
+#endif
+
+nparms=$#
+case ${nparms} in
+3)	os=$1; cpu=$2; variant=$3; list=OS ;;
+2)	       cpu=$1; variant=$2; list=CPU ;;
+1)	               variant=$1; list=VARIANT ;;
+*)
+  echo Need at least a variant name specifed.
+  ;;
+esac
+
+buildlist=$(find ${PWD} -name Makefile | xargs fgrep -l "LIST=${list}")
+for mkfile in ${buildlist}; do
+  cd ${mkfile%/Makefile}
+  case ${nparms} in
+  3)
+    echo Deleting ${PWD}/${os}/${cpu}/${variant}...
+    rm -Rf ${os}/${cpu}/${variant}
+    ;;	
+  2)
+    echo Deleting ${PWD}/${cpu}/${variant}...
+    rm -Rf ${cpu}/${variant}
+    ;;
+  1)
+    echo Deleting ${PWD}/${variant}...
+    rm -Rf ${variant}
+    ;;
+  esac
+done

@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# Run any initial setup for Photon. This script is only
+# executed on the first login for root.
+
+# If the installer creates a /tmp/url file then
+# launch a web browser with this URL
+
+fn=/etc/rc.d/url.tmp
+if [ -r $fn ]
+then
+	browser=/usr/photon/bin/firefox
+	tmpurl=$(head -n 1 $fn)
+	if [ -x $browser ]
+	then
+		$browser -height 650 -width 850 $tmpurl >/dev/null 2>&1 &
+	fi
+	rm -f $fn
+fi

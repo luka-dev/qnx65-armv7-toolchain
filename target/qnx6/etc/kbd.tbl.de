@@ -1,0 +1,157 @@
+# kbd.tbl.de -- DE-102 keyboard layout
+
+# To use this mapping, copy this file to
+#   /etc/kbd.tbl
+# and press  CTRL+ALT+SPACE  to reload the mapping dynamically.
+
+
+# Syntax
+# ------
+# This file's structure is very simple and rigid. It must contain
+# either *exactly* 5*96 or *exactly* 6*96 hexadecimal entries, 
+# separated by whitespace, newlines, or commas. If it contains 5*96 
+# entries, left and right Alt keys will both be treated as regular
+# Alt keys. If the file has 6*96 entries, the right Alt key will be
+# treated as an AltGr key, and the last 96 entries must define key
+# codes for each key with AltGr pressed.
+# Entries must be no longer than 4 hex digits (16 bits) each.
+# Comments must start with a '#'; they extend to the end of the line.
+
+
+# Semantics
+# ---------
+# Each run of 96 entries defines the semantics of up to 96 different 
+# keys under certain conditions:
+# 
+# Entries  Define semantics for keys...
+#  000-095  Without any modifiers
+#  096-191  With SHIFT pressed
+#  192-287  With CTRL pressed
+#  288-383  With ALT pressed
+#  384-479  With CTRL+ALT pressed
+# [480-575  With ALT-GR (right ALT) pressed]
+# 
+# The 96 entries in a run are indexed by keyboard scan codes.
+# You'll need to know those scan codes in order to make up your own
+# keyboard definition. Given below is the scancode/symbol-mapping
+# for a US-101 keyboard:
+# 
+#   0     1     2     3     4     5     6     7    8     9     A     B     C     D     E     F
+#     ,  Esc,  '1',  '2',  '3',  '4',  '5',  '6'  '7',  '8',  '9',  '0',  '-',  '=',  Rub,  Tab  ; 00
+#  'q',  'w',  'e',  'r',  't',  'y',  'u',  'i'  'o',  'p',  '[',  ']',  Ent,  Ctl,  'a',  's'  ; 10
+#  'd',  'f',  'g',  'h',  'j',  'k',  'l',  ';'  ''',  '`',  Shf,  '\',  'z',  'x',  'c',  'v'  ; 20
+#  'b',  'n',  'm',  ',',  '.',  '/',  Rsh,  '*'  Alt,   SP,  Cap,   F1,   F2,   F3,   F4,   F5  ; 30
+#   F6,   F7,   F8,   F9,  F10,  Num,  Scr,  Hom   Up,  PgU,   K-,  Lft,   K5,  Rig,   K+,  End  ; 40
+#  Dwn,  PgD,  Ins,  Del,     ,     ,     ,  F11  F12,     ,     ,     ,     ,     ,     ,       ; 50
+# 
+# For every scan code, two bytes of data are given by the entries.
+# The high byte defines a number of flags for the key (see below), 
+# while the low byte usually carries the actual data to be given 
+# to the "user" when the key is pressed. Only for shift, lock, and
+# special keys, the low byte will carry additional, function-dependant
+# information (see below, too).
+
+
+# Entries' high bits
+# ------------------
+#
+#  00  - Data Key
+#  01  - Function Key
+#  02  - Shift key
+#        0201 = Shift
+#        0202 = Ctl
+#        0204 = Alt
+#        0208 = Rshift
+#  04  - Numlock dependant
+#  08  - Lock Key
+#        0801 = ScrollLock
+#        0802 = NumLock
+#        0804 = CapsLock
+#  10  - Dead Key
+#  20  - Capslock dependant
+#  40  - Special
+#        4001 = reboot (ctl-alt-del)
+#        4002 = debug  (ctl-alt-esc)
+#        4003 = con+   (ctl-alt-plus/CR)
+#        4004 = con-   (ctl-alt-minus)
+#        4005 = con1   (ctl-alt-1)
+#        4006 = con2   (ctl-alt-2)
+#        ...
+#        400C = con8   (ctl-alt-8)
+#        400D = con9   (ctl-alt-9)
+#        400E = con10  (ctl-alt-0)
+#        400F = size+  (ctl-alt->)
+#        4010 = size-  (ctl-alt-<)
+#        4011 = help   (ctl-alt-?)
+#        4012 = break  (ctl-Break)
+#        4013 = hangup (ctl-alt-End)
+# 
+#        4020 = prtsc  (ctl-alt-PRTSC)
+#        4021 = hot1   (ctl-alt-F1)
+#        4022 = hot2   (ctl-alt-F2)
+#        ...
+#        402B = reload (ctl-alt-space)
+#
+#  80  - Invalid key
+#
+# ================================================================================
+
+#  Base codes
+	8000,001B,0031,0032,0033,0034,0035,0036,0037,0038,0039,0030,00DF,10B4,007F,0009,		# 00
+	2071,2077,2065,2072,2074,207A,2075,2069,206F,2070,20FC,002B,000D,0202,2061,2073,		# 10
+	2064,2066,2067,2068,206A,206B,206C,20F6,20E4,105E,0201,0023,2079,2078,2063,2076,		# 20
+	2062,206E,206D,002C,002E,002D,0208,002A,0204,0020,0804,0181,0182,0183,0184,0185,		# 30
+	0186,0187,0188,0189,018A,0802,0801,05A0,05A1,05A2,05A3,05A4,05A5,05A6,05A7,05A8,		# 40
+	05A9,05AA,05AB,05AC,8000,8000,003C,01AE,01AF,8000,8000,8000,8000,8000,8000,8000,		# 50
+
+#  Shift codes
+	8000,001B,0021,0022,00A7,0024,0025,0026,002F,0028,0029,003D,003F,1060,01FC,0180,		# 00
+	2051,2057,2045,2052,2054,205A,2055,2049,204F,2050,20DC,002A,01E0,0202,2041,2053,		# 10
+	2044,2046,2047,2048,204A,204B,204C,20D6,20C4,00B0,0201,0027,2059,2058,2043,2056,		# 20
+	2042,204E,204D,003B,003A,005F,0208,01AD,0204,0020,8000,018B,018C,018D,018E,018F,		# 30
+	0190,0191,0192,0193,0194,8000,8000,0437,0438,0439,042D,0434,0435,0436,042B,0431,		# 40
+	0432,0433,0430,042E,8000,8000,003E,01DB,01DC,8000,8000,8000,8000,8000,8000,8000,		# 50
+
+#  Cntl codes
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Still wrong for all values>001A (non-char keys)
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	8000,001B,8000,0000,8000,8000,8000,001E,8000,8000,8000,8000,001F,8000,01DE,019F,		# 00
+	0011,0017,0005,0012,0014,001A,0015,0009,000F,0010,001B,001D,01D0,0202,0001,0013,		# 10
+	0004,0006,0007,0008,000A,000B,000C,8000,8000,8000,0201,001C,0019,0018,0003,0016,		# 20
+	0002,000E,000D,8000,8000,8000,0208,01BD,0204,0020,8000,0195,0196,0197,0198,0199,		# 30
+	019A,019B,019C,019D,019E,8000,4012,01B0,01B1,01B2,01B3,01B4,01B5,01B6,01B7,01B8,		# 40
+	01B9,01BA,01BB,01BC,8000,8000,8000,01BE,01BF,8000,8000,8000,8000,8000,8000,8000,		# 50
+
+#  Alt codes
+#!!!!!!!!!!!!!!!!!!!!!!
+# Only swapped y and z
+#!!!!!!!!!!!!!!!!!!!!!!
+	8000,001B,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,01DF,8000,		# 00
+	01F1,01F7,01E5,01F2,01F4,01FA,01F5,01E9,01EF,01F0,8000,8000,01FB,0202,01E1,01F3,		# 10
+	01E4,01E6,01E7,01E8,01EA,01EB,01EC,8000,8000,8000,0201,8000,01F9,01F8,01E3,01F6,		# 20
+	01E2,01EE,01ED,8000,8000,8000,0208,01CD,0204,8000,8000,01D1,01D2,01D3,01D4,01D5,		# 30
+	01D6,01D7,01D8,01D9,01DA,8000,8000,01C0,01C1,01C2,01C3,01C4,01C5,01C6,01C7,01C8,		# 40
+	01C9,01CA,01CB,01CC,01DD,8000,8000,01CE,01CF,8000,8000,8000,8000,8000,8000,8000,		# 50
+
+#  Ctl-Alt codes
+#!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Ctl-Alt-Space:Reload
+#!!!!!!!!!!!!!!!!!!!!!!!!!!
+	8000,4002,4005,4006,4007,4008,4009,400A,400B,400C,400D,400E,8000,8000,4004,8000,		# 00
+	8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,4003,0202,8000,8000,		# 10
+	8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,0201,8000,8000,8000,8000,8000,		# 20
+	8000,8000,8000,4010,400F,4011,0208,4020,0204,402B,8000,4021,4022,4023,4024,4025,		# 30
+	4026,4027,4028,4029,402A,8000,8000,8000,8000,8000,4004,8000,8000,8000,4003,8000,		# 40
+	8000,8000,8000,4001,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,		# 50
+
+#  AltGr codes
+#!!!!!!!!!!!!!!!!!!!!!!!!!!
+# @, {, [, ], }, \, ~, ², |
+#!!!!!!!!!!!!!!!!!!!!!!!!!!
+	8000,8000,8000,00B2,00B3,8000,8000,8000,007B,005B,005D,007D,005C,8000,8000,8000,		# 00
+	0040,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,007E,8000,0202,8000,8000,		# 10
+	8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,0201,8000,8000,8000,8000,8000,		# 20
+	8000,8000,00B5,8000,8000,8000,0208,8000,0204,8000,8000,8000,8000,8000,8000,8000,		# 30
+	8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,8000,		# 40
+	8000,8000,8000,8000,8000,8000,007C,8000,8000,8000,8000,8000,8000,8000,8000,8000,		# 50

@@ -1,0 +1,55 @@
+#! /bin/ksh
+
+function add_file 
+{
+  case ${addtype} in
+  rcs)
+    ci -q -u ${1} </dev/null
+    ;;	
+  cvs)
+    cvs add -m "." ${1}
+    ;;
+  esac
+}
+
+addtype=tmp
+while getopts c opt $*; do
+  case $opt in
+  c)
+	if [ "${PWD%*/cvs/*}" != "${PWD}" ]; then
+	  addtype=cvs
+	elif [ -d CVS -o -d ../CVS ]; then
+	  addtype=cvs
+	else
+	  addtype=rcs
+	fi
+	;;
+  esac
+done
+let i=OPTIND-1
+shift $i
+
+buildlist=$(find ${PWD} -name Makefile | xargs fgrep -l "LIST=VARIANT")
+for mkfile in ${buildlist}; do
+  dir=${mkfile%/Makefile}
+  cd ${dir}
+  for vardir in */Makefile; do
+	cd ${dir}/${vardir%/Makefile}
+	if [ ! -f .cvsignore ]; then
+		echo Propagating ${PWD}/.cvsignore file...
+		# find the directory containing common.mk
+		common_dir=
+		while [ ! -f ${common_dir}common.mk ]; do
+		  common_dir=../${common_dir}
+		  if [ ${#common_dir} -ge 128 ]; then
+			echo "Can't find 'common.mk' file. Giving up."
+			exit 2
+		  fi
+		done
+		if [ -f ${common_dir}cvsignore ]; then
+		  cp ${common_dir}cvsignore .cvsignore
+		  add_file .cvsignore
+		fi
+	fi
+  done
+done

@@ -1,0 +1,139 @@
+#ifdef __USAGE
+#
+#%C
+#
+# This is the first script run by the system. It should
+# start any systems services that would be in a monolithic
+# *nix kernel. It finishes by "exec"ing into "tinit"
+#
+#endif
+
+# Change the path to get everything from the /bin and /sbin
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin
+
+# These are integers
+typeset -i VERBOSE SAFEMODE NO_ETC
+
+# Don't pass on these environment vars...
+typeset +x BOOTSRC SAFEMODE VERBOSE ROOTDEV NO_ETC
+
+# Display some info if requested
+if test 0$VERBOSE -ge 1; then
+	print BOOTSRC=$BOOTSRC
+	print SAFEMODE=$SAFEMODE
+	print VERBOSE=$VERBOSE
+	print ROOTDEV=$ROOTDEV
+	print NO_ETC=$NO_ETC
+	if test 0$VERBOSE -ge 2; then
+		set -x
+	fi
+	sleep 2
+fi
+
+# Start the slog resmgr
+if ! test /dev/slog -ef /dev/slog; then
+ 	slogger
+fi
+
+# Start the pipe manager. It is needed for sub-shelling...
+if ! test /dev/pipe -ef /dev/pipe; then
+	if pipe; then
+		typeset -i i=0
+		while test $i -lt 60 -a ! /dev/pipe -ef /dev/pipe ; do
+			sleep 1;
+			let i=i+1;
+		done
+		unset i
+	fi
+	if ! test /dev/pipe -ef /dev/pipe; then
+		print Unable to start pipe manager...
+		exec sh
+		exec fesh
+	fi
+fi
+
+# Start the POSIX message queue/named semaphore manager
+mqueue
+
+# If there is no indicator file, the system is just starting
+# for the first time. Run rc.setup-once to fix any problems
+# with the root filesystem, and extract any setup information
+# to seed the initial files...
+if test ! -r /etc/system/setupisdone; then
+	# Must use a "." so the local vars are inherited (e.g. $ROOTDEV)
+	. /etc/rc.d/rc.setup-once
+fi
+
+# Setup timezone
+if test -z "$TZ"; then
+	TZ=$(cat /etc/TIMEZONE 2>/dev/null)
+	if test -z "$TZ"; then
+		TZ=UTC
+	fi
+fi
+
+# The following sets the timezone. Instead of using the TZ envar, we
+# use a confstr to allow changing this dynamically.
+#
+#export TZ
+typeset +x TZ
+
+getconf -s CS_TIMEZONE $TZ
+
+# Setup the realtime clock (usually if the rtc is localtime)
+if test -x /etc/rc.d/rc.rtc; then
+	. /etc/rc.d/rc.rtc
+fi
+
+# If no hostname is configured, look in /etc/HOSTNAME
+HOSTNAME=$(hostname -s)
+if test "$HOSTNAME" == localhost; then
+	if test -r /etc/HOSTNAME; then
+		hostname $(cat /etc/HOSTNAME)
+		HOSTNAME=$(hostname -s)
+	fi
+fi
+
+# Start the Filesystem auto-mounter
+if test -r /etc/mcd.conf
+then
+	/usr/sbin/mcd /etc/mcd.conf
+fi
+
+# Start random, this is needed for things like OpenSSH and 
+# the TCP/IP stack
+random -t
+
+# Enumerate the devices...
+if test 0$VERBOSE -ge 2; then
+	verbose=-v
+fi
+/etc/rc.d/rc.devices $verbose
+unset verbose
+
+# Enable qnet if user has enabled it.
+if test -r /etc/system/config/useqnet -a -d /dev/socket; then
+		mount -Tio-pkt lsm-qnet.so
+fi
+
+# Clean up internal vars
+unset HOSTNAME devices verbose
+
+if test 0$VERBOSE -ge 1; then
+	sleep 5
+fi
+
+# Start the pseudo-tty manager (probably should let users fiddle the parm)
+devc-pty -n 32
+
+# Run the system initialization script
+if test -x /etc/rc.d/rc.sysinit; then
+	. /etc/rc.d/rc.sysinit
+fi
+
+print Unable to run rc.sysinit, starting a shell
+
+exec sh
+exec fesh
+
+print Really can't do anything...

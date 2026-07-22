@@ -1,0 +1,8 @@
+#
+# Definitions for pccard vendors
+#
+
+all
+	set(PCCARD_VEND_DLINK, 0149)
+	set(PCCARD_VEND_3COM, 0101)
+	set(PCCARD_VEND_SOCKET, 0104)

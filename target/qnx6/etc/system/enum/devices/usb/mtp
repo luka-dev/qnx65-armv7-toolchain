@@ -1,0 +1,11 @@
+## Generic MTP device
+#
+#device(usb, mscomp=MTP)
+#	driver(io-fs-media "-dpfs,device=$(busno):$(devno):$(iface)")
+#
+## ZUNE MTP device
+#
+#device(usb, mscomp=MTPZ)
+#	driver(io-fs-media "-dpfs,device=$(busno):$(devno):$(iface)")
+#
+

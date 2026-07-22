@@ -1,0 +1,324 @@
+#! /usr/bin/env ksh
+#ifdef __USAGE
+#%C    - add a new OS/CPU/VARIANT directory structure to a source tree
+#
+#%C		[-C <type>] [-c] [-i <init_lvls>] [-P] [[<os_name>] <cpu_name>] <variant_name>
+#
+#Where:
+#    -C <type>      add to SCM of <type>, which is either "cvs", "svn", or "rcs"
+#    -c             add to CVS repository on next commit
+#    -i <init_lvls> create the initial common.mk and Makefile in the CWD
+#    -P             creating initial directories for a Phab application
+#
+#    <os_name>      is the name of the os to add. E.g qnx4, solaris, ...
+#    <cpu_name>     is the name of the cpu to add. E.g. mips, ppc, x86, ...
+#    <variant_name> is the name of the variant to add. E.g. "o", "a.be", ...
+#    <init_lvls>    level(s) of the initial recursing makefile. E.g. OS, ...
+#
+#%C searchs from the CWD down in the directory tree, looking for 
+#Makefiles with the line:
+#
+#	 "LIST=OS"		(if three levels specified) 
+#	 "LIST=CPU"		(if two levels specified) 
+#	 "LIST=VARIANT"	(if one level specified) 
+#
+#in them. When it finds one, it creates the <cpu_name> directory underneath 
+#(if it doesn't already exist) and puts a recursing Makefile in it. Then it 
+#creates the <variant_name> directory under the <cpu_name> directory and 
+#puts a Makefile that includes the appropriate common.mk in there.
+#
+# Squashing levels
+# ----------------
+#%C has the ability to 'squash' directory levels together. If you
+#do a "addvariant -i OS/CPU/VARIANT nto x86 o", it will create a recursing
+#makefile in the current working directory structure that has a
+#"LIST=OS CPU VARIANT", and then a single subdirectory called "nto-x86-o"
+#Any further addvariant's in the tree will notice the squashing automatically
+#generate the appropriate directory structure. You can also do a:
+#"addvariant -i OS/CPU nto x86 o", which will create a two level directory
+#called "nto-x86/o". Finally, by doing "addvariant -i OS nto x86/o",
+#you can create the opposite two level scheme: "nto/x86-o".
+#
+# Dealing with 'configure' style projects
+# ---------------------------------------
+#If there are files called "configure" and "Makefile.in" in the current
+#working directory, addvariant assumes that it's working in a GNU configure
+#style project. In that case it automatically will squash the directory
+#levels as described above, and will create "GNUmakefile"'s in the newly
+#created directories along with a recursing makefile to take advantage of
+#them.
+#endif
+
+function create_recurse {
+  echo LIST=${1} 
+  if [ "${GNUCONFIG}" ]; then
+    echo "MAKEFILE=GNUmakefile"
+  fi
+  echo ifndef QRECURSE
+  echo QRECURSE=recurse.mk
+  echo ifdef QCONFIG
+  echo 'QRDIR=$(dir $(QCONFIG))'
+  echo endif
+  echo endif
+  echo 'include $(QRDIR)$(QRECURSE)'
+}
+
+function create_common {
+  echo 'ifndef QCONFIG'
+  echo 'QCONFIG=qconfig.mk'
+  echo 'endif'
+  echo 'include $(QCONFIG)'
+  echo ''
+  echo "include \$(MKFILES_ROOT)/${target}"
+}
+
+function add_directory {
+  case ${addtype} in
+  rcs)
+    mkdir -p ${1}/RCS
+    ;;	
+  cvs)
+    cvs add -m "." ${1}
+    ;;
+  svn)
+	svn add ${1}  
+  	;;
+  esac
+}
+
+function add_file {
+  case ${addtype} in
+  rcs)
+    ci -q -u ${1} </dev/null
+    ;;	
+  cvs)
+    oldpwd=${PWD}
+	cd ${1%/*}
+    cvs add -m "." ${1##*/}
+	cd ${oldpwd}
+    ;;
+  svn)
+	svn add ${1}  
+  	;;
+  esac
+}
+
+function propagate_ignore {
+	case ${addtype} in
+	cvs)
+	    cp ${1} ${2}/.cvsignore
+	    add_file ${2}/.cvsignore
+		;;
+	svn)
+		tr ' ' '\12' <${1} >ign.$$
+		svn propset svn:ignore -F ign.$$ ${2}  
+		rm ign.$$
+		;;
+	esac
+}
+
+function create_gnu_variant {
+  echo 'ifndef QCONFIG'
+  echo 'QCONFIG=qconfig.mk'
+  echo 'endif'
+  echo 'include $(QCONFIG)'
+  echo ''
+  echo 'include $(MKFILES_ROOT)/qmake-cfg.mk'
+}
+
+function create_new_variant {
+  extra_dir=""
+  while [ ! -f ${common_dir}common.mk ]; do
+	common_dir=../${common_dir}
+	if [ ${#common_dir} -ge 128 ]; then
+	  echo "Can't find 'common.mk' file. Giving up."
+	  exit 2
+	fi
+	if [ "${extra_dir}" = "" -a -f ${common_dir}extra.mk ]; then
+	  # there's an add-on 'extra.mk' lower on down in the tree
+	  extra_dir=${common_dir}
+	fi
+  done
+  echo include ../${common_dir}common.mk >${1}/Makefile
+  if [ "${extra_dir}" ]; then
+	echo include ../${extra_dir}extra.mk >>${1}/Makefile
+  fi
+  if [ -f ${common_dir}cvsignore ]; then
+	propagate_ignore ${common_dir}cvsignore ${1}  
+  fi
+}
+
+function create_level {
+  while true; do
+    level=$1
+    sublist="$2"
+    while true; do
+    	test "${sublist}" = "" && break
+    	grep -F "${sublist}" <Makefile >/dev/null || break
+    	shift 2
+        level="${level}-$1"
+        sublist="$2"
+    done
+  
+    if [ ! -d ${level} ]; then
+  	  # directory doesn't exist yet
+	  echo Creating ${PWD}/${level} directory...
+	  mkdir -p ${level}
+	  add_directory ${level}
+	  submakes=$(echo */Makefile)
+	  if [ "${GNUCONFIG}" ]; then
+	    create_gnu_variant ${level} >${level}/GNUmakefile
+	    add_file ${level}/GNUmakefile
+	    if [ -f cvsignore ]; then
+		  propagate_ignore cvsignore ${level}	
+	    fi
+	  elif [ "${submakes}" != "*/Makefile" ]; then
+	    # Got an already existing OS/CPU/VARIANT makefile, use that.
+		first=${submakes%% *}
+	    cp ${submakes%% *} ${level}/
+	    add_file ${level}/Makefile
+		dir=${first%/Makefile}
+		case ${addtype} in
+		cvs)
+			if [ -f ${dir}/.cvsignore ]; then
+			  propagate_ignore ${dir}/.cvsignore ${level}	
+			fi
+			;;
+		svn)
+			svn propget svn:ignore ${dir} >ign.$$
+			if [ -s ign.$$ ]; then
+				svn propset svn:ignore -F ign.$$ ${level}
+			fi
+			rm ign.$$
+			;;
+		esac
+	  elif [ "${sublist}" != "" ]; then
+	    # First time for everything, create an interior Makefile from scratch.
+	    create_recurse "${sublist}" >${level}/Makefile
+	    add_file ${level}/Makefile
+	  else 
+	    # First time variant level
+	    create_new_variant ${level}
+	    add_file ${level}/Makefile
+	  fi
+    fi
+	test "${sublist}" = "" && break
+    shift 2
+    cd ${level}
+  done
+}
+
+target=qtargets.mk
+addtype=none
+while getopts C:ci:P opt $*; do
+  case $opt in
+  C)
+  	addtype = ${OPTARG}
+	;;
+  c)
+	if [ "${PWD%*/cvs/*}" != "${PWD}" ]; then
+	  addtype=cvs
+	elif [ -d CVS -o -d ../CVS ]; then
+	  addtype=cvs
+	elif [ -d .svn -o -d ../.svn ]; then
+	  addtype=svn
+	elif [ -d RCS -o -d ../RCS ]; then
+	  addtype=rcs
+    elif [ X"${ADDVARIANT_SCM}" != "X" ]; then
+	  addtype = "${ADDVARIANT_SCM}"
+	else
+	  addtype=rcs
+	fi
+	;;
+  i)
+    initlist=${OPTARG}
+	;;
+  P)
+    target=qphabtarg.mk
+	;;
+  esac
+done
+
+export GNUCONFIG=""
+if [ -f configure -a -f Makefile.in ]; then
+  GNUCONFIG="yes"
+  if [ ! -f Makefile ]; then
+    create_recurse "OS CPU VARIANT" >Makefile
+	add_file Makefile
+  fi
+elif [ "${initlist}" ]; then
+  if [ ! -f common.mk ]; then
+    create_common >common.mk
+	add_file common.mk
+  fi
+  if [ ! -f Makefile ]; then
+    create_recurse "$(echo ${initlist} | sed -e 's/[/-]/ /g')" >Makefile
+	add_file Makefile
+  fi
+fi
+
+let i=OPTIND-1
+shift $i
+
+nparms=$#
+case ${nparms} in
+3)	
+  os=$1
+  cpu=$2
+  variant=$3
+  list=OS 
+  ;;
+2)
+  cpu=$1
+  variant=$2
+  list=CPU
+  if echo ${variant} | grep -F "/" >/dev/null; then
+    os=$1
+    cpu=${2%/*}
+    variant=${2#*/}
+    list=OS
+    nparms=4
+  fi
+  ;;
+1)
+  variant=$1
+  list=VARIANT 
+  ;;
+0)
+  if [ "${initlist}" ]; then
+    exit 0
+  fi
+  echo Need at least a variant name specifed.
+  exit 1
+  ;;
+*)
+  echo Too many directory levels specified.
+  exit 1
+  ;;
+esac
+
+if [ -x $QNX_HOST/usr/bin/find ]; then
+ the_find=$QNX_HOST/usr/bin/find
+else
+ the_find=find
+fi
+
+for mkfile in $(${the_find} ${PWD} -name Makefile); do
+  if grep -Fq "LIST=${list}" ${mkfile}; then
+    cd ${mkfile%/Makefile}
+    case ${nparms} in
+    4)
+      create_level ${os} "CPU VARIANT" ${cpu}-${variant}
+      ;;
+    3)
+      create_level ${os} CPU ${cpu} VARIANT ${variant}
+      ;;	
+    2)
+	  create_level ${cpu} VARIANT ${variant}
+      ;;
+    1)
+	  create_level ${variant}
+      ;;
+    esac
+  fi	
+done

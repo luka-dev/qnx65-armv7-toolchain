@@ -1,0 +1,346 @@
+#!/bin/sh
+#set -x
+#exec >/dev/con1 
+#ifdef __USAGE
+#Launch the Photon Windowing System
+#
+#%C [options]
+#    -n <name>  Name of server to start
+#    -s         Instruction on how to start Photon in safe graphics mode
+#    -x         Do not initialize Xphoton and paths for X11 applications
+#    -v         verbose
+#
+#  Sequence of events:
+#  1)  Check if photon is already running, 
+#      if so, start a ditto session...
+#  2)  Determine the current environment
+#  3)  Start Photon.
+#      -  Photon
+#      -  Phfont
+#      -  Possibly an input device
+#      -  Graphics driver
+#  4)  Start optional programs:
+#      - pwm, shelf, and $HOME/.ph/phapps
+#
+# Envars:
+#  PHGFX    -- set io-graphics and its options [/usr/photon/bin/io-graphics]
+#  PHINPUT  -- input trapper                   [inputtrap start]
+#  PHOTON   -- photon device name              [/dev/photon]
+#  PHWM     -- photon window manager           [pwm]
+#  PHFONT   -- phfont device name              [/dev/phfont]
+#  PHFONT_USE_EXTERNAL
+#           -- run a standalone copy of phfont server. If you run io-graphics
+#              make sure that font server mode is set to 'local' or 'none'.
+#  PHFONTOPTS                                  [-X]
+#           -- phfont options. Used only if PHFONT_USE_EXTERNAL is set.
+#
+#endif
+# Test if photon is already running:
+if test ! -z "$PHSTART"; then
+	exec phditto
+	exit 1
+fi
+
+# Test is X is running
+if test ! -z "$PHSTART" -a ! -z "$DISPLAY"; then
+	echo "Your 'DISPLAY' environment variable is set."
+	echo "If running photon in an X environment, please use the 'phx' command"
+	exit 1
+fi
+
+if test -z "$SYSNAME"; then
+    case $(uname -sr) in
+	procnto*|QNX\ [0123456789]*)    export SYSNAME=nto;;
+	QNX\ *)                         export SYSNAME=qnx4;;
+	esac
+fi
+
+case $SYSNAME in
+nto)	package_root=/usr
+		if test -z "$HOSTNAME"; then
+			export HOSTNAME=$(uname -n)
+		fi
+		file_unique=.$HOSTNAME;;
+qnx4)	package_root=/qnx4
+		file_unique=.$NODE;;
+esac
+export PHOTON_PATH=${PHOTON_PATH:-$package_root/photon}
+export PHOTON2_PATH=${PHOTON_PATH:-$package_root/photon}
+export PHTK_PATH=${PHTK_PATH:-$package_root/photon}
+graphics_root=${GRAPHICS_PATH:-$package_root/photon}
+PHFONT_USE_EXTERNAL=${PHFONT_USE_EXTERNAL:-0}
+PHFONTOPTS=${PHFONTOPTS:--X}
+
+#See io-graphics usemsg for details.
+export PHFIXROP=1
+
+if test ! -d $PHOTON_PATH; then
+	echo "Can't find the photon directory $PHOTON_PATH."
+	exit 1
+fi 
+
+function add_path {
+	case $PATH in
+	*:$1:*|$1:*|*:$1)	;;
+	*)		PATH=$PATH:$1;;
+	esac
+}
+
+function add_libpath {
+	case $LD_LIBRARY_PATH in
+	*:$1:*|$1:*|*:$1)	;;
+	*)		LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$1;;
+	esac
+}
+
+add_path $PHOTON_PATH/bin
+add_path $PHTK_PATH/appbuilder
+
+case $SYSNAME in
+qnx4)	add_path /usr/bin/photon;;
+nto) 	export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-$(getconf CS_LIBPATH)}
+		add_libpath $PHOTON_PATH/lib
+		add_libpath $PHOTON_PATH/dll
+		add_libpath /opt/lib
+		add_libpath /usr/local/lib
+		;;
+esac
+
+export PHOTON=${PHOTON:-/dev/photon}
+export PHWM=${PHWM:-pwm}
+export PHFONT=${PHFONT:-/dev/phfont}
+export ABLPATH=${ABLPATH:-$PHOTON_PATH/translations}
+
+# Placeholder for entered name (via -n)
+export USER_NAME=${PHOTON}
+
+# start Photon the best way 
+let phsafe=0
+let xphoton=1
+let export_on=1
+
+while getopts n:svcNx  opt $*
+do
+	case $opt in
+		n)	export USER_NAME=$OPTARG;
+			export PHOTON=$USER_NAME;;
+		s)	echo "Check /etc/system/config/display.conf file and choose a safe configuration"
+			echo "for your graphics device (e.g. set VGA driver and 640x480 pal8 mode)."
+			echo "Unmount your graphics device and mount it again, then start ph."
+			exit 1;;
+		x)	xphoton=0;;
+		X)  export_on=0;;
+		v)	set -x;;
+		*)	echo; echo
+			use $0
+			exit 1;;
+	esac
+done
+
+# These must be added regardless of Xphoton's status so they are available
+# if Xphoton is newly installed
+if [ $xphoton = 1 ] ; then
+	X11_PATH=/opt/X11R6
+	X11_PATH2=/usr/X11R6
+	add_path $X11_PATH/bin
+	add_libpath $X11_PATH/lib
+	add_path $X11_PATH2/bin
+	add_libpath $X11_PATH2/lib
+	if test -z "$DISPLAY"; then
+		export DISPLAY=127.1:0
+	fi
+fi
+
+if ! test -d "/dev/io-display"; then
+	if phin -TG -q 2>/dev/null ; then
+		# There's no graphics region, i.e. no graphics driver running yet so we
+		# will probably try to run io-graphics below. Check added for phrelay.
+		echo "io-display is not running, unable to continue"
+		exit 1;
+	fi
+fi
+
+# Read in global ABLANG setting, but not if ABLANG is already defined
+
+if test -z $ABLANG; then
+	if test -r /etc/photon/ABLANG; then
+		export ABLANG=`cat /etc/photon/ABLANG`
+	fi
+fi
+
+if test ! $PHOTON -ef $PHOTON; then
+	if test ! -z "$LOGNAME"; then
+		Photon &
+	else
+		if test -x $PHOTON_PATH/bin/phlogin2 ; then
+			if test -e /etc/system/config/display.conf.changed ; then
+				Photon -g -l'phlogin2 "-pphgrafx -K" "-Sphshutdown -l"' &
+			else
+				Photon -g -l'phlogin2 "-Sphshutdown -l"' &
+			fi
+		else
+			if test -e /etc/system/config/display.conf.changed ; then
+				Photon -g -l'phlogin "-pphgrafx -K" "-Sphshutdown -l"' &
+			else
+				Photon -g -l'phlogin "-Sphshutdown -l"' &
+			fi
+		fi
+	fi
+	
+	if test $? -ne 0; then
+		exit 1
+	fi
+	
+	waitfor $PHOTON
+
+	if test ! $PHOTON -ef $PHOTON; then
+		print "Unable to start windowing kernel. Please check the installation"
+		print "instructions for more information.\n"
+		exit 1
+    fi
+fi
+
+if test "$PHFONT_USE_EXTERNAL" = "1"; then
+	if test ! $PHFONT -ef $PHFONT; then
+		
+		# phfont will use $PHFONT envar -- no need to pass it as a parameter.
+		phfont -d $PHOTON_PATH/font_repository $PHFONTOPTS &
+		
+		waitfor $PHFONT 30;
+		
+		if test ! $PHFONT -ef $PHFONT; then
+		 print "Unable to start font server"
+		 print "Please confirm that Photon installed properly"
+		 exit 1
+		fi
+	fi
+fi
+
+PHGFX="${PHGFX:-/usr/photon/bin/io-graphics}";
+PHINPUT="${PHINPUT:-inputtrap start}";
+
+if [ "$PHOTON" = "$USER_NAME" ]; then
+	if phin -TG -q; then
+		$PHGFX
+		if [ $? -ne 0 ]; then
+			echo "Unable to start graphics driver(s)";
+			exit 1;
+		fi 
+	fi
+	
+	phin -TPK -q && $PHINPUT
+	if test "$PHAUDIO"; then 
+		(phin -TA -q && $PHAUDIO) &
+	fi
+fi
+
+if test -e /etc/system/config/display.conf.changed; then
+	if test "$LOGNAME"; then
+		phgrafx -K;
+	fi
+fi
+
+if test "$START_A_CONSOLE"; then 
+    (exec $START_A_CONSOLE) &
+    unset START_A_CONSOLE
+fi
+
+if test $PHOTON -ef $PHOTON; then
+	if test "$LOGNAME"; then
+		if test ! -r $HOME/.ph; then
+			mkdir $HOME/.ph
+		else
+			# Allow user to override system setting for ABLANG
+			
+			if test -r $HOME/.ph/.ABLANG; then
+				export ABLANG=`cat $HOME/.ph/.ABLANG`
+			fi
+		fi
+
+		export PHSTART=1
+
+		phin -qPpwm 
+		if [ $? -eq 0 ]; then 
+			$PHWM $PHWMOPTS $PHWMSAFE & 
+		fi
+
+		echo "Waiting for the Input driver to startup..."
+		phin -qTK -t10
+		if [ $? -eq 0 ]; then
+			echo "* No input driver detected.";
+		fi
+		
+		echo "Waiting for the window manager to startup..."
+		phin -qPpwm -t10
+		if [ $? -eq 0 ]; then
+			echo "* No window manager detected.";
+		fi
+
+		if [ "$PHSHELF_DISABLE" = "" ]; then
+			phin -qPshelf  
+			if [ $? -eq 0 ]; then
+				shelf &
+			fi
+
+			echo "Waiting for the desktop manager to startup..."
+			
+			phin -qPshelf -t10
+			if [ $? -eq 0 ]; then
+				echo "* No desktop manage detected.";
+			fi
+		fi
+
+		phin -qPbkgdmgr
+		if [ $? -eq 0 ]; then
+			bkgdmgr &
+		fi
+
+		wmswitch &
+		saver &
+		prjobs -r &
+
+		if test ! -a /etc/system/activatequerydone; then
+			if test -x /etc/qnx/bin/qnxactivate; then
+				/etc/qnx/bin/qnxactivate &
+				touch /etc/system/activatequerydone
+			fi
+		fi
+
+		# Run-once usually involves a browser pointing to
+		# interesting information or launching the help. 
+		# Do this after the activation app is finished 
+		# to avoid confusion.
+		if test -r /etc/runinstall -a $(id -ru) = 0; then
+			if test ! -r /etc/TIMEZONE; then
+				phlocale 
+			fi
+			if test -r /etc/rc.d/rc.ph-once; then
+				. /etc/rc.d/rc.ph-once
+			fi
+			rm /etc/runinstall
+		fi
+
+		if [ $phsafe = 0 ]; then
+			if test -x $HOME/.ph/phapps ; then
+				. $HOME/.ph/phapps
+			fi
+		fi
+
+		if [ $xphoton = 1 ] ; then
+			if test -x $X11_PATH/bin/XPhoton -a -d $X11_PATH/lib/X11/fonts ; then
+				XPhoton &
+			else
+				if test -x $X11_PATH2/bin/Xphoton -a -d $X11_PATH2/lib/X11/fonts ; then
+					Xphoton -once &
+					gtwm >/dev/null 2>&1 &
+				fi
+  	    	fi
+		fi
+	fi
+fi
+
+
+if test "$SYSNAME" = "nto"; then
+	export SYSNAME=pkg
+fi
+exit 0

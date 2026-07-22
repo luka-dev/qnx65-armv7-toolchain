@@ -1,0 +1,4 @@
+con1 "/bin/login" qansi-m on 
+con2 "/bin/login" qansi-m on
+con3 "/bin/login" qansi-m on 
+con4 "/bin/login" qansi-m on

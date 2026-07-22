@@ -1,0 +1,35 @@
+#
+# Definitions for pci bridges
+#
+
+device(pnpbios, .type=$(PNPBIOS_TYPE_BRIDGE), .subtype=$(PNPBIOS_BRIDGE_PCI))
+	tag(pci)
+	requires(pci-bios,)
+	waitfor(/dev/pci)
+	enumerator(pci)
+
+device(pci, .class=$(PCI_CLASS_BRIDGE), .subclass=$(PCI_BRIDGE_HOST_PCI))
+device(pci, .class=$(PCI_CLASS_BRIDGE), .subclass=$(PCI_BRIDGE_PCI_PCI))
+	tag("null")
+
+device(pci, .class=$(PCI_CLASS_BRIDGE), .subclass=$(PCI_BRIDGE_PCI_ISA))
+device(pci, .class=$(PCI_CLASS_BRIDGE), .subclass=$(PCI_BRIDGE_PCI_EISA))
+device(pci, .class=$(PCI_CLASS_BRIDGE), .subclass=$(PCI_BRIDGE_PCI_MCA))
+	enumerator(pnpisa)
+
+# PCMCIA and CARDBUS
+device(pci, .class=$(PCI_CLASS_BRIDGE), .subclass=$(PCI_BRIDGE_PCI_PCMCIA))
+device(pci, .class=$(PCI_CLASS_BRIDGE), .subclass=$(PCI_BRIDGE_PCI_CARDBUS))
+	requires(devp-pccard,)
+	waitfor(/dev/pccard)
+	enumerator(pccard)
+
+device(pci, .class=$(PCI_CLASS_BRIDGE), .subclass=$(PCI_BRIDGE_PCI_PCMCIA), .function=1)
+device(pci, .class=$(PCI_CLASS_BRIDGE), .subclass=$(PCI_BRIDGE_PCI_CARDBUS), .function=1)
+	tag("null")
+
+#	Handle any bridge type device that doesn't match...
+device(pnpbios, .type=$(PNPBIOS_TYPE_BRIDGE))
+	echo(bridge bus=pnpbios devid=$(devid) type=$(type) subclass=$(subtype) progif=$(progif), /etc/system/trap/unknown)
+device(pci, .class=$(PCI_CLASS_BRIDGE))
+	echo(bridge bus=pci ven=$(ven) dev=$(dev) class=$(class) subclass=$(subclass) progif=$(progif) subven=$(subven) subsys=$(subsys), /etc/system/trap/unknown)

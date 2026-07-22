@@ -1,0 +1,16 @@
+= Desktop Menu
+Terminal		T	pterm
+Web Browser		B	firefox
+-4
+Help			H	helpviewer
+<Configure		C	c
+PWM Menu 		w	phmenu
+Appearance		W	pwmopts
+Display			D	phgrafx
+Mouse			M	input-cfg
+Network			N	phlip
+Screen Saver	v	savercfg
+Shelf			S	shelf -c
+Users			U	phuser
+>
+Shutdown...		u	phshutdown

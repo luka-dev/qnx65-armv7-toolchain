@@ -1,0 +1,7 @@
+all
+	set (UMASS_OPTS, "umass priority=21")
+	set (DISK_OPTS, "cam quiet blk cache=1m,vnode=384,auto=none,delwri=2:2,rmvto=none,noatime disk name=umass cdrom name=umasscd")
+
+device(usb, .class=$(USB_CLASS_MASS_STORAGE))
+	driver(devb-umass $(DISK_OPTS) $(UMASS_OPTS)",vid=0x$(ven),did=0x$(dev),busno=0x$(busno),devno=0x$(devno),iface=$(iface),ign_remove") 
+

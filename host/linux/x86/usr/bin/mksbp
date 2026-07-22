@@ -1,0 +1,100 @@
+#!/usr/bin/env ksh
+
+#ifdef __USAGE
+#
+#%C - Build a QNX System Builder Project
+#
+#%C <project path> 
+# or
+#%C <workspace path> <System Builder project>
+#
+#Where:
+#    <project path>   is the full path to the System Builder project to build.
+#    <workspace path> is the full path to the workspace.
+#    <System Builder project> is the name of the System Builder project to build.
+#
+# Second variant can be used when System Builder project lives
+# out of the workspace.   
+#
+# The $QNX_HOST environment variable is used to find the target runtime
+# binaries.  Ensure that it is setup (see qconfig) before running this
+# program.
+#
+# Generated output will be placed in the Images/ directory in the project,
+# mimicking the behavior within the Momentics IDE exactly.
+#
+#endif
+#
+
+if [ "x$*" = "x" ] 
+then
+    exec use $0
+fi
+
+function add_path {
+        case $PATH in
+        *:$1:*|$1:*|*:$1)       ;;
+        *)              PATH=$1:$PATH;;
+        esac
+}
+
+function add_libpath {
+        case $LD_LIBRARY_PATH in
+        *:$1:*|$1:*|*:$1)       ;;
+        *)              LD_LIBRARY_PATH=$1:$LD_LIBRARY_PATH;;
+        esac
+}
+
+
+
+#
+# Make sure it is a System Builder project we are trying to build.
+#
+if [ ! -d "$1" ] 
+then
+    echo $1 is not a directory.
+    exit
+fi
+if [ "x$2" = "x" ]  # 2-arguments call
+then
+	if [ ! -e $1/project.bld ]
+	then
+	    echo $1 is not a System Builder project directory.
+	    exit
+	fi
+fi
+
+
+QDE=$QNX_HOST/usr/qde
+
+if [ "x$2" = "x" ] 
+then
+WORKSPACE=`echo $1 | sed "s/[\/\\]$//
+						  s/[\/\\][^\/\\]*$//"`
+SBPROJECT=`echo $1 | sed "s/[\/\\]$//
+						  s/.*[\/\\]//"`
+shift 1
+else
+WORKSPACE="$1"
+SBPROJECT="$2"
+shift 2
+fi
+
+
+#
+# Setup paths for the JVM we include with eclipse
+#
+JVMDIR="$QDE/eclipse/jre/bin"
+add_path "$JVMDIR"
+add_libpath "$JVMDIR"
+
+echo WORKSPACE is $WORKSPACE
+echo SBPROJECT is $SBPROJECT
+
+#
+# Start the jvm
+#
+
+
+"$QDE/eclipse/qde"  -nosplash -application com.qnx.tools.ide.builder.core.CommandLineBuilder -consoleLog -data "$WORKSPACE" -project "$SBPROJECT" $*
+

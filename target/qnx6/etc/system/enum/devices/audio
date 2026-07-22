@@ -1,0 +1,137 @@
+#
+# Definitions for audio devices
+#
+
+device(pci, ven=$(PCI_VEND_ENSONIC), dev=5000)		# ES1370
+device(pci, ven=$(PCI_VEND_ENSONIC), dev=1371)		# ES1371
+device(pci, ven=$(PCI_VEND_ENSONIC), dev=5880)		# late model SB-PCI128
+device(pci, ven=$(PCI_VEND_CREATIVE), dev=8938)		# EV1938
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-audiopci",)
+
+device(pci, ven=$(PCI_VEND_AUREAL), dev=0001)		# AU8820
+device(pci, ven=$(PCI_VEND_AUREAL), dev=0002)		# AU8830
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-vortex",)
+
+device(pci, ven=$(PCI_VEND_YAMAHA), dev=0004)		# YMF724
+device(pci, ven=$(PCI_VEND_YAMAHA), dev=000d)		# YMF724F
+device(pci, ven=$(PCI_VEND_YAMAHA), dev=000a)		# YMF740
+device(pci, ven=$(PCI_VEND_YAMAHA), dev=000c)		# YMF740C
+device(pci, ven=$(PCI_VEND_YAMAHA), dev=0010)		# YMF744
+device(pci, ven=$(PCI_VEND_YAMAHA), dev=0012)		# YMF754
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-ymfds1",)
+
+device(pci, ven=$(PCI_VEND_TRIDENT), dev=2000)		# TRIDENT 4D-WAVE DX
+device(pci, ven=$(PCI_VEND_TRIDENT), dev=2001)		# TRIDENT 4D-WAVE NX
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-4dwave",)
+
+device(pci, ven=$(PCI_VEND_ESS), dev=1969)		# ESS 1938 (Solo-1)
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-ess1938",)
+
+device(pci, ven=$(PCI_VEND_CIRRUS), dev=6005)		# CIRRUS 4281
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-cs4281",)
+
+device(pci, ven=$(PCI_VEND_CIRRUS), dev=6001)		# CIRRUS 4610
+device(pci, ven=$(PCI_VEND_CIRRUS), dev=6003)		# CIRRUS 46xx
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-cs46xx",)
+
+device(pci, ven=$(PCI_VEND_NS), dev=0103)		# NatSemi GEODE
+device(pci, ven=$(PCI_VEND_NS), dev=0503)		# NatSemi Durado
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-geode",)
+
+device(pci, ven=$(PCI_VEND_INTEL), dev=27d8)		# Intel 82801G (ICH7 family)	
+device(pci, ven=$(PCI_VEND_INTEL), dev=284b)		# Intel 82801H (ICH8 family)	
+device(pci, ven=$(PCI_VEND_INTEL), dev=293e)		# Intel 82801I (ICH9 family)	
+device(pci, ven=$(PCI_VEND_INTEL), dev=3a6e)		# Intel 82801JD/DO (ICH10 family)	
+device(pci, ven=$(PCI_VEND_INTEL), dev=3b56)		# Intel 5/3400 series
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-intel_hda",)
+
+device(pci, ven=$(PCI_VEND_INTEL), dev=2415)		# Intel 82801AA
+device(pci, ven=$(PCI_VEND_INTEL), dev=2425)		# Intel 82801AB
+device(pci, ven=$(PCI_VEND_INTEL), dev=2445)		# Intel 82801BA
+device(pci, ven=$(PCI_VEND_INTEL), dev=2485)		# Intel 82801CA
+device(pci, ven=$(PCI_VEND_INTEL), dev=24c5)		# Intel 82801DB
+device(pci, ven=$(PCI_VEND_INTEL), dev=24d5)		# Intel 82801EB
+device(pci, ven=$(PCI_VEND_INTEL), dev=266e)		# Intel 82801FB
+device(pci, ven=$(PCI_VEND_INTEL), dev=25A6)        # Intel 6300ESB
+device(pci, ven=$(PCI_VEND_SIS), dev=7012)			# SIS 963
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-i8x0",)
+
+device(pci, ven=$(PCI_VEND_VIA), dev=3058)		# Via 82C686A
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-via686",)
+
+device(pci, ven=$(PCI_VEND_NEOMAGIC), dev=8016)		# NM2380
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-nmg6",)
+
+device(pci, ven=$(PCI_VEND_TVIA), dev=5050)		# IGS CyberPro 5050
+device(pci, ven=$(PCI_VEND_TVIA), dev=5350)		# IGS CyberPro 5350
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-cyberpro5",)
+
+
+device(isapnp, devid=CTL7001)   # Sound Blaster 16PnP ISA
+device(isapnp, devid=CTL7005)   # Sound Blaster VibraVX (Model CT4170)
+device(isapnp, devid=CTL2011)   # Sound Blaster AWE 32 PnP (Model CT3600)
+device(isapnp, devid=CTL7002)   # Sound Blaster AWE 64 PnP (Model CT4520)
+device(isapnp, devid=YHM0022)   # Yamaha OPL3-SA PnP
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -oioport=$(ioport),ioport1=$(ioport1),ioport2=$(ioport2),irq=$(irq),dma=$(dma),dma1=$(dma1) /lib/dll/deva-ctrl-sb",)
+
+device(pci, ven=$(PCI_VEND_SIS), dev=7018)		# SIS 9708
+	append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -opci=$(index) /lib/dll/deva-ctrl-sis",)
+
+device(isa, .type=$(ISA_TYPE_MULTIMEDIA), .subtype=$(ISA_MULTIMEDIA_AUDIO), .progif=$(ISA_MULTIMEDIA_AUDIO_SB))
+    append(legacy, ",noaudio")
+	requires($(IOAUDIO_CMD),)
+	waitfor(/dev/snd)
+	mount("-Tio-audio -oioport=$(ioport),ioport1=$(ioport1),ioport2=$(ioport2),irq=$(irq),dma=$(dma),dma1=$(dma1) /lib/dll/deva-ctrl-sb",)
+
+
+#   Handle any audio type device that doesn't match...
+device(pnpbios, .type=$(PNPBIOS_TYPE_MULTIMEDIA), .subtype=$(PNPBIOS_MULTIMEDIA_AUDIO))
+    echo(audio bus=pnpbios devid=$(devid) type=$(type) subclass=$(subtype) progif=$(progif), /etc/system/trap/unknown)
+
+device(pci, .class=$(PCI_CLASS_MULTIMEDIA), .subclass=$(PCI_MULTIMEDIA_AUDIO))
+    echo(audio bus=pci ven=$(ven) dev=$(dev) class=$(class) subclass=$(subclass) progif=$(progif) subven=$(subven) subsys=$(subsys), /etc/system/trap/unknown)

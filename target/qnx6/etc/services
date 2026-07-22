@@ -1,0 +1,127 @@
+#
+# Network services, Internet style
+#
+#	@(#)services	5.8 (Berkeley) 5/9/91
+#
+echo		7/tcp
+echo		7/udp
+discard		9/tcp		sink null
+discard		9/udp		sink null
+systat		11/tcp		users
+daytime		13/tcp
+daytime		13/udp
+netstat		15/tcp
+qotd		17/tcp		quote
+chargen		19/tcp		ttytst source
+chargen		19/udp		ttytst source
+ftp		21/tcp
+telnet		23/tcp
+smtp		25/tcp		mail
+time		37/tcp		timserver
+time		37/udp		timserver
+rlp		39/udp		resource	# resource location
+nameserver	42/tcp		name		# IEN 116
+whois		43/tcp		nicname
+domain		53/tcp		nameserver	# name-domain server
+domain		53/udp		nameserver
+mtp		57/tcp				# deprecated
+# Bootp experimental (sellgren@vangogh)
+bootp		67/udp		bootps		# bootp server
+bootpc		68/udp				# bootp client
+#
+tftp		69/udp
+rje		77/tcp		netrjs
+finger		79/tcp
+link		87/tcp		ttylink
+supdup		95/tcp
+hostnames	101/tcp		hostname	# usually from sri-nic
+tsap		102/tcp				# part of ISODE.
+#csnet-cs	105/?
+pop		109/tcp		postoffice
+pop3		110/tcp
+sunrpc		111/tcp		rpcbind portmap
+sunrpc		111/udp		rpcbind portmap
+auth		113/tcp		authentication
+sftp		115/tcp
+uucp-path	117/tcp
+nntp		119/tcp		readnews 	# Network News Transfer Protocol
+ntp		123/udp				# Network Time Protocol
+snmp		161/udp
+snmp-trap	162/udp
+#
+# UNIX specific services
+#
+exec		512/tcp
+biff		512/udp		comsat
+login		513/tcp
+who		513/udp		whod
+shell		514/tcp		cmd		# no passwords used
+syslog		514/udp
+printer		515/tcp		spooler		# line printer spooler
+talk		517/udp
+ntalk		518/udp
+route		520/udp		router routed
+timed		525/udp		timeserver
+tempo		526/tcp		newdate
+courier		530/tcp		rpc
+conference	531/tcp		chat
+netnews		532/tcp		readnews
+netwall		533/udp				# -for emergency broadcasts
+uucp		540/tcp		uucpd		# uucp daemon
+remotefs	556/tcp		rfs_server rfs	# Brunhoff remote filesystem
+
+ingreslock	1524/tcp
+
+#
+# Neutrino specific services
+#
+pidin           557/tcp         nto_pid_info # Neutrino system information
+pidinmem        558/tcp
+pidinarg        559/tcp
+pidinenv        560/tcp
+pidinsig        561/tcp
+
+#
+# Kerberos (Project Athena/MIT) services
+#
+kerberos	750/udp		kdc		# Kerberos (server) udp
+kerberos	750/tcp		kdc		# Kerberos (server) tcp
+krbupdate	760/tcp		kreg		# Kerberos registration
+kpasswd		761/tcp		kpwd		# Kerberos "passwd"
+klogin		543/tcp				# Kerberos rlogin
+eklogin		2105/tcp			# Kerberos encrypted rlogin
+kshell		544/tcp		krcmd		# Kerberos remote shell
+
+tcpmux		1/tcp				# rfc-1078
+message		18/tcp
+message		18/udp
+ftp-data	20/tcp
+fsp		21/udp		fspd
+ssh		22/udp                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+ssh		22/tcp                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+gopher		70/tcp
+http		80/tcp		www
+https		443/tcp				# Default HTTPS port
+hostnames	101/tcp		hostname	# usually to sri-nic
+x400		103/tcp				# ISO Mail
+x400-snd	104/tcp
+netbios-ns	137/udp				# NETBIOS Name Server
+netbios-dgm	138/udp				# NETBIOS Datagram Service
+netbios-ssn	139/udp				# NETBIOS Session Service
+netbios-ssn	139/tcp
+NeWS		144/tcp		news		# Window System
+snmp		161/udp				# network management
+dirsrv		1525/udp
+nfsd		2049/tcp
+nfsd		2049/udp
+webster		2627/tcp
+infleet		5999/tcp
+xserver		6000/tcp
+irc		6667/tcp
+phrelay		4868/tcp
+phrelaydbg	4869/tcp
+phindemo	4870/tcp
+socks		1080/tcp
+timesrv		22375/tcp			# time server process - RES
+althttp		25080/tcp			# alternate www port
+dir_svc		33333/tcp
