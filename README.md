@@ -317,15 +317,18 @@ docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 
 **Reproducibility / pinning**
 - Base image pinned by **digest** (`debian:bullseye-slim@sha256:…`).
-- Rust nightly pinned by **date** in `rust/rust-toolchain.toml` (rustup verifies
-  component checksums).
-- Go bootstrap pinned by the `GO_BOOTSTRAP` version arg.
-- GCC 4.9.4 is **built from source** in the `gcc-build` stage from vanilla
-  upstream + the vendored port (`gcc/port`). `sdp/host` carries only binutils.
-  The `gcc-4.9.4.tar.bz2` is fetched from ftp.gnu.org at build (byte-identical to
-  the canonical release); vendor it under `gcc/` for a fully offline build.
-- Not pinned: `apt` package versions (float with the Debian mirror) and the
-  `rustup`/crate downloads. For a hermetic build, vendor those too.
+- **GCC source** pinned by **sha256** (`GCC_SHA256`, verified after download).
+- **Go bootstrap** pinned by version (`GO_BOOTSTRAP`) **and sha256** (`GO_BOOTSTRAP_SHA256`).
+- **Rust nightly** pinned by **date** — `RUST_NIGHTLY` at install + the same date
+  in `rust/rust-toolchain.toml`; rustup verifies component checksums.
+- GCC 4.9.4 is **built from source** in `gcc-build` from vanilla upstream + the
+  vendored port (`gcc/port`); `sdp/host` carries only binutils. The
+  `gcc-4.9.4.tar.bz2` is fetched from ftp.gnu.org (byte-identical to the canonical
+  release, checksum-checked); vendor it under `gcc/` for a fully offline build.
+- Still floats: **`apt` package versions** (from the Debian mirror). The digest-
+  pinned base fixes the pre-installed set, but `apt-get install` pulls current
+  versions. For bit-reproducibility, point `sources.list` at snapshot.debian.org
+  (a dated snapshot) — omitted here as it is slower and occasionally flaky.
 
 **Partial builds** (handy while iterating):
 
