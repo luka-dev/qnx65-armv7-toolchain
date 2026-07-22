@@ -21,8 +21,8 @@ the asm bridge `sys_qnx_arm.s` is **written from scratch** (darwin/arm64's
 | Asset | Use |
 |---|---|
 | QNX 6.5 SDP toolchain (in this image: `arm-unknown-nto-qnx6.5.0eabi-gcc` + binutils 2.19 + `target/qnx6/armle-v7` sysroot) | Source of **all struct/constant values** for `defs_qnx_arm.go`, and the **external linker** (Go emits `.o`, the QNX gcc links the ELF). |
-| `Tools/qnx-gl-passthrough` QEMU (cortex-a15, real procnto + libc.so.3) | on-device test bed - same one rust-qnx65 used for its milestones. |
-| `Refferences/qnx_source` (QNX 6.3.0 src) | reference for libc struct layouts / ucontext / sigset. |
+| cortex-a15 QEMU (cortex-a15, real procnto + libc.so.3) | on-device test bed - same one rust-qnx65 used for its milestones. |
+| QNX 6.3.0 source | reference for libc struct layouts / ucontext / sigset. |
 
 ## libc symbol reality (measured on QNX 6.5, 2026-07)
 libc.so.3 has almost everything the runtime needs: `pthread_create`,
@@ -97,7 +97,7 @@ libc.so.3 has almost everything the runtime needs: `pthread_create`,
       Pure internal linking = self-contained cross-compiler (no QNX toolchain to
       link). NOTE: `go build` caches the final link - use `-a` or a clean
       `make.bash` after linker edits, or you observe stale binaries.
-      Next: **M3 run** - mkifs + QEMU cortex-a15 (copy of Tools/qnx-gl-passthrough),
+      Next: **M3 run** - mkifs + QEMU cortex-a15 (cortex-a15 QEMU),
       read `println` off the serial. First real on-device Go.
 
 ## REMAINING - the runtime port (the person-months)

@@ -32,7 +32,6 @@ docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 - [Testing on real hardware](#testing-on-real-hardware)
 - [Troubleshooting](#troubleshooting)
 - [Status & limitations](#status--limitations)
-- [Related projects](#related-projects)
 
 ---
 
@@ -281,9 +280,8 @@ sysroot/CRT/specs, and links correctly - verified for C and C++14. `qcc` and its
 
 ### armv7-only
 Only the `armle-v7` (EABI) target is kept. The other SDP arches (arm-old-abi,
-x86, mips, ppc, sh), the Momentics IDE, docs, and WebKit were moved out to
-`Refferences/qnx650-extras/` (not in this repo), shrinking the tree from ~1.1 GB
-to ~235 MB.
+x86, mips, ppc, sh), the Momentics IDE, docs, and WebKit were trimmed from the
+SDP tree, shrinking it from ~1.1 GB to ~235 MB.
 
 ### Go: a real GOOS port
 Not a cross-compile of existing code - QNX is not an upstream Go target. The port
@@ -381,9 +379,9 @@ runtime `-v host:/opt/tools` mount. See `tools/README.md`.
 ## Testing on real hardware
 
 The compilers are `linux/amd64` and cannot execute ARM QNX output directly.
-Use the QEMU cortex-a15 target (real `procnto` + `libc.so.3`) from the sibling
-`qnx-gl-passthrough` project, or a physical QNX 6.5 board, to run and validate.
-Package binaries into a bootable image with the QNX `mkifs`/`mkefs` tools.
+Run and validate on `qemu-system-arm -M virt -cpu cortex-a15` (boots real
+`procnto` + `libc.so.3`) or a physical QNX 6.5 board. Package binaries into a
+bootable image with the QNX `mkifs`/`mkefs` tools (both are in the image).
 
 ---
 
@@ -416,17 +414,4 @@ Package binaries into a bootable image with the QNX `mkifs`/`mkefs` tools.
 - **Rust** - **full `std`** via `build-std=std,panic_abort` (threads, fs, net,
   Command, collections), runtime-validated on real QNX 6.5 QEMU. `panic=abort`,
   no unwind/backtrace. Port baked into the image (`build-std <crate>`).
-- **One arch** - `armle-v7` only. Other arches live in `Refferences/qnx650-extras/`.
-
----
-
-## Related projects
-
-- **`qnx-gcc49`** - origin of the GCC 4.9.4 port now vendored here in `gcc/`
-  (the `arm/nto.h` port + 12-defect bring-up). This repo no longer depends on it.
-- **`tailscale/go-qnx65`** - the upstream of the `GOOS=qnx` Go port (`go/` here is
-  its trimmed source tree).
-- **`mhi2-carplay/tools/rust-qnx65`** - origin of the full-std Rust port now
-  vendored here in `rust/` (libc `nto65` fork, std patches, 56/56 upstream
-  core/alloc tests + M1-M5 validated on real QNX 6.5 QEMU).
-- **`qnx-gl-passthrough`** - QEMU cortex-a15 test bed (real QNX 6.5 runtime).
+- **One arch** - `armle-v7` only (other SDP arches trimmed from the tree).
