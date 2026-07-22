@@ -52,18 +52,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 COPY gcc/ /opt/gcc-src/
 ARG GCC_VER=4.9.4
+ARG GCC_SHA256=6c11d292cd01b294f9f84c9a59c230d80e9e4a47e5c6355f046bb36d4f358092
 RUN curl -fsSL "https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.bz2" -o /tmp/gcc.tar.bz2 && \
+    echo "${GCC_SHA256}  /tmp/gcc.tar.bz2" | sha256sum -c - && \
     bash /opt/gcc-src/build.sh /tmp/gcc.tar.bz2 /gcc-out && \
     rm -rf /tmp/gcc.tar.bz2 /tmp/gccbuild
 
 # ─────────────────────────── go-build: GOOS=qnx port from source ───────────────
 FROM qnx-sdp AS go-build
 ARG GO_BOOTSTRAP=go1.26.4
+ARG GO_BOOTSTRAP_SHA256=1153d3d50e0ac764b447adfe05c2bcf08e889d42a02e0fe0259bd47f6733ad7f
 COPY go/ /opt/go/
-# Fetch the official Go as bootstrap, rebuild the patched tree with make.bash.
-# CGO_ENABLED=0 keeps make.bash from needing a host C compiler; the qnx/arm
-# cross uses the QNX gcc via CC at build time, not here.
-RUN curl -fsSL "https://go.dev/dl/${GO_BOOTSTRAP}.linux-amd64.tar.gz" | tar -C /tmp -xz && \
+# Fetch the official Go as bootstrap (checksum-verified), rebuild the patched
+# tree with make.bash. CGO_ENABLED=0 keeps make.bash from needing a host C
+# compiler; the qnx/arm cross uses the QNX gcc via CC at build time, not here.
+RUN curl -fsSL "https://go.dev/dl/${GO_BOOTSTRAP}.linux-amd64.tar.gz" -o /tmp/go-boot.tar.gz && \
+    echo "${GO_BOOTSTRAP_SHA256}  /tmp/go-boot.tar.gz" | sha256sum -c - && \
+    tar -C /tmp -xzf /tmp/go-boot.tar.gz && rm /tmp/go-boot.tar.gz && \
     cd /opt/go/src && \
     GOROOT=/opt/go GOROOT_BOOTSTRAP=/tmp/go GOTOOLCHAIN=local CGO_ENABLED=0 ./make.bash && \
     rm -rf /tmp/go /opt/go/pkg/obj
@@ -72,8 +77,11 @@ RUN curl -fsSL "https://go.dev/dl/${GO_BOOTSTRAP}.linux-amd64.tar.gz" | tar -C /
 FROM qnx-sdp AS rust-build
 COPY rust/ /opt/rust/
 ENV RUSTUP_HOME=/opt/rustup CARGO_HOME=/opt/cargo
+# Pin the toolchain to the same dated nightly as rust/rust-toolchain.toml so the
+# install doesn't grab a floating "latest". rustup verifies component checksums.
+ARG RUST_NIGHTLY=nightly-2026-07-21
 RUN curl -fsSL https://sh.rustup.rs | \
-        sh -s -- -y --default-toolchain nightly --profile minimal --component rust-src && \
+        sh -s -- -y --default-toolchain "${RUST_NIGHTLY}" --profile minimal --component rust-src && \
     /opt/cargo/bin/rustup --version && \
     rm -rf /opt/cargo/registry/cache
 
