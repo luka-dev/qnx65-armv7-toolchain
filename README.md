@@ -47,7 +47,7 @@ docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 |----------|----------|----------|------------|--------|
 | C / C++  | **GCC 4.9.4** (custom-built, replaces SDP 4.4.2) | C99 / **C++11** + partial C++14 | `arm-unknown-nto-qnx6.5.0eabi-{gcc,g++}` | ELF 32-bit ARM QNX exe/`.so` |
 | Go       | **Go 1.26.4**, `GOOS=qnx GOARCH=arm` port | full `gc` toolchain | `GOOS=qnx GOARCH=arm GOARM=7 go build` | ELF 32-bit ARM QNX exe |
-| Rust     | **nightly** rustc + `build-std` | `no_std` (core + alloc) | `cargo build -Z build-std=… --target …json` | static/`cdylib`, linked by the QNX gcc |
+| Rust     | **nightly** rustc + `build-std` | **full `std`** (threads/fs/net/Command) | `build-std <crate>` | ELF 32-bit ARM QNX exe, linked by the QNX gcc |
 
 All three emit:
 
@@ -96,10 +96,8 @@ docker run --rm -v "$PWD":/src qnx65-armv7-toolchain \
 docker run --rm -v "$PWD":/src qnx65-armv7-toolchain \
     sh -c 'GOOS=qnx GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o hello ./...'
 
-# 4. Rust (no_std)
-docker run --rm -v "$PWD":/src qnx65-armv7-toolchain sh -c '
-  cargo build -Z build-std=core,alloc -Z json-target-spec \
-    --target /opt/rust/armv7-unknown-nto-qnx650.json --release'
+# 4. Rust (full std) — build_std links via the QNX gcc for you
+docker run --rm -v "$PWD":/src qnx65-armv7-toolchain build-std path/to/crate
 
 # interactive shell
 docker run --rm -it -v "$PWD":/src qnx65-armv7-toolchain bash
@@ -165,26 +163,31 @@ different toolchain version.
 
 ### Rust
 
-Nightly rustc with **`-Z build-std`** — there is no prebuilt `std` for QNX, so
-you compile `core`/`alloc` from source per build. Targets are described by
-`rust/armv7-unknown-nto-qnx650.json` (arm/eabi, softfp, `linker =
-arm-unknown-nto-qnx6.5.0eabi-gcc`, `panic = abort`, PIC/PIE).
+**Full `std`** for QNX 6.5 armv7 — nightly rustc + `-Z build-std=std,panic_abort`
+against a custom target (`rust/armv7-unknown-nto-qnx650.json`: arm/eabi, softfp,
+**`+strict-align`** for QNX's `SCTLR.A=1`, `panic = abort`). The std port (an
+`nto65` libc fork + std source patches for 32-bit `time_t` and `/dev/random`)
+is **baked into the image** — no per-machine setup.
 
 ```sh
-# build a no_std staticlib for the target
-cargo build -Z build-std=core,alloc -Z json-target-spec \
-  --target /opt/rust/armv7-unknown-nto-qnx650.json --release
-
-# link the produced .a into a QNX .so with the base GCC 4.9
-arm-unknown-nto-qnx6.5.0eabi-gcc -shared -Wl,-u<exported_symbol> \
-  -o libfoo.so target/armv7-unknown-nto-qnx650/release/libfoo.a -lc
+# one command: build-std compiles std + your crate and links via the QNX gcc
+build-std path/to/crate
+# -> path/to/crate/target/armv7-unknown-nto-qnx650/release/<crate>  (ARM QNX ELF)
 ```
 
+Under the hood it runs `cargo build -Z build-std=std,panic_abort` with
+`RUSTFLAGS="-C linker=/opt/rust/qnx-cc"`; `qnx-cc` is a linker shim that calls the
+in-image gcc, remaps `-lgcc_s -> -lgcc`, adds the sysroot, and links the EHABI
+`_Unwind_GetIP` shim. What works (validated on real QNX 6.5 QEMU): threads +
+`thread_local!` + `Arc<Mutex>`/atomics, `fs`, `Command`/`posix_spawn`,
+`TcpListener`/`TcpStream`/`UdpSocket`, `HashMap`/`BTreeMap`, `fmt`. `panic=abort`
+(no unwind/backtrace — 6.5 lacks `dl_iterate_phdr`). See `rust/README.md` +
+`rust/port/PLATFORM_NOTES.md`.
+
 `rust/rust-toolchain.toml` pins a **dated nightly** (`nightly-2026-07-21`) +
-`rust-src`, so you don't type `+nightly`/`-Z` toolchain flags and builds don't
-drift with the floating channel. **Stable can't build this** — `-Z build-std`
-and `-Z json-target-spec` are nightly-only. Full `std` is not available (QNX is
-not a Rust target); this is `no_std` + `core`/`alloc` today.
+`rust-src` — the std-port patches are calibrated to it, so the pin is load-bearing,
+not just for reproducibility. **Stable can't build this**: `-Z build-std` and
+`-Z json-target-spec` are nightly-only.
 
 ---
 
@@ -411,8 +414,9 @@ Package binaries into a bootable image with the QNX `mkifs`/`mkefs` tools.
 - **Go** — the `GOOS=qnx` port compiles and the full stdlib builds for `qnx/arm`;
   internal-link binaries are produced. Full on-device runtime coverage (cgo,
   external-link defaults) is the ongoing work of the upstream port.
-- **Rust** — `no_std` (`core` + `alloc`) via `build-std`, verified building and
-  linking a QNX `.so`. No `std`.
+- **Rust** — **full `std`** via `build-std=std,panic_abort` (threads, fs, net,
+  Command, collections), runtime-validated on real QNX 6.5 QEMU. `panic=abort`,
+  no unwind/backtrace. Port baked into the image (`build-std <crate>`).
 - **One arch** — `armle-v7` only. Other arches live in `Refferences/qnx650-extras/`.
 
 ---

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# One-command FULL-std cross-build for QNX 6.5 armv7 (executable), fully local.
-#   cargo build-std (Mac) -> link with QNX 6.5 gcc 4.4.2 in docker via qnx-cc.
-# Prereq once per machine: ./port/apply_std_port.sh  (patches toolchain libc+std).
-# Usage: ./build_std.sh <crate-dir>
+# One-command FULL-std cross-build for QNX 6.5 armv7 (executable), in-image.
+#   cargo build-std -> link with the in-image QNX gcc via qnx-cc.
+# The std port (libc nto fork + std source patches) is baked into the image; run
+# port/apply_std_port.sh only after a toolchain change. Usage: build_std.sh <crate-dir>
 set -euo pipefail
-export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CRATE="${1:?usage: build_std.sh <crate-dir>}"
 TGT="$HERE/armv7-unknown-nto-qnx650.json"
@@ -17,5 +17,5 @@ TGT="$HERE/armv7-unknown-nto-qnx650.json"
     --target "$TGT" --release )
 BIN="$HERE/$CRATE/target/armv7-unknown-nto-qnx650/release/$(basename "$CRATE")"
 echo "OK -> $BIN"
-docker run --rm --platform=linux/amd64 -v /Users/luka:/Users/luka -w "$HERE/$CRATE" qnx65-armv7 \
-  ntoarm-readelf -hA "$BIN" 2>/dev/null | grep -iE 'Type:|Machine:|CPU_arch:|FP_arch' | head
+arm-unknown-nto-qnx6.5.0eabi-readelf -hA "$BIN" 2>/dev/null | \
+  grep -iE 'Type:|Machine:|CPU_arch:|FP_arch|Tag_ABI_align' | head

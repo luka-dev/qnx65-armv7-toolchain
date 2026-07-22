@@ -84,6 +84,18 @@ RUN curl -fsSL https://sh.rustup.rs | \
         sh -s -- -y --default-toolchain "${RUST_NIGHTLY}" --profile minimal --component rust-src && \
     /opt/cargo/bin/rustup --version && \
     rm -rf /opt/cargo/registry/cache
+ENV PATH=/opt/cargo/bin:/opt/qnx650/host/linux/x86/usr/bin:/usr/bin:/bin
+# Bake the full-std QNX port. A first build-std pulls libc-0.2.185 into the
+# registry (the link step fails — no gcc in this stage — but that's after the
+# download); apply_std_port then installs the nto libc fork + std source patches
+# onto the active toolchain (rustc --print sysroot). std then builds clean in the
+# final stage, which has the gcc linker.
+RUN cd /opt/rust/tests/stdhello && \
+    ( RUSTFLAGS="-C linker=/opt/rust/qnx-cc" cargo build \
+        -Z build-std=std,panic_abort -Z build-std-features= -Z json-target-spec \
+        --target /opt/rust/armv7-unknown-nto-qnx650.json --release 2>/dev/null || true ) && \
+    cd /opt/rust && bash port/apply_std_port.sh && \
+    rm -rf /opt/rust/tests/stdhello/target /opt/cargo/registry/cache
 
 # ─────────────────────────── final: qnx65-sdp-arm ─────────────────────────────
 FROM qnx-sdp AS full
@@ -99,8 +111,16 @@ ENV GOROOT=/opt/go \
     GOTOOLCHAIN=local \
     RUSTUP_HOME=/opt/rustup \
     CARGO_HOME=/opt/cargo \
-    PATH=/opt/go/bin:/opt/cargo/bin:/opt/qnx650/host/linux/x86/usr/bin:/usr/bin:/bin \
+    PATH=/opt/go/bin:/opt/cargo/bin:/opt/qnx650/host/linux/x86/usr/bin:/usr/local/bin:/usr/bin:/bin \
     LD_LIBRARY_PATH=/opt/qnx650/host/linux/x86/usr/lib
+
+# Build the Rust std linker's unwind shim with the in-image gcc (defines the
+# EHABI _Unwind_GetIP symbol std wants), and expose the one-command std builder.
+RUN cd /opt/rust/shim && \
+    arm-unknown-nto-qnx6.5.0eabi-gcc -c unwind_shim.c -o unwind_shim.o && \
+    arm-unknown-nto-qnx6.5.0eabi-ar rcs libqnxunwind.a unwind_shim.o && \
+    printf '#!/bin/sh\nexec /opt/rust/build_std.sh "$@"\n' > /usr/local/bin/build-std && \
+    chmod +x /usr/local/bin/build-std
 
 WORKDIR /src
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
