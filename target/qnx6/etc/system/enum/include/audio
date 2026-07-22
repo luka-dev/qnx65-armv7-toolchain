@@ -1,0 +1,7 @@
+#
+# macro definitions for audio
+#
+	
+all
+	set(IOAUDIO_CMD, io-audio)
+

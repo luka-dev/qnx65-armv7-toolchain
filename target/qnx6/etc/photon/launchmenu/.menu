@@ -1,0 +1,8 @@
+[*]
+[-]
+[&Configure]
+[&Help]
+target = helpviewer
+[-]
+[&Log Out]
+target=phshutdown

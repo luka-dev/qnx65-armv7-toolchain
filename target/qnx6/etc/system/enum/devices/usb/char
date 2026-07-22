@@ -1,0 +1,13 @@
+
+#USB-to-serial dongles
+device(usb,ven=0557,dev=2008)	# ATEN_232A/GUC_232A
+device(usb,ven=2478,dev=2008)	# TRIPP LITE U2009-000-R
+device(usb,ven=9710,dev=7720)	# MOSCHIP 7720
+device(usb,ven=0403,dev=6001)	# FTDI 8U232AM
+device(usb,ven=1199,dev=0120)	# Sierra AirCard U595
+device(usb,ven=0681,dev=0040)	# Siemens HC25
+device(usb,ven=1bc7,dev=1003)	# Telit UC864E
+device(usb,ven=067b,dev=2303)	# Prolific
+	start(devc-serusb, "-d vid=0x$(ven),did=0x$(dev),busno=0x$(busno),devno=0x$(devno)" )
+
+

@@ -1,0 +1,381 @@
+#
+# Definitions for graphics devices
+#
+# Format is <match> [ { <match> } ] <action> [ { <action } ]
+# Only one group of actions will be performed.  Try to match on exact
+# pci/vendor string first, otherwise match on PCI display class.
+# Defaults to "all" if no PCI display devices in system.
+#
+
+device(pci, ven=$(PCI_VEND_ATI), dev=4144)		# ATI Radeon 9500
+device(pci, ven=$(PCI_VEND_ATI), dev=4145)		# ATI Radeon R300-4P 
+device(pci, ven=$(PCI_VEND_ATI), dev=4146)		# ATI Radeon R300-4P 
+device(pci, ven=$(PCI_VEND_ATI), dev=4147)		# ATI Radeon R300-4P 
+device(pci, ven=$(PCI_VEND_ATI), dev=4148)		# ATI Radeon 9800 
+device(pci, ven=$(PCI_VEND_ATI), dev=4149)		# ATI Radeon 9500
+device(pci, ven=$(PCI_VEND_ATI), dev=4150)		# ATI Radeon 9600
+device(pci, ven=$(PCI_VEND_ATI), dev=4151)		# ATI Radeon 9600
+device(pci, ven=$(PCI_VEND_ATI), dev=4152)		# ATI Radeon 9600 XT
+device(pci, ven=$(PCI_VEND_ATI), dev=4242)		# ATI Radeon 8500 AIW
+device(pci, ven=$(PCI_VEND_ATI), dev=4964)		# ATI Radeon 9000 
+device(pci, ven=$(PCI_VEND_ATI), dev=4965)		# ATI Radeon 9000 
+device(pci, ven=$(PCI_VEND_ATI), dev=4966)		# ATI Radeon 9000 
+device(pci, ven=$(PCI_VEND_ATI), dev=4967)		# ATI Radeon 9000 
+device(pci, ven=$(PCI_VEND_ATI), dev=4c57)		# ATI Radeon M7
+device(pci, ven=$(PCI_VEND_ATI), dev=4c58)		# ATI Radeon M7
+device(pci, ven=$(PCI_VEND_ATI), dev=4c59)		# ATI Radeon M6
+device(pci, ven=$(PCI_VEND_ATI), dev=4c5a)		# ATI Radeon M6
+device(pci, ven=$(PCI_VEND_ATI), dev=4c64)		# ATI Radeon M9
+device(pci, ven=$(PCI_VEND_ATI), dev=4c65)		# ATI Radeon M9 
+device(pci, ven=$(PCI_VEND_ATI), dev=4c66)		# ATI Radeon M9 
+device(pci, ven=$(PCI_VEND_ATI), dev=4c67)		# ATI Radeon M9 
+device(pci, ven=$(PCI_VEND_ATI), dev=4e44)		# ATI Radeon 9700 
+device(pci, ven=$(PCI_VEND_ATI), dev=4e45)		# ATI Radeon 9700 
+device(pci, ven=$(PCI_VEND_ATI), dev=4e46)		# ATI Radeon 9700 
+device(pci, ven=$(PCI_VEND_ATI), dev=4e47)		# ATI Radeon 9700 
+device(pci, ven=$(PCI_VEND_ATI), dev=4e48)		# ATI Radeon 9800 
+device(pci, ven=$(PCI_VEND_ATI), dev=4e49)		# ATI Radeon 9800 
+device(pci, ven=$(PCI_VEND_ATI), dev=4e4a)		# ATI Radeon 9800 XT 
+device(pci, ven=$(PCI_VEND_ATI), dev=4e50)		# ATI Mobility Radeon 9600
+device(pci, ven=$(PCI_VEND_ATI), dev=4e52)		# ATI Mobility Radeon 9600
+device(pci, ven=$(PCI_VEND_ATI), dev=5144)		# ATI Radeon QD
+device(pci, ven=$(PCI_VEND_ATI), dev=5145)		# ATI Radeon QE (7200)
+device(pci, ven=$(PCI_VEND_ATI), dev=5146)		# ATI Radeon QF (7200)
+device(pci, ven=$(PCI_VEND_ATI), dev=5147)		# ATI Radeon QG (7200)
+device(pci, ven=$(PCI_VEND_ATI), dev=514d)		# ATI Radeon 9100
+device(pci, ven=$(PCI_VEND_ATI), dev=5159)		# ATI Radeon RV100 (VE) (7000)
+device(pci, ven=$(PCI_VEND_ATI), dev=515a)		# ATI Radeon RV100 (VE) (7000) 
+device(pci, ven=$(PCI_VEND_ATI), dev=5157)		# ATI Radeon R7500
+device(pci, ven=$(PCI_VEND_ATI), dev=5158)		# ATI Radeon R7500
+device(pci, ven=$(PCI_VEND_ATI), dev=514c)		# ATI Radeon 8500
+device(pci, ven=$(PCI_VEND_ATI), dev=514d)		# ATI Radeon 8500
+device(pci, ven=$(PCI_VEND_ATI), dev=514e)		# ATI Radeon 8500
+device(pci, ven=$(PCI_VEND_ATI), dev=514f)		# ATI Radeon 8500
+device(pci, ven=$(PCI_VEND_ATI), dev=5960)		# ATI Radeon 9200
+device(pci, ven=$(PCI_VEND_ATI), dev=5961)		# ATI Radeon 9200
+device(pci, ven=$(PCI_VEND_ATI), dev=5964)		# ATI Radeon 9200
+device(pci, ven=$(PCI_VEND_ATI), dev=5c61)		# ATI Mobility 9200
+device(pci, ven=$(PCI_VEND_ATI), dev=5c63)		# ATI Mobility 9200
+device(pci, ven=$(PCI_VEND_ATI), dev=5460)              # ATI Mobility X300 (M22)
+device(pci, ven=$(PCI_VEND_ATI), dev=5b60)              # ATI Radeon X300
+device(pci, ven=$(PCI_VEND_ATI), dev=3e50)              # ATI Radeon X600
+device(pci, ven=$(PCI_VEND_ATI), dev=515e)              # ATI ES1000
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d svga -d radeon -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+ 
+# Observe how this stanza must appear after the previous one
+device(pci, ven=$(PCI_VEND_ATI), dev=4164)		# ATI Radeon 9500 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=4168)		# ATI Radeon 9800 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=4169)		# ATI Radeon 9500 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=4170)		# ATI Radeon 9600 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=4171)		# ATI Radeon 9600 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=4172)		# ATI Radeon 9600 XT (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=496e)		# ATI Radeon 9000 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=496f)		# ATI Radeon 9000 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=4c6f)		# ATI Radeon 9000 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=4e64)		# ATI Radeon 9700 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=4e65)		# ATI Radeon 9700 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=4e66)		# ATI Radeon 9600 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=4e68)		# ATI Radeon 9800 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=4e69)		# ATI Radeon 9800 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=4e6a)		# ATI Radeon 9800 XT (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=516d)		# ATI Radeon 9100 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=5940)		# ATI Radeon 9200 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=5941)		# ATI Radeon 9200 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=5d44)		# ATI Radeon 9200 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=5b70)              # ATI Radeon X300 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=3e70)              # ATI Radeon X600 (Secondary)
+device(pci, ven=$(PCI_VEND_ATI), dev=71e2)              # ATI Radeon X1600 (Secondary)
+	echo("# $(ven),$(dev) ATI Radeon secondary device ", /dev/null )
+ 
+device(pci, ven=$(PCI_VEND_ATI), dev=5245)		# ATI Rage 128 GL
+device(pci, ven=$(PCI_VEND_ATI), dev=5246)		# ATI Rage 128 GL
+device(pci, ven=$(PCI_VEND_ATI), dev=534b)		# ATI Rage 128 GL
+device(pci, ven=$(PCI_VEND_ATI), dev=534c)		# ATI Rage 128 GL
+device(pci, ven=$(PCI_VEND_ATI), dev=534d)		# ATI Rage 128 GL
+device(pci, ven=$(PCI_VEND_ATI), dev=534e)		# ATI Rage 128 4X 
+device(pci, ven=$(PCI_VEND_ATI), dev=524b)		# ATI Rage 128 VR 
+device(pci, ven=$(PCI_VEND_ATI), dev=524c)		# ATI Rage 128 VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5345)		# ATI Rage 128 VR 
+device(pci, ven=$(PCI_VEND_ATI), dev=5346)		# ATI Rage 128 VR 
+device(pci, ven=$(PCI_VEND_ATI), dev=5347)		# ATI Rage 128 VR 
+device(pci, ven=$(PCI_VEND_ATI), dev=5348)		# ATI Rage 128 VR 
+device(pci, ven=$(PCI_VEND_ATI), dev=5041)		# ATI Rage 128 PRO GL
+device(pci, ven=$(PCI_VEND_ATI), dev=5042)		# ATI Rage 128 PRO GL
+device(pci, ven=$(PCI_VEND_ATI), dev=5043)		# ATI Rage 128 PRO GL
+device(pci, ven=$(PCI_VEND_ATI), dev=5044)		# ATI Rage 128 PRO GL
+device(pci, ven=$(PCI_VEND_ATI), dev=5045)		# ATI Rage 128 PRO GL
+device(pci, ven=$(PCI_VEND_ATI), dev=5046)		# ATI Rage 128 PRO GL
+device(pci, ven=$(PCI_VEND_ATI), dev=5047)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5048)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5049)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=504a)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=504b)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=504c)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=504d)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=504e)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=504f)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5050)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5051)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5052)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5053)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5054)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5055)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5056)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5057)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5058)		# ATI Rage 128 PRO VR
+device(pci, ven=$(PCI_VEND_ATI), dev=5446)		# ATI Rage 128 PRO ULTRA (Expert Pro 2000) 
+device(pci, ven=$(PCI_VEND_ATI), dev=544C)		# ATI Rage 128 PRO ULTRA 
+device(pci, ven=$(PCI_VEND_ATI), dev=5452)		# ATI Rage 128 PRO ULTRA  
+device(pci, ven=$(PCI_VEND_ATI), dev=5453)		# ATI Rage 128 PRO ULTRA  
+device(pci, ven=$(PCI_VEND_ATI), dev=5454)		# ATI Rage 128 PRO ULTRA  
+device(pci, ven=$(PCI_VEND_ATI), dev=5455)		# ATI Rage 128 PRO ULTRA  
+device(pci, ven=$(PCI_VEND_ATI), dev=4c45)		# ATI Rage 128 Mobility M3
+device(pci, ven=$(PCI_VEND_ATI), dev=4c46)		# ATI Rage 128 Mobility M3
+device(pci, ven=$(PCI_VEND_ATI), dev=4d46)		# ATI Rage 128 Mobility M4
+device(pci, ven=$(PCI_VEND_ATI), dev=4d4c)		# ATI Rage 128 Mobility M4
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d svga -d ati_rage128 -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+ 
+# Observe how this stanza must appear after the previous one
+device(pci, ven=$(PCI_VEND_ATI), dev=5046, subven=$(PCI_VEND_ATI), subsys=2001)		# ATI Rage Fury MaXX
+	echo("# $(ven),$(dev) ATI Rage Fury Maxx second processor", /dev/null )
+ 
+device(pci, ven=$(PCI_VEND_ATI), dev=4754)		# ATI 3D Rage II (GT)
+device(pci, ven=$(PCI_VEND_ATI), dev=4755)		# ATI 3D Rage II+ (GTB)
+device(pci, ven=$(PCI_VEND_ATI), dev=4756)		# ATI 3D Rage IIC PCI
+device(pci, ven=$(PCI_VEND_ATI), dev=4765)		# ATI 3D Rage IIC PCI
+device(pci, ven=$(PCI_VEND_ATI), dev=4757)		# ATI 3D Rage IIC AGP
+device(pci, ven=$(PCI_VEND_ATI), dev=4759)		# ATI 3D Rage IIC AGP
+device(pci, ven=$(PCI_VEND_ATI), dev=475a)		# ATI 3D Rage IIC AGP
+device(pci, ven=$(PCI_VEND_ATI), dev=4742)		# ATI 3D Rage PRO AGP
+device(pci, ven=$(PCI_VEND_ATI), dev=4744)		# ATI 3D Rage PRO AGP
+device(pci, ven=$(PCI_VEND_ATI), dev=4749)		# ATI 3D Rage PRO PCI
+device(pci, ven=$(PCI_VEND_ATI), dev=4750)		# ATI 3D Rage PRO PCI
+device(pci, ven=$(PCI_VEND_ATI), dev=4751)		# ATI 3D Rage PRO PCI
+device(pci, ven=$(PCI_VEND_ATI), dev=4c42)		# ATI 3D Rage LT-PRO
+device(pci, ven=$(PCI_VEND_ATI), dev=4c47)		# ATI 3D Rage LT
+device(pci, ven=$(PCI_VEND_ATI), dev=4c49)		# ATI 3D Rage LT-PRO
+device(pci, ven=$(PCI_VEND_ATI), dev=4c50)		# ATI 3D Rage LT-PRO
+device(pci, ven=$(PCI_VEND_ATI), dev=4c4d)		# ATI 3D Rage Mobility M/M1/P
+device(pci, ven=$(PCI_VEND_ATI), dev=4c52)		# ATI 3D Rage Mobility M/M1/P
+device(pci, ven=$(PCI_VEND_ATI), dev=474d)		# ATI 3D Rage XL
+device(pci, ven=$(PCI_VEND_ATI), dev=474f)		# ATI 3D Rage XL
+device(pci, ven=$(PCI_VEND_ATI), dev=4752)		# ATI 3D Rage XL
+device(pci, ven=$(PCI_VEND_ATI), dev=474c)		# ATI 3D Rage XC
+device(pci, ven=$(PCI_VEND_ATI), dev=474e)		# ATI 3D Rage XC
+device(pci, ven=$(PCI_VEND_ATI), dev=5656)		# ATI Rage IIC  
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d svga -d rage -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+ 
+device(pci, ven=1078, dev=0104)				# Media GX
+device(pci, ven=100b, dev=0504)				# Geode Dorado 
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d geode -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+ 
+device(pci, ven=1022, dev=2081)				# AMD Geode LX800
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d lx800 -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=$(PCI_VEND_MATROX), dev=0520)		# MATROX G200 PCI
+device(pci, ven=$(PCI_VEND_MATROX), dev=0521)		# MATROX G200 AGP
+device(pci, ven=$(PCI_VEND_MATROX), dev=0525)		# MATROX G400/G450 AGP
+device(pci, ven=$(PCI_VEND_MATROX), dev=2527)		# MATROX G550 AGP
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d svga -d matroxg -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+ 
+device(pci, ven=102c, dev=00c0)		# Chips and Technologies 69000
+device(pci, ven=102c, dev=00e5)		# Chips and Technologies 65555
+device(pci, ven=102c, dev=00e4)		# Chips and Technologies 65554
+device(pci, ven=102c, dev=00e0)		# Chips and Technologies 65550
+device(pci, ven=102c, dev=0c30)		# Chips and Technologies 69030
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d vesabios -d chips )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+ 
+device(pci, ven=$(PCI_VEND_S3), dev=8a22)		# S3 Savage 4 
+device(pci, ven=$(PCI_VEND_S3), dev=8a25)		# ProSavage PM133 
+device(pci, ven=$(PCI_VEND_S3), dev=8d01)		# Twister (ProSavage PN133) 
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d vesabios -d s3_savage )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+ 
+device(pci, ven=12d2, dev=0018)                         # nVidia / SGS Thomson Riva 128
+device(pci, ven=12d2, dev=0019)                         # nVidia / SGS Thomson Riva 128
+device(pci, ven=10de, dev=0020)                         # nVidia Riva TNT
+device(pci, ven=10de, dev=0028)                         # nVidia Riva TNT2
+device(pci, ven=10de, dev=0029)                         # nVidia Riva TNT2
+device(pci, ven=10de, dev=002a)                         # nVidia Riva TNT2
+device(pci, ven=10de, dev=002b)                         # nVidia Riva TNT2
+device(pci, ven=10de, dev=002c)                         # nVidia Riva TNT2
+device(pci, ven=10de, dev=002d)                         # nVidia Riva TNT2
+device(pci, ven=10de, dev=002e)                         # nVidia Riva TNT2
+device(pci, ven=10de, dev=002f)                         # nVidia Riva TNT2
+device(pci, ven=10de, dev=00a0)                         # nVidia Riva TNT2
+device(pci, ven=10de, dev=0100)                         # nVidia GeForce SDR
+device(pci, ven=10de, dev=0101)                         # nVidia GeForce DDR
+device(pci, ven=10de, dev=0102)                         # nVidia GeForce
+device(pci, ven=10de, dev=0103)                         # nVidia GeForce QUADRO
+device(pci, ven=10de, dev=0110)                         # nVidia GeForce
+device(pci, ven=10de, dev=0111)                         # nVidia GeForce
+device(pci, ven=10de, dev=0112)                         # nVidia GeForce
+device(pci, ven=10de, dev=0113)                         # nVidia GeForce
+device(pci, ven=10de, dev=0150)                         # nVidia GeForce2 GTS
+device(pci, ven=10de, dev=0151)                         # nVidia GeForce2 GTS
+device(pci, ven=10de, dev=0152)                         # nVidia GeForce2 GTS
+device(pci, ven=10de, dev=0153)                         # nVidia GeForce2
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d svga -d tnt -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+	mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=10de, dev=040f)                         # nVidia - HP XW4600
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+	mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=8086, dev=7121)				# Intel 82810
+device(pci, ven=8086, dev=7123)				# Intel 82810 DC100
+device(pci, ven=8086, dev=7125)				# Intel 82810E
+device(pci, ven=8086, dev=1132)				# Intel 82815
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d i810 )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=8086, dev=3577, index=0)		# Intel 82830
+device(pci, ven=8086, dev=2562)				# Intel 82845
+device(pci, ven=8086, dev=2992)				# Intel 965/Q965
+device(pci, ven=8086, dev=29a2)				# Intel 965
+device(pci, ven=8086, dev=29b2)				# Intel Q35
+device(pci, ven=8086, dev=2a02)				# Intel 965GM
+device(pci, ven=8086, dev=2a12)				# Intel 965GME/GLE960
+device(pci, ven=8086, dev=2982)				# Intel G35
+device(pci, ven=8086, dev=29c2)				# Intel 82G33/G31
+device(pci, ven=8086, dev=29d2)				# Intel Q33 
+device(pci, ven=8086, dev=2a42)				# Intel Media Mobile 4 GM45
+device(pci, ven=8086, dev=2e12)				# Intel Media Mobile 4 Q45
+device(pci, ven=8086, dev=2e42)				# Intel Media Mobile 4 
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d svga -d i830 -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+ 
+device(pci, ven=8086, dev=3582, index=0)		# Intel 82852/82855
+device(pci, ven=8086, dev=358e, index=0)		# Intel 82854
+device(pci, ven=8086, dev=2572)				# Intel 82865
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d svga -d extreme2 -d i830  -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=8086, dev=2582)				# Intel 915G
+device(pci, ven=8086, dev=2592)				# Intel 915GM
+device(pci, ven=8086, dev=2772)				# Intel 945G
+device(pci, ven=8086, dev=27a2)				# Intel 945GM
+device(pci, ven=8086, dev=27ae)				# Intel 945GME
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d svga -d gma9xx -d i830  -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=8086, dev=0042)                         # Intel Desktop Ironlake
+device(pci, ven=8086, dev=0046)                         # Intel Mobile Ironlake
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d svga -d intelhd -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+	mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=8086, dev=3577, index=1)		# Intel 82830 "clone" device
+device(pci, ven=8086, dev=3582, index=1)		# Intel 82852/82855 "clone" device
+device(pci, ven=8086, dev=358e, index=1)		# Intel 82854 "clone" device
+device(pci, ven=8086, dev=2782)				# Intel 915G "clone" device
+device(pci, ven=8086, dev=2792)				# Intel 915GM "clone" device
+device(pci, ven=8086, dev=2776)				# Intel 945G "clone" device
+device(pci, ven=8086, dev=27a6)				# Intel 945GM "clone" device
+device(pci, ven=8086, dev=2993)				# Intel 965/Q965 "clone" device
+device(pci, ven=8086, dev=2a03)				# Intel 965GM "clone" device
+device(pci, ven=8086, dev=2a13)				# Intel 965GME/GLE960 "clone" device
+device(pci, ven=8086, dev=29c3)				# Intel G33 "clone" device
+device(pci, ven=8086, dev=2e43)				# Intel Media Mobile 4 "clone"
+device(pci, ven=8086, dev=2e13)				# Intel Q35 "clone" device
+device(pci, ven=8086, dev=29a3)				# Intel 965 "clone" device
+device(pci, ven=8086, dev=29b3)				# Intel Q45 "clone" device
+device(pci, ven=8086, dev=29c3)				# Intel G33/G31 "clone" device
+device(pci, ven=8086, dev=29d3)				# Intel Q33 "clone" device
+device(pci, ven=8086, dev=2983)				# Intel G35 "clone" device
+device(pci, ven=8086, dev=a012)				# Intel Pineview "clone" device
+	echo("# $(ven),$(dev) Intel clone device", /dev/null )
+
+device(pci, ven=8086, dev=2a43)				# Intel Media Mobile 4 "clone" device
+	echo("# $(ven),$(dev) Intel Media Mobile 4 clone device", /dev/null )
+ 
+device(pci, ven=10ea, dev=5300)				# IGS CyberPro 53xx 
+device(pci, ven=10ea, dev=5200)				# IGS CyberPro 52xx 
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d tvia )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+ 
+device(pci, ven=10cf, dev=2019)				# Fujitsu Coral-P  
+device(pci, ven=10cf, dev=201e)				# Fujitsu Coral-PA  
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d coral -g pixel_format=argb1555 )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+    
+device(pci, ven=10cf, dev=202b)				# Fujitsu Carmine
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d carmine -g pixel_format=argb1555 )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+ 
+device(pci, ven=15ad, dev=0405)				# VMWare graphics driver (PCI SVGA)
+device(pci, ven=15ad, dev=0710)				# VMWare graphics driver (Legacy SVGA)
+    start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d vmware -g "xres=1024,yres=768,pixel_format=argb8888" )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=1039, dev=6300)				# SiS630  
+device(pci, ven=1039, dev=0300)				# SiS300  
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d vesabios -d sis630 )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=126f, dev=0712)				# SM712 
+device(pci, ven=126f, dev=0720)				# SM722 
+device(pci, ven=126f, dev=0730)				# SM731
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d vesabios -d smi7xx )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=126f, dev=0501)				# SM501 Voyager GX
+device(pci, ven=126f, dev=0510)
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d smi5xx )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=1106, dev=3344)				# Via Unichrome
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d svga -d unichrome -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=5333, dev=8811)				# S3/Virtual PC
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -g "pixel_format=argb8888" -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+device(pci, ven=8086, dev=8108)				# SGX/Poulsbo
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d poulsbo -g "xres=800,yres=600" )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+ 
+#   Handle any graphic type device that doesn't match...
+device(pnpbios, .type=$(PNPBIOS_TYPE_DISPLAY))
+device(pci, .class=$(PCI_CLASS_DISPLAY))		# Unaccelerated VESA 2.00
+	start/wait( dispconf -i "0x$(ven),0x$(dev),$(index)" -d svga -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0x$(ven),did=0x$(dev),deviceindex=$(index)" )
+
+#   Handle any ISA graphic type...
+device(isa, .type=$(ISA_TYPE_DISPLAY))
+	start/wait( dispconf -i "0,0,0" -d svga -d geode -d vesabios )
+	requires/wait( $(IODISPLAY_CMD), )
+    mount(-Tio-display "vid=0,did=0,deviceindex=0" )

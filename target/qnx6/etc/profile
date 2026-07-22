@@ -1,0 +1,77 @@
+# startup profile executed by shell during login
+
+if test "$PROCESSOR" == "" -o "$SYSNAME" == "" -o "$HOSTNAME" == ""; then
+	SAVE="$IFS"
+	IFS=' ' set `uname -a`
+	IFS="$SAVE"
+	unset SAVE
+
+	HOSTNAME=$2
+	export HOSTNAME
+
+	PROCESSOR=$6
+	export PROCESSOR
+
+	if test -z "$SYSNAME"; then
+		case $(uname -sr) in
+			procnto*|QNX\ [0123456789]*)    export SYSNAME=nto;;
+			QNX\ *)                         export SYSNAME=qnx4;;
+		esac
+	fi
+	set --
+fi
+
+TTY=$(tty)
+
+if test "$LOGNAME" == root; then
+	PATH=/sbin:/usr/sbin:$PATH:/usr/local/bin:/opt/bin:/opt/sbin
+else
+	PATH=$PATH:/usr/local/bin:/opt/bin
+	MAIL=${MAIL:-/var/spool/mail/$LOGNAME}
+	test -s $MAIL -a $MAIL -nt ~/.lastlogin -a "$TTY" != "not a tty" && echo "You have new mail."
+fi
+
+umask 2
+
+if test -f ~/.hushlogin -o "$TTY" = "not a tty"; then
+	echo -n >~/.lastlogin
+else
+	echo "${DATE=$(date +%c)} on ${TTY}"
+	test /etc/motd -nt ~/.lastlogin && cat /etc/motd
+	test -s ~/.lastlogin && echo $(<~/.lastlogin)
+	echo "Last login: ${DATE} on ${TTY}" >~/.lastlogin
+	unset DATE
+fi
+
+if test -z "$ENV"; then
+	ENV=~/.${SHELL##*/}
+	if test -x $ENV; then
+		export ENV
+	else
+		unset ENV
+	fi
+fi
+
+export PATH TMPDIR=${TMPDIR:-/tmp} PROCESSOR HOSTNAME SYSNAME
+
+for file in /etc/profile.d/*.${SHELL##*/}; do
+	if test -x $file; then
+		. $file
+	fi
+done
+unset file
+
+if test -z "$QNX_CONFIGURATION"; then
+	QNX_CONFIGURATION=/etc/qnx
+	export QNX_CONFIGURATION
+fi
+
+if test -z "$QNX_TARGET"; then
+	QNX_TARGET=/
+	export QNX_TARGET
+fi
+
+if test -z "$QNX_HOST"; then
+	QNX_HOST=/
+	export QNX_HOST
+fi

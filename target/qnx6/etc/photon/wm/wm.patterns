@@ -1,0 +1,163 @@
+[Blend]
+
+primary = aa55aa55aa55aa55
+
+[Bricks 1]
+
+primary = 44a051a2458a150a
+
+[Bricks 2]
+
+primary = 2020FF020202FF20
+
+[Buttons]
+
+primary = 55823988398041aa
+
+[Net]
+
+primary = 87ceec781e3773e1
+
+[Circuitry]
+
+primary = add67bbd6bd6bd7b
+
+[Cobblestone]
+
+primary = d7bb6d542993c7ef
+
+[Flowers]
+
+primary = e173270240e4ce87
+
+[Colosseum]
+
+primary = 7dfefefe54aa55aa
+
+[Giddy]
+
+primary = c1f81ef8c18f3c8f
+
+[Field Effect]
+
+primary = a9a659659a6a9556
+
+[Maze]
+
+primary = 01fd0575455d417f
+
+[Jaggy]
+
+primary = 1010f10101011f10
+
+[Plaid]
+
+primary = 0f0f0f0f55aa55aa
+
+[Round Buttons]
+
+primary = 286cd728d76c2a28
+
+[Fishy]
+
+primary = 1ed5da6daa67c108
+
+[Stone]
+
+primary = 51b21000f7b251b2
+
+[Thatches]
+
+primary = 078bddb870e8dd8e
+
+[Tiles]
+
+primary = ba7dfefffe7dba55
+
+[Triangles]
+
+primary = 7888898bff081838
+
+[Waffles]
+
+primary = b26587aa1065b265
+
+[Checkers 1]
+
+primary = f0f0f0f00f0f0f0f
+
+[Checkers 2]
+
+primary = cccc3333cccc3333
+
+[Diamonds]
+
+primary = 10387cfe7c381000
+
+[Horizontal Stripes 1]
+
+primary = 000000ff00000000
+
+[Horizontal Stripes 2]
+
+primary = 0000ff000000ff00
+
+[Horizontal Stripes 3]
+
+primary = 00ff00ff00ff00ff
+
+[Vertical Stripes 1]
+
+primary = 1010101010101010
+
+[Vertical Stripes 2]
+
+primary = 2222222222222222
+
+[Vertical Stripes 3]
+
+primary = 5555555555555555
+
+[Diagonal Stripes 1]
+
+primary = 8001020408102040
+
+[Diagonal Stripes 2]
+
+primary = 8811224488112244
+
+[Diagonal Stripes 3]
+
+primary = 8040201008040201
+
+[Diagonal Stripes 4]
+
+primary = 8844221188442211
+
+[Weave]
+
+primary = 3e1d88d1e3c5885c
+
+[Crosshatch 1]
+
+primary = ff80808080808080
+
+[Crosshatch 2]
+
+primary = ff888888ff888888
+
+[Crosshatch 3]
+
+primary = ffaaffaaffaaffaa
+
+[Lattice 1]
+
+primary = 8041221408142241
+
+[Lattice 2]
+
+primary = 8855225588552255
+
+[Hearts]
+
+primary = 00006CFEFE7C3810

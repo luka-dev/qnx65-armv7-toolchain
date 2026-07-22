@@ -1,0 +1,60 @@
+# Photon Application Associations File
+# Describes associations between file content types and applications.
+# Currently this file format specifies 8 colon-separated fields.  Unspecified fields may be left
+# empty, or the line may be prematurely terminated if no other fields need to be specified for a
+# given association.
+
+# Field 1 - file patterns
+#    file patterns matching the association (comma-separated list of standard
+#    file-matching expressions)
+# Field 2 - MIME type (RFC2045/6)
+#    MIME type/subtype matching the association
+# Field 3 - name of association
+#    brief ASCII text string describing the association
+# Field 4 - open action
+#    command to invoke to "open" (ie "execute") content matching the association
+#    this is generally interpreted as the default action to perform on an item.  If
+#    other actions are not specified they will default to the "open" action.
+#    Special characters:
+#        '@' will be substituted for the filename to open
+# Field 5 - view action
+#    command to invoke to view the content.  If not specified the lib will fallback to "open"
+# Field 6 - edit action
+#    command to invoke to modify the content.  If not specified the lib will fallback to "open"
+# Field 7 - small icon
+#    full path to a small (max 24X18) icon representing this association
+# Field 8 - large icon
+#    full path to a large (max 48X48) icon representing this association
+
+# software development
+[mM]akefile::Build File:pterm -z make -f @:ped -r@:ped @
+*.[cC]::C Source Code:ped @:ped -r@
+*.[hH]::C/C++ Header File:ped @:ped -r@
+*.[cC][cC],*.[cC][pP][pP],*.[cC]++::C++ Source Code:ped @:ped -r@
+*.core:application/x-coredump:Memory Core Image:pterm -z coreinfo @:pterm -g24x80 spatch -b @:pterm -g24x80 spatch @:/usr/share/icons/topics/bomb.gif
+
+# text types
+*.[tT][xX][tT]:text/plain:ASCII Text File:ped @:ped -r@
+*.[hH[tT][mM],*.[hH][tT][mM][lL]:text/html:Hypertext Markup Language:"voyager -u file://@"::ped @
+
+# image formats
+*.[bB][mM][pP],*.rle:image/bmp:Microsoft Bitmap Image:pv @
+*.[gG][iI][fF]:image/gif:Compuserve Graphics Interchange Format:pv @
+*.[jJ][pP][gG],*.[jJ][pP][eE][gG],*.[jJ][pP][eE]:image/jpeg:JPEG File Interchange Format:pv @
+*.[pP][cC][xX]::PC Paintbrush File Format:pv @
+*.[pP][nN][gG]:image/png:Portable Network Graphics:pv @
+
+# audio formats
+*.[wW][aA][vV]:audio/wav:WAV Audio:"mmplay -ufile://@"
+*.[aA][uU]:audio/basic:SUN Audio:"mmplay -ufile://@"
+*.[aA][iI][fF][fF],*.[aA][iI][fF],*.[iE][eE][fF],*.[iI][fF][fF]:Audio Interchange File Format:"mmplay -ufile://@"
+*.[mM][pP]3:audio/mp3:MPEG3 Audio Stream:"mmplay -ufile://@"
+*.[mM][pP]2:audio/mp2:MPEG2 Audio Stream:"mmplay -ufile://@"
+*.[mM][pP]1:audio/mp1:MPEG1 Audio Stream:"mmplay -ufile://@"
+*.[mM][pP][aA]:audio/mpa:MPEG Audio Stream:"mmplay -ufile://@"
+*.[mM]3[uU]:audio/x-mpegurl:MPEG3 Audio URL:"mmplay -ufile://@"
+
+# video formats
+*.[mM][pP][gG],*.[mM][pP][eE][gG]:video/mpeg:MPEG Video Stream:"mmplay -ufile://@"
+*.[mM]2[vV]:video/m2v:MPEG2 Video Stream:"mmplay -ufile://@"
+*.[mM][pP][vV]:video/mpv:MPEG Video Stream:"mmplay -ufile://@"

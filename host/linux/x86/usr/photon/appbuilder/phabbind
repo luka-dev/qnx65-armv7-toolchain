@@ -1,0 +1,61 @@
+#!/usr/bin/env ksh
+
+#ifdef __USAGE
+# This is an internal script used internally by the application builder.
+#endif
+
+[ $# != 0 ] || exit 1
+
+if [ "$OSTYPE" = "cygwin" ]
+then
+	#
+	# 00Mar07, MKF: Under Cygwin, the $PWD variable does not seem to be
+	# set properly when Makefiles are executed within Phab. Also, get the
+	# full path since ldrel (called by bindres) does not understand
+	# Cygwin mount points. We get the full path by converting to the 
+	# windows path name and then translating backslashes to forward
+	# slashes. This results in a name that works both in Cygwin and non-Cygwin
+	# WinNT unix-like programs.
+	#
+	export PWD=`pwd`
+	export APPDIR=$PWD
+	export APPDIR=`cygpath -w $APPDIR`
+	export APPDIR=`echo $APPDIR | tr '\\\\' '/'`
+else
+	OSTYPE=`uname`
+	export APPDIR=$PWD
+fi
+APP="$APPDIR/$1"
+shift
+
+cd ../../wgt 2>/dev/null
+
+if [ -z "$PHTK_PATH" ]
+then
+	case $OSTYPE in
+	cygwin)
+		qh=`cygpath -u $QNX_HOST`
+		PHTK_PATH=`eval cygpath -u $qh`/usr/photon
+		;;
+	SunOS)
+		PHTK_PATH=${QNX_HOST:-/opt/QNXsdk/host/solaris/sparc}/usr/photon
+		;;
+	Linux)
+		PHTK_PATH=${QNX_HOST:-/opt/QNXsdk/host/linux/x86}/usr/photon
+		;;
+	QNX)
+		PHTK_PATH=${QNX_HOST:-}/usr/photon
+		;;
+	esac
+fi
+
+# the bindres is now located in /usr/bin
+BINDRES="bindres"
+
+if [ $# = 0 ]
+then
+	exec "$BINDRES" -q "$APP" *.wgt[dipwx]
+else
+	exec "$BINDRES" -q "$APP" $*
+fi
+

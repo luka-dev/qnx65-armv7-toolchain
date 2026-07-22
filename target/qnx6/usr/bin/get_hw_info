@@ -1,0 +1,65 @@
+suffix=${HOSTNAME}
+if [ ! -z "$1" ]
+then
+	suffix="$1"
+fi
+
+fil="/tmp/hw-info-${suffix:-unknown}.txt"
+
+rm -f $fil
+exec 3>$fil
+exec 2>&3 >&3
+
+echo "==== Script started at $(date +"%y/%m/%d %H:%M") on $(hostname)" 
+echo " "
+echo "==== pidin" 
+pidin 
+echo " " 
+echo "==== pidin arg" 
+pidin arg 
+echo " " 
+echo "==== pidin mem" 
+pidin mem 
+echo " " 
+echo "==== sloginfo" 
+sloginfo 
+echo " " 
+echo "==== ls /dev" 
+ls /dev 
+echo " " 
+echo "==== ls -l /fs" 
+ls -l /fs 
+echo " " 
+echo "==== ls /dev/io-net" 
+ls /dev/io-net 
+echo " " 
+echo "==== pci -vvv" 
+pci -vvv 
+echo " " 
+echo "==== /etc/system/trap/unknown" 
+cat /etc/system/trap/unknown
+echo " " 
+echo "==== first line of graphics-modes" 
+head -n1 /etc/system/config/graphics-modes
+echo " " 
+echo "==== usb -v" 
+usb -v 
+echo " " 
+echo "==== hidview" 
+hidview 
+echo " " 
+echo "==== dcheck" 
+for i in /dev/hd[0-9]
+do
+	echo -n "$i:" 
+	dcheck -b16 -q $i 
+	ret=$?
+	if [ $ret == 0 ]
+	then
+		echo " ok" 
+	else
+		echo " FAIL"
+	fi
+done
+echo " "
+echo "==== Script completed at $(date +"%y/%m/%d %H:%M")" 

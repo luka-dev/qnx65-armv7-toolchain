@@ -1,0 +1,7 @@
+#
+# macro definitions for network
+#
+	
+all
+	set(IOPKT_CMD, io-pkt-v4-hc -ptcpip)
+

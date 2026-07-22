@@ -1,0 +1,13 @@
+#
+# common drivers
+#
+all
+	config(include)
+	config(devices)
+
+# Enumerator binaries which are not present on the target system must be 
+# commented out or enum-devices will report an error. For example enum-pnpbios 
+# is only provided for x86.	 
+
+	enumerator(pnpbios)
+	enumerator(usb)

@@ -1,0 +1,49 @@
+# Generic settings
+#all
+#	set(IOPKT_CMD_USB, io-pkt-v4-hc -ptcpip)
+
+# This file should only be used on target systems which don't use
+# the PCI enumerator
+#
+# A variety of mechanisms can be used to configure the IP address 
+# on the interface after the driver has started.  Examples follow.
+#
+# Instead of using a "mount" clause for the driver, we use a "driver"
+# clause to call the mount. This is necessary to prevent the enumerator
+# from trying to umount the driver on removal since there is no mount
+# point to unmount.
+#
+# For self-hosted ("netmgr" is defined in the higher level net file
+#	requires($(IOPKT_CMD_USB),)
+#	waitfor (/dev/socket, 5)
+#	driver (mount -Tio-pkt devnp-axe.so)
+# 	start(netmanager)	
+#
+# For embedded platforms that want to use DHCP
+#	requires($(IOPKT_CMD_USB),)
+#	waitfor(/dev/socket, 5)
+#	driver (mount -Tio-pkt devnp-axe.so)
+#	use("symbolic=netdhcp")
+#
+# For embedded platforms that want to use a fixed IP address
+#	requires($(IOPKT_CMD_USB),)
+#	waitfor(/dev/socket, 5)
+#	set(ifnum, 0)
+#	set(ifname, axe)
+#	set(ipaddr, 192.168.200.12)
+#	driver (mount -Tio-pkt devnp-axe.so)	
+#	start (ifconfig $(ifname) $(ifnum) $(ipaddr))	
+
+
+# SMC2209 dongle
+#device(usb, ven=0b95,dev=1720)
+#	requires($(IOPKT_CMD_USB),)
+#	waitfor(/dev/socket, 5)
+#	driver (mount -Tio-pkt devnp-axe.so)
+#	start(netmanager)
+
+#device(symbolic=netdhcp)
+#	waitfor(/dev/socket, 5)
+#	driver(/usr/sbin/dhcp.client -t2)
+
+

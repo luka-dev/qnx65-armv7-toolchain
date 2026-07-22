@@ -1,0 +1,14 @@
+#----------------------------------------------------------------------
+# Device						Mountpt		Type	Options
+#----------------------------------------------------------------------
+/dev/cd[0-9]					/fs/cd%#	udf		normv
+/dev/umass[0-9]					/			enum
+/dev/umass[0-9]t1[124]			/fs/usb%0	dos		normv,fsi=use
+/dev/umass[0-9]t1[124].[0-9]	/fs/usb%0	dos		normv,fsi=use
+/dev/umass[0-9]t[146]			/fs/usb%0	dos		normv,fsi=use
+/dev/umass[0-9]t[146].[0-9]		/fs/usb%0	dos		normv,fsi=use
+/dev/umass[0-9]t7[789]			/fs/usb%0	qnx4	normv
+/dev/umass[0-9]t17[789]			/fs/usb%0	qnx6	normv,sync=optional
+/dev/umass[0-9]t7				/fs/usb%0	nt		normv,ro
+/dev/umass[0-9]t175				/fs/usb%0	mac		normv,ro
+/dev/umass[0-9]					/fs/usb%0	dos		normv,fsi=use

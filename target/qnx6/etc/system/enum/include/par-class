@@ -1,0 +1,15 @@
+#
+# Definitions for par classes
+#
+
+all
+	set(PAR_CLASS_PRINTER, PRINTER)
+	set(PAR_CLASS_MODEM, MODEM)
+	set(PAR_CLASS_NET, NET)
+	set(PAR_CLASS_HDC, HDC)			# Hard disk controller
+	set(PAR_CLASS_PCMCIA, PCMCIA)
+	set(PAR_CLASS_MEDIA, MEDIA)		# any multimedia device
+	set(PAR_CLASS_FDC, FDC)			# Floppy disk controller
+	set(PAR_CLASS_PORTS, PORTS)
+	set(PAR_CLASS_SCANNER, SCANNER)
+	set(PAR_CLASS_DIGCAM, DIGCAM)	# Digital Camera

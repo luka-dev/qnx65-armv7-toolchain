@@ -1,0 +1,7 @@
+#
+# Block macro definitions
+#
+	
+all
+	set(DEVB_OPTIONS, cam quiet blk auto=partition)
+	set(FLOPPY_OPTIONS, cam quiet blk "auto=partition,cache=100k")

@@ -1,0 +1,2 @@
+#! /bin/sh
+exec $QNX_HOST/usr/bin/bison -y "$@"

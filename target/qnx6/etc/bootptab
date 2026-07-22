@@ -1,0 +1,83 @@
+# /etc/bootptab: database for bootp server (/etc/bootpd)
+# Last update: gwr, Tue Jun  8 09:53:46 EDT 1993
+# Blank lines and lines beginning with '#' are ignored.
+#
+# Legend:	(see bootptab.5)
+#
+#	first field -- hostname
+#			(may be full domain name and probably should be)
+#
+#	hd -- home directory (dir relative to /tftpboot)
+#	hn -- send the client its host name (does this work?)
+#	bf -- bootfile
+#	cs -- cookie servers
+#	ds -- domain name servers
+#	gw -- gateways
+#	ha -- hardware address
+#	ht -- hardware type
+#	im -- impress servers
+#	ip -- host IP address
+#	lg -- log servers
+#	lp -- LPR servers
+#	ns -- IEN-116 name servers
+#	rl -- resource location protocol servers
+#	sm -- subnet mask
+#	tc -- template host (points to similar host entry)
+#	to -- time offset (seconds)
+#	ts -- time servers
+
+#
+# Be careful about including backslashes where they're needed.  Weird (bad)
+# things can happen when a backslash is omitted where one is intended.
+#
+
+
+# First, we define a global entry which specifies the stuff every host uses.
+
+global.dummy:\
+	:hd=/boot:\
+	:hn:bf=null:
+
+# Next, we can define different master entries for each subnet. . .
+
+subnet16.dummy:\
+	:tc=global.dummy:\
+	:sm=255.255.255.0:\
+	:gw=198.231.78.1:\
+	:ds=198.231.78.251:
+
+subnet17.dummy:\
+	:tc=global.dummy:\
+	:td=/tftp:\
+	:sm=255.255.255.0:\
+	:gw=192.233.17.32:\
+	:ds=192.233.17.28:
+
+#
+# We should be able to use as many levels of indirection as desired.  Use
+# your imagination. . .
+#
+
+# Individual entries (could also have different servers for some/all of these
+# hosts, but we don't really use this feature at CMU):
+
+# This is for testing the arbitrary tag option:
+# T40 is the NIS domain name
+# T41 is the NIS server list
+walnut:tc=subnet16.dummy:ht=ethernet:ha=08.00.20.0E.FF.30:\
+	:ip=192.233.16.24:bf=boot.sun4c:\
+	:T40="mc.com":T41=192.233.16.4:T128="hello":
+
+# Tadpole 885 board.
+tp885:tc=subnet17.dummy:ht=ethernet:ha=08.00.4C.00.2F.74:\
+	:ip=192.233.17.42:bf=tp885sys1.cfe:
+
+# MVME147 VxWorks board.
+mvme147:tc=subnet17.dummy:ht=ethernet:ha=08.00.3e.20.da.47:\
+	:ip=192.233.17.41:bf=mv147vxw.st:
+
+node34:tc=subnet16.dummy:ht=ethernet:ha=00.00.c0.0d.9e.40:\
+	:ip=198.231.78.34:bf=images/node34:to=auto:
+
+node206:tc=subnet16.dummy:ht=ethernet:ha=08.00.5a.12.85.4c:\
+	:ip=198.231.78.198:bf=|cd /boot; mkifs build/node206.ws:

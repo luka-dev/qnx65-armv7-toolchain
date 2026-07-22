@@ -1,0 +1,51 @@
+#!/bin/sh
+#
+# This script builds an HTML index of links to all the installed
+# BSP booksets.
+#
+
+export PATH=$QNX_HOST/bin:$QNX_HOST/usr/bin:$PATH
+
+cd $QNX_TARGET/usr/help/product
+
+OFIL=bsp_index.html
+
+cat <<HERE >$OFIL
+<html>
+<head>
+<title>QNX Momentics Board Support Packages (BSPs)</title>
+<link rel="previous" href="bookset.html">
+<link rel="next" href="bookset.html">
+</head>
+<body bgcolor="#ffffff" text="#000000">
+<h1>QNX<small><sup>&reg;</sup></small> Momentics<small><sup>&reg;</sup></small> Board Support Packages (BSPs)</h1>
+<br clear="all">
+HERE
+
+echo bsp_*.toc >/dev/null 2>&1
+if [ $? != 0 ]; then
+	echo "<p>You haven't installed any BSPs.</p>" >>$OFIL
+else
+	echo "<ul>">>$OFIL
+	cat bsp*.toc | sort | \
+	sed -e 's~1|\(.*\) Board Support Package.*|\(.*\)\.htm\(l*\)~  <li><a href=\"\2.htm\3\">\1</a>~' \
+	    -e 's~1|\([^|]*\)|\(.*\)\.htm\(l*\)~  <li><a href=\"\2.htm\3\">\1</a>~' >>$OFIL
+	echo "</ul>">>$OFIL
+fi
+
+cat <<HERE >>$OFIL
+<p>
+You can purchase BSPs via our website:
+<a href="http://www.qnx.com/"><tt>http://www.qnx.com/</tt></a>.
+<hr>
+<p>
+<small>
+QNX, Neutrino, Photon, Photon microGUI, Momentics, and Aviage
+are trademarks, registered in certain jurisdictions, of 
+QNX Software Systems GmbH &amp; Co. KG. and are used under license by QNX 
+Software Systems International Corporation. All other trademarks belong 
+to their respective owners.
+</small>
+</body>
+</html>
+HERE

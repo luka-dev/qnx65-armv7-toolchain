@@ -1,0 +1,197 @@
+#!/usr/bin/env ksh
+# $Id: qbinaudit 201223 2008-09-29 16:36:18Z bwebster $
+# 
+#ifdef __USAGE
+#
+# This script parses the manifest file to retreive each checksum value::binary filename pair.
+# The binary file's CRC32 checksum is regenerated and that value is compared against the checksum 
+# value in the manifest file.  If there is a difference, the binary filename is reported to stdout
+# which indicates that this binary is not part of the officially distributed QNX release.
+#
+#%C [options] <manifest filename>
+#   -v set verbose mode to display each file processed.
+#   -s set silent mode to disable dot progress output.
+#
+# Note: The <manifest filename> can be specified on the command line or if it is not specified
+#       then the script will go to the known install location of the manifest files and prompt
+#       the user to select one.
+#
+#endif
+#
+# The script limits it use of executables to sed and QNX supplied binaries only.  As you persue
+# this script, executables like basename, cut, etc might be a better choice to use but this script
+# must run on the Windows distro which is MinGW based and only has a limited set of functionality
+# to provide loadbuild capabilities.
+#
+#################
+# Functions
+# Note: Some functions represents commands available in Neutrino and Linux distros but with 
+#       Windows MinGW there is a very limit set of commands available (i.e. ksh, sed)
+#
+function dirnameCmd {
+	# Modeled after the Unix dirname shell command, to display the parent directory from the 
+	# supplied pathname.  In this case, it sets the global variable $dirnameCmdValue with the
+        # parent directory value.  Not pretty but that's ksh functions.	
+	typeset aFn
+	# get the last filename from the supplied pathname
+	aFn=`echo $1 | sed 's/^.*\///'`
+	# now, using that filename, remove it from the supplied pathname
+	dirnameCmdValue=`echo $1 | sed 's/\/'${aFn}'$//'`
+}
+
+
+# Verify if looks like a valid QNX installation/configuration
+baseDir=`qconfig | sed -e '/Base Directory/!d' -e 's/^.*Base Directory: *//'`
+qVersion=`qconfig | sed -e '/Version/!d' -e 's/^.*Version: *//'`
+if [ -z $baseDir ] || [ -z $qVersion ]; then
+	echo -e "ERROR: Failed to execute 'qconfig' command.\n\tPlease verify the QNX installation/configuration is properly setup."
+	exit 1
+elif [ ! -e ${baseDir} ]; then
+	echo -e "ERROR: Base directory: '$baseDir' reported by qconfig, does not exist.\n\tPlease verify the QNX installation is properly setup."
+	exit 2
+fi
+
+# Parse input arguments
+verbose=0	# verbose mode disabled
+silent=0;	# silent mode disabled
+while getopts vs myArgs
+do	case "$myArgs" in
+	v)	verbose=1;;
+	s)	silent=1;;
+	[?])	echo "Discontining, refer to 'use' info for further assistance."
+		exit 2;;
+	esac
+done
+# move input argument index to first non option value
+shift $((OPTIND-1))
+
+# Validate the input arguments
+manifestDir="$baseDir/install/qnxsdp/$qVersion"
+manifestFilename=""
+if [ $# -gt 1 ]; then
+	echo "ERROR: Two or more manifest files cannot be specifed."
+elif [ $# -eq 1 ]; then
+	# user has specified a manifest file so check if it exists before continuing
+	if [ ! -e $1 ]; then
+		echo -e "ERROR: Specified manifest file does not exist.\n\ti.e. $1"
+	else
+		manifestFilename=$1
+	fi
+elif [ ! -e "$manifestDir" ]; then
+	echo "ERROR: No manifest file specifed as an input argument."
+	echo -e "\tand the known manifest directory doesn't exist so cannot continue."
+	echo -e "\ti.e. $manifestDir"
+	echo -e "\tPlease verify the QNX installation is properly setup."
+else
+	# No manifest file specified as an input argument so display the manifest files in the known manifest directory for user selection	
+	echo "Select a manifest file using the prefixed selection number in the square brackets."
+	manCount=0
+	for aManFn in `cd $manifestDir; echo manifest*`; do
+		let manCount+=1
+		aManArray[$manCount]=$aManFn
+		echo "[$manCount]: ${aManArray[$manCount]}"
+	done
+	if [ $manCount == 0 ]; then
+		echo "ERROR: No manifest files in the manifest directory."
+		echo -e "\ti.e. $manifestDir"
+		echo -e "\tPlease verify the QNX installation is properly setup."
+	else
+		# query the user to select a manifest file, keep looping until a valid file is selected
+		while [ 1 ]; do
+			echo -n "Select? "
+			read aValue
+			if [ $aValue -gt 0 ] && [ $aValue -le $manCount ];  then
+				manifestFilename="$manifestDir/${aManArray[$aValue]}"
+				break
+			else
+				echo "ERROR: Select a numeric value between 1 and $manCount only."
+			fi
+		done
+	fi
+fi
+	
+# process the manifest file
+extraCR=""
+if [ "$manifestFilename" == "" ]; then
+	echo "... no manifest files specified so discontinuing."
+	exit 9
+else
+	echo "**** Processing $manifestFilename"
+fi
+
+{ while read aManLine; do
+	# Each manifest file record is of the format:
+	# aCheckSumValue       aFilename
+	#
+	# Note: Using sed rather than cut since cut is not available on Windows host distro (i.e. MinGW)
+	#       Also read command strips out multiple space leaving a single host.  I'll need to make the
+	#       BIG ASSUMPTION: The binaries that QNX ships does NOT contain spaces!!!!
+	# For checksum value, ensure no leading spaces then delete everything to the right of multiple spaces
+	aChksum=`echo $aManLine | sed -e 's/^ *//' -e 's/ .*//'`
+
+	# For filename value, delete everything from the left up to multiple spaces
+	# Note: If the last character is a '/' that indicates a directory but directories will be ignored
+	aFilename=`echo $aManLine | sed -e '/\/$/d' -e 's/^.* //'`
+	if [ "$aFilename" == "" ]; then
+		# blank filename (i.e. probable directory) so ignore record
+		continue
+	fi
+
+	# if aNumberTest var contains a value then that value is numeric only
+	aNumberTest=`echo $aChksum | sed -n '/^[0-9].*$/p'`
+
+	if [ $aChksum != "" ] && [ "$aNumberTest" != "" ]; then
+		kernelOnlyFilenameCheck=`echo $aFilename | sed -n -e '/^host\//p' -e '/^target\//p'`
+		if [ "$kernelOnlyFilenameCheck" == "" ]; then
+			# kernel only filename so prefix the root directory only
+			fullFilename="/$aFilename"
+		else
+			# QNX target or host filename so prefix the QNX base directory
+			fullFilename="$baseDir/$aFilename"
+		fi
+		if [ ! -e $fullFilename ]; then
+			echo "Missing file: $fullFilename"
+		else
+			# determine if file is a symlink
+			if [ -L ${fullFilename} ]; then
+				# file is a valid symlink so locate the physical filename
+				# first parse out the physical pathname for the symlink info
+				symlinkInfo=`ls -l $fullFilename | sed 's/^.* \-> //'`
+				# next, determine the parent directory of the symlinke
+				dirnameCmd $fullFilename
+				# Append the parent directory with the physical pathname of the symlink to form the actual pathname 
+				# Note: dirnameCmdValue is a global variable set by the dirnameCmd function
+				tmpFilename="$dirnameCmdValue/$symlinkInfo"
+				if [ ! -e $tmpFilename ]; then
+					echo -e "ERROR: Unable to resolve symlink for $fullFilename.\n\ti.e.$tmpFilename"
+					continue
+				elif [ -d $tmpFilename ]; then
+					# resolved symlink points to a directory so ignore it
+					continue
+				# else
+				#	fullFilename=$tmpFilename
+				# Note: No need to reset the filename from its symlink to its actual name, the cksum facility handles symlinks correctly
+				fi
+					
+			fi
+			computedChecksum=`cksum $fullFilename | sed -e 's/^ *//' -e 's/ .*//'`
+			if [ "$computedChecksum" == "" ]; then
+				echo "${extraCR}Compute error: $fullFilename"
+				extraCR=""
+			elif [ $aChksum -ne $computedChecksum ]; then
+				echo "${extraCR}Chksum diff: $aChksum vs $computedChecksum $fullFilename"
+				extraCR=""
+			elif [ $verbose -eq 1 ]; then
+				echo "${extaCR}>>>>> $fullFilename"
+				extraCR=""
+			elif [ $silent -eq 0 ]; then
+				echo -n '.'
+				extraCR="\n"
+			fi
+		fi
+	fi
+done } <$manifestFilename
+echo -e "\n**** Completed ****"
+
+exit
+

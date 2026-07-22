@@ -1,0 +1,7 @@
+
+#device(usb, class=$(USB_CLASS_HID), usr_spec_id=AppleIpod)
+#	driver(io-fs-media "-dipod,transport=usb:busno=$(busno):devno=$(devno):audio=/dev/snd/ipod-$(busno)-$(devno),darates=+8000:11025:12000:16000:22050:24000,mount=$(inc_usr_spec_id),playback,acp=i2c") 
+
+#device(usb, class=$(USB_CLASS_AUDIO), subclass=$(USB_AUDIO_PROTOCOL_CONTROL), usr_spec_id=AppleIpod)
+#	driver(io-audio "-dipod busno=$(busno),devno=$(devno),cap_name=ipod-$(busno)-$(devno),ipod_mount=$(inc_usr_spec_id)")
+

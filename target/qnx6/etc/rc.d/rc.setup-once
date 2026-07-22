@@ -1,0 +1,123 @@
+#!/bin/sh
+
+#ifdef __USAGE
+#
+#%C
+#
+# This script creates directories. It only runs once on the first
+# boot after an installation.
+#
+#endif
+
+
+# Make the /tmp directory if not there (use sticky bit on directory)
+if ! test -d /tmp; then
+	if test 0$VERBOSE -ge 1; then
+		print Creating /tmp
+	fi
+	mkdir /tmp
+	chmod 01777 /tmp
+fi
+
+
+# Make missing directories if not there
+for dir in /etc/system/trap:0775 /etc/system/config:0775 /etc/profile.d:0775 \
+    /home:0775 /var:0755 /var/clipboard:0777 /var/log:0775 /var/run:0775 \
+    /var/lock:0775 /var/spool:0775 /var/state:0775 /var/dumps:0775 /var/pps:0775 \
+    /var/help:0777 /var/spool/mail:0775 /var/spool/mqueue:0775 \
+    /var/spool/cron/crontabs:0775 /opt:0775 /usr/local:0775 \
+    /usr/local/lib:0775 /usr/local/bin:0775 /etc/openssl/certs:0755 \
+    /etc/openssl/misc:0755 /etc/openssl/private:0755 /var/chroot/sshd:0755; do
+	if test ! -x $(echo $dir | cut -d: -f1); then
+		if test 0$VERBOSE -ge 1; then
+			print Creating a $dir directory
+		fi
+		mkdir -pm $(echo $dir | cut -d: -f2) $(echo $dir | cut -d: -f1)
+	fi
+done
+unset dir
+
+# Special cases
+chmod 0755 /
+chmod 0755 /etc
+
+if test "$BOOTSRC" != "cdrom"
+then
+	chmod 0755 /etc/ssh
+fi
+
+# This is required during "Run from CD" to ensure this directory is handled
+# by fs-ram and not the CD-ROM file system
+if test "$BOOTSRC" = "cdrom" -o ! -d /etc/system/config
+then
+	mkdir -p /etc/system/config
+fi
+
+# File needs creation for graphics enumerators
+if test -d /etc/system/config; then
+	touch /etc/system/config/graphics-traplist
+fi
+
+# Create file for 'who'
+touch /var/log/utmp
+
+# Create log files for default syslogd conf
+touch /var/log/syslog
+touch /var/log/maillog
+
+# This is required during "Run from CD" to ensure this directory is handled
+# by fs-ram and not the CD-ROM file system
+if test "$BOOTSRC" = "cdrom" -o ! -d /etc/rc.d
+then
+	mkdir -p /etc/rc.d
+fi
+
+# Create empty rc.local with the correct permissions
+if test -d /etc/rc.d -a ! -r /etc/rc.d/rc.local; then
+	touch /etc/rc.d/rc.local
+	chmod 0750 /etc/rc.d/rc.local
+fi
+
+# Find an install time configuration file
+if ! test -z "$ROOTDEV"; then
+	x=$(dirname "$ROOTDEV")
+	if test "$x" == "/dev"; then
+		x=/etc/rc.d
+	elif test $(basename "$x") == fs; then
+		x=$(dirname "$x")
+	fi
+	x="$x/setup.inf"
+	if test 0$VERBOSE -ge 1; then
+		print Setting up info with $x
+		sleep 2
+	fi
+	if test -r "$x"; then
+		/etc/rc.d/rc.setup-info "$x"
+	fi
+	unset x
+fi
+
+# Make sure there is a /root directory
+if ! test -d /root; then
+	if test 0$VERBOSE -ge 1; then
+		print Creating /root
+	fi
+	mkdir /root
+	chmod 0700 /root
+	if test -r /etc/skel/.profile; then
+		cp -D /etc/skel/.profile /root
+	fi
+fi
+
+# Create a trigger file for the welcome message to display (when root first logs in)
+# only if this boot is a harddisk boot
+if test "$BOOTSRC" = "disk"; then
+	touch /etc/runinstall
+	# Create the initial help search database
+	print Generating helpviewer search index
+	/usr/photon/bin/helpviewer-index -r/usr/help/product -t/usr/help/product >/dev/null 2>&1 &
+
+fi
+
+# Signal init scripts that we've already run 
+touch /etc/system/setupisdone

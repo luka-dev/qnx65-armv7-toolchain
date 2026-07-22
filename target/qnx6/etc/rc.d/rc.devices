@@ -1,0 +1,79 @@
+#!/bin/sh
+
+#ifdef __USAGE
+#
+#%C     
+#
+#A script which determines your configuration directory & executes enum-devices
+#with these parameters 
+#
+#endif 
+
+typeset -i ok=1 verbose=0
+progname=$0
+
+while getopts vn opt $*
+do case $opt in
+	v)	options="$options -v"; verbose=1;;
+	n)	options="$options -n";;
+	*)	ok=0;;
+esac done
+if test $OPTIND -gt 1; then
+	let OPTIND=OPTIND-1
+	shift $OPTIND
+fi
+
+# Find the enum directories
+if test $# -eq 0; then
+	if test -z "$HOSTNAME"; then
+		HOSTNAME=$(hostname -s)
+	fi
+	dir1=/etc/system/enum
+	# See if there is a host specify etc directory
+	if ! test -z "$HOSTNAME"; then
+		if test -x /etc/host_cfg/$HOSTNAME/enum; then
+			dir2=/etc/host_cfg/$HOSTNAME/enum
+		fi
+	fi
+elif test $# -eq 1; then
+	dir1=$1
+else
+	ok=0
+fi
+
+if test ok -eq 0; then
+	echo use: $progname [-v] [-n] enum-files-path
+	exit 1
+fi
+
+cfgdir=""
+
+# Add local overrides directories
+if test -r $dir1/overrides; then
+	cfgdir="$cfgdir -c$dir1/overrides"
+fi
+if test -n "$dir2" -a -r $dir2/overrides; then
+	cfgdir="$cfgdir -c$dir2/overrides"
+fi
+
+# Add oem directories
+if test -x $dir1/oem; then
+	cfgdir="$cfgdir -c$dir1/oem"
+fi
+if test -n "$dir2" -a -x $dir2/oem; then
+	cfgdir="$cfgdir -c$dir2/oem"
+fi
+
+# Check if there is a local machine override
+if test -n "$dir2" -a -r $dir2/common; then
+	cfgdir="$cfgdir -c$dir2/common"
+else
+	cfgdir="$cfgdir -c$dir1/common"
+fi
+
+
+if ! test verbose -eq 0; then
+	echo Enumerating devices with "$cfgdir"
+fi
+
+exec enum-devices $options $cfgdir -i. -I~ -I.bak -ebootdev -E"legacy neednet,\$(legacy)" -E"=D bus=none type=02"

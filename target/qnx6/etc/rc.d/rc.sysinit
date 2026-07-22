@@ -1,0 +1,67 @@
+#ifdef __USAGE
+#
+#%C
+#
+#This script sets up your environment & starts system services
+#
+#endif
+
+# Add the system utilities to the path...
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin
+
+# A useful function
+function waitfor {
+	typeset -i i=0
+	while test $i -lt 60 -a ! $1 -ef $1 ; do
+		sleep 1;
+		let i=i+1;
+	done
+	unset i
+}
+
+# Find the hostname
+if test -z $HOSTNAME; then
+	HOSTNAME=$(hostname -s)
+	if test $HOSTNAME == localhost; then
+		unset HOSTNAME
+	fi
+fi
+
+# See if there is a host specify etc directory
+if ! test -z "$HOSTNAME"; then
+	if test -x /etc/host_cfg/$HOSTNAME; then
+		etc_host=/etc/host_cfg/$HOSTNAME;
+	fi
+fi
+
+if test -d /var/dumps; then
+	dumper -d /var/dumps
+fi
+
+if test ! -z "$etc_host" -a -x $etc_host/rc.d/rc.local; then
+	echo "Starting extra run commands for $(hostname)"
+	. $etc_host/rc.d/rc.local
+elif test -x /etc/rc.d/rc.local; then
+	echo "Starting extra run commands"
+	. /etc/rc.d/rc.local
+fi
+
+# Change the path to back before starting tinit
+P=-p
+if test ! -z "$SAFEMODE"; then
+	unset P
+fi
+
+if test -f /etc/system/config/nophoton; then
+	unset P
+fi
+
+PATH=/bin:/usr/bin exec `which tinit` $P
+
+print Unable to init, starting a shell
+
+exec sh
+exec fesh
+
+print Really can't do anything...
+

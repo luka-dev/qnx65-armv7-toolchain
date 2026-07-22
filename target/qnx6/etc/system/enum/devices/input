@@ -1,0 +1,13 @@
+#
+# Definitions for input devices
+#
+
+device(pnpbios, .type=$(PNPBIOS_TYPE_INPUT), .subtype=$(PNPBIOS_INPUT_KEYBOARD))
+	requires(@console)
+#	driver(devi-hirun, kbd fd -d/dev/kbd)
+
+device(pnpbios, .type=$(PNPBIOS_TYPE_INPUT), .subtype=$(PNPBIOS_INPUT_MOUSE))
+	tag("null")
+	append(legacy, ",nomouse")
+#	requires(@photon)
+#	driver(devi-hirun, ps2 kb -2)

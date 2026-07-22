@@ -1,0 +1,61 @@
+[Default]
+active = 0x5C8BDF
+inactive = 0xB1C1D9
+background = 0xBDBDAA
+active_text = 0x65
+
+[Brick]
+
+active = 0x800000
+inactive = 0x8d8961
+active_text = 0xe1e0d2
+background = 0x420000
+
+[Rainy Day]
+
+active = 0x4f657d
+inactive = 0x808080
+active_text = 0xffffff
+background = 0x000000
+
+[Rose]
+
+active = 0x9f6070
+inactive = 0xa0a0a4
+active_text = 0xffffff
+background = 0x808080
+
+[Slate]
+
+active = 0x558097
+inactive = 0x808080
+active_text = 0xffffff
+background = 0x414141
+
+[Spruce]
+
+active = 0x599764
+inactive = 0x808080
+active_text = 0xd0e3d3
+background = 0x213f21
+
+[Desert]
+
+active = 0x008080
+inactive = 0xa28d68
+active_text = 0xffffff
+background = 0x897754
+
+[Eggplant]
+
+active = 0x0588078
+inactive = 0x90b0a8
+active_text = 0xffffff
+background = 0x400040
+
+[Lilac]
+
+active = 0x5a4eb1
+inactive = 0x808080
+active_text = 0xffffff
+background = 0x000000

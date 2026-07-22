@@ -1,0 +1,97 @@
+#! /usr/bin/env ksh
+#
+#ifdef __USAGE
+#QNX ln wrapper script
+#
+#	This script takes all command lines and passes them through
+#	to the native ln utility, except -f, which forces any existing 
+#	destinations to be removed before linking (QNX).
+#endif
+
+#osname=`uname -s`
+#if test ! $osname = SunOS; then
+#        echo Invalid os $osname.
+#        echo This script is only meant to run on Solaris.
+#        echo Exiting.
+#        exit
+#fi
+
+#
+# Set up some defaults
+#
+
+force_dest="no"
+command_line_args=""
+srcs=""
+dest=""
+
+#
+# Parse command line args
+#
+
+while :
+do
+
+# Break out if there are no more args
+        case $# in
+        0)
+                break
+                ;;
+        esac
+
+# Get the first arg, and shuffle later
+        option=$1
+
+# parse args
+	case $option in
+	-\?)
+	echo "QNX ln wrapper script"
+	echo
+	echo "	This script takes all command lines and passes them through"
+	echo "	to the native ln utility, except -f, which forces any existing"
+	echo "	destinations to be removed before linking (QNX)."
+		exit
+		;;
+	-*)
+		case $option in
+		-f)	force_dest="yes"
+			;;
+		*f*)
+			force_dest="yes" 
+			option=`echo $option | sed 's/f//g'`
+	    		command_line_args="$command_line_args $option" 
+			;;
+		*)	command_line_args="$command_line_args $option" 
+			;;
+		esac
+		;;
+	*)	
+		if test "x$srcs" = "x"; then
+			srcs=$option
+		else
+			if test "x$dest" = "x"; then
+				dest=$option
+			else
+				srcs="$srcs $dest"
+				dest=$option
+			fi
+		fi
+		;;
+	esac
+
+# shuffle args at the end
+        shift
+done
+
+#
+# Handle any of the qnx options, currently just '-f'
+#
+
+if test $force_dest = "yes"; then
+	if test ! x$dest = "x"; then
+		if test -L $dest; then
+			rm $dest
+		fi
+	fi
+fi
+ln $command_line_args $srcs $dest

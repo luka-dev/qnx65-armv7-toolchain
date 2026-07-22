@@ -1,0 +1,298 @@
+#!/bin/sh
+
+#ifdef __USAGE
+#
+#%C
+#
+# This script reads the setup.inf file and sets up
+# anything that isn't already setup. i.e. it is only
+# used once..
+#
+#endif
+
+if test -z "$1"; then
+	setup_file=/boot/setup.inf
+else
+	setup_file="$1"
+fi
+hostname_file=/etc/HOSTNAME
+netcfg_file=/etc/net.cfg
+passwd_file=/etc/passwd
+shadow_file=/etc/shadow
+default_passwd_file=/etc/default/passwd
+
+unset hostname rootname rootpass username userpass userdesc userhome
+typeset -i useruid=-1 usergid=-1
+unset ipaddr ipmask gateway domain nameserver
+
+usershell=/bin/sh
+rootdesc=Superuser
+
+typeset -i enet=-1
+typeset -i utc_clock=0	# People usually set their BIOS to localtime...
+netglobal="version 1.0\n[global]\nlookup file bind"
+netcfg=
+netarg=
+timezone=
+
+if test -n "$setup_file" -a -r "$setup_file"; then
+	textto -ql "$setup_file"
+	while read -r temp; do
+		arg=${temp#*=}
+		if test -n "$arg"; then
+			case ${temp%%=*} in
+			hostname|HOSTNAME)
+				hostname=$arg
+				;;
+			ipaddr|IPADDR)
+				case "$netarg" in
+				""|,ipaddr*)
+					let enet=enet+1
+					netcfg="$netcfg\n\n[en$enet]\ntype ethernet\nmode dhcp"
+					netarg=
+					;;
+				esac
+				netarg=$netarg,ipaddr
+				netcfg="$netcfg\nmanual_ip $arg"
+				;;
+			ipmask|IPMASK)
+				case "$netarg" in
+				""|,ipmask*)
+					let enet=enet+1
+					netcfg="$netcfg\n\n[en$enet]\ntype ethernet\nmode dhcp"
+					netarg=
+					;;
+				esac
+				netarg=$netarg,ipmask
+				netcfg="$netcfg\nmanual_netmask $arg"
+				;;
+			gateway|GATEWAY)
+# netmanager doesn't like this
+#				netglobal="$netglobal\nroute $arg 0.0.0.0 0.0.0.0"
+				;;
+			nameserver|NAMESERVER)
+				netglobal="$netglobal\nnameserver $arg"
+				;;
+			domain|DOMAIN)
+				netglobal="$netglobal\ndomain $arg"
+				;;
+			rootname|ROOTNAME)
+				rootname=$arg
+				;;
+			rootpass|ROOTPASS)
+				rootpass=$arg
+				;;
+			rootdesc|ROOTDESC)
+				rootdesc=$arg
+				;;
+			username|USERNAME)
+				username=$arg
+				;;
+			userpass|USERPASS)
+				userpass=$arg
+				;;
+			userdesc|USERDESC)
+				userdesc=$arg
+				;;
+			useruid|USERUID)
+				useruid=$arg
+				;;
+			userhome|USERHOME)
+				userhome=$arg
+				;;
+			usergid|USERGID)
+				usergid=$arg
+				;;
+			usershell|USERSHELL)
+				usershell=$arg
+				;;
+			timezone|TIMEZONE)
+				timezone=$arg
+				;;
+			rtc|RTC)
+				case "$arg" in
+				local|LOCAL)
+					utc_clock=0
+					;;
+				utc|UTC|gmt|GMT)
+					utc_clock=1
+					;;
+				*)
+					# echo invalid rtc $arg
+					;;
+				esac
+				;;
+			*)
+				# echo xxx=$arg
+				;;
+			esac
+		fi
+	done <"$setup_file"
+fi
+unset setup_file
+
+#
+# If there is no hostname or the hostname is "localhost"
+# then update /etc/HOSTNAME.
+#
+if test -n "$hostname"; then
+	if test "$(hostname)" = localhost -o -z "$(hostname)"; then
+		if test ! -s $hostname_file; then
+			echo $hostname >$hostname_file
+		else
+			tmp=$(cat $hostname_file)
+			if test -z "$tmp" -o "$tmp" = localhost; then
+				echo $hostname >$hostname_file
+			else
+				unset hostname
+			fi
+			unset tmp
+		fi
+		if test -n "$hostname"; then
+			hostname $hostname
+		fi
+	fi
+fi
+unset hostname_file
+
+#
+# Save the timezone and hardware real time clock (rtc) information
+#
+if test $utc_clock -eq 0; then
+	# If rtc clock is not UTC, cause rtc -l to be executed on startup
+	echo "rtc -l hw" >/etc/rc.d/rc.rtc
+	chmod +x /etc/rc.d/rc.rtc
+fi
+if test -n "$timezone"; then
+	echo $timezone >/etc/TIMEZONE
+fi
+unset utc_clock timezone
+
+#
+# Write out network config file
+#
+if test ! -s $netcfg_file -a $enet -ge 0; then
+	echo $netglobal$netcfg >$netcfg_file
+fi
+unset netcfg_file enet netarg netglobal netcfg
+
+#
+# Setup root in passwd and shadow databases
+#
+if test -n "$rootpass"; then
+	if test -z "$rootname"; then
+		rootname=root		# Default root name
+	fi
+	# Only modify files if no root password in shadow file
+	if test -z "$(grep ^$rootname: $shadow_file 2>/dev/null)"; then
+		if test -z "$(grep ^$rootname: $passwd_file 2>/dev/null)"; then
+			# add a root entry to the password file
+			echo $rootname:x:0:0:$rootdesc:/$rootname:/bin/sh >>$passwd_file
+			if test ! -r /$rootname; then
+				mkdir /$rootname 2>/dev/null
+				chmod 0 /$rootname 2>/dev/null
+			fi
+		else
+			# Change root passwd to indicate there is a password in shadow
+			if sed -e s/^$rootname::/$rootname:x:/ $passwd_file >${passwd_file}.new; then
+				if cp ${passwd_file}.new $passwd_file; then
+					test
+				else
+					unset rootname rootpass
+				fi
+				rm ${passwd_file}.new
+			else
+				rm ${passwd_file}.new
+				unset rootname rootpass
+			fi
+		fi
+		if test -n $rootpass; then
+			echo $rootname:$rootpass:0:0:0 >>$shadow_file
+		fi
+	fi
+fi
+unset rootname rootpass rootdesc
+
+#
+# Setup user in passwd and shadow databases
+#
+if test -n "$username" -a -z "$(grep ^$username: $passwd_file 2>/dev/null)"; then
+	# Make sure there is a home directory
+	if test -z "$userhome"; then
+		# Find the base directory for user
+		basedir=/home
+		if test -r $default_passwd_file; then
+			set -- $(sed -e"s/#.*$//" $default_passwd_file | fgrep -si BASEDIR=)
+			tmp=${1#*=}
+			if test -n "$tmp"; then
+				basedir=$tmp
+			fi
+			unset tmp
+		fi
+		userhome=$basedir/$username
+		unset basedir
+	fi
+	# Get the uid value
+	if test $useruid -le 0; then
+		if test -d $userhome; then
+			# If there is already a home directory use its uid/gid
+			useruid=0$(ls -Llnd $userhome | sed -e"s/  */:/g" | cut -sf3 -d:)
+			if test $usergid -le 0; then
+				usergid=0$(ls -Llnd $userhome | sed -e"s/  */:/g" | cut -sf4 -d:)
+			fi
+		fi
+		if test $useruid -le 0; then
+			# Look at the system defined uid range...
+			if test -r $default_passwd_file; then
+				set -- $(sed -e"s/#.*$//" $default_passwd_file | fgrep -si UIDRANGE=)
+				tmp=${1#*=}
+				tmp=${tmp%%-*}
+			fi
+			let useruid=0$tmp
+			if test $useruid -le 0; then
+				let useruid=100
+			fi
+			# Scan the passwd database for first free uid
+			while test $useruid -lt 60000; do
+				if grep "^.*:.*:$useruid:" $passwd_file >/dev/null 2>/dev/null; then
+					let useruid=useruid+1
+				else
+					break;
+				fi
+			done
+			if test $useruid -ge 60000; then
+				# What else can we do??
+				username=
+			fi
+		fi
+	fi
+	# If no gid, pick the same as the uid
+	if test $usergid -le 0; then
+		let usergid=useruid
+	fi
+	# Make the users directory...
+	if test -n "$username"; then
+		if test ! -r $userhome; then
+			if test -d /etc/skel; then
+				cp -cR /etc/skel $userhome
+			else 
+				mkdir -p $userhome
+			fi
+			chown -R $useruid:$usergid $userhome
+		fi
+		# Update the shadow file
+		if test -n "$userpass"; then
+			if test -z "$(grep ^$username: $shadow_file 2>/dev/null)"; then
+				echo $username:$userpass:0:0:0 >>$shadow_file
+			fi
+			userpass=x
+		fi
+		echo $username:$userpass:$useruid:$usergid:${userdesc:-$username}:/home/$username:${usershell:-/bin/sh} >>$passwd_file
+	fi
+fi
+
+# Make sure shadow has sensible permissions
+chmod 0600 $shadow_file
+
+unset username userpass userdesc usershell useruid usergid
+unset passwd_file shadow_file

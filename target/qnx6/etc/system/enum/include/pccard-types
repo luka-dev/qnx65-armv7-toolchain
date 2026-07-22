@@ -1,0 +1,13 @@
+#
+# Definitions for pccard types
+#
+
+all
+	set(PCCARD_TYPE_MASS, 01)
+		set(PCCARD_MASS_IDE, 01)
+	set(PCCARD_TYPE_NETWORK, 02)
+		set(PCCARD_NETWORK_ETHER, 00)
+			set(PCCARD_NETWORK_ETHER_NE2000, 00)
+	set(PCCARD_TYPE_COMM, 07)
+		set(PCCARD_COMM_SERIAL, 00)
+			set(PCCARD_COMM_SERIAL_IF, 00)

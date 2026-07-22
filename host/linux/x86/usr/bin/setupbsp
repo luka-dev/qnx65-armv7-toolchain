@@ -1,0 +1,732 @@
+#!/usr/bin/env ksh
+
+##########################################################################
+# Title      :	setupbsp
+# Date       :	2006-05-03
+# Category   :	Install/setup script for BSP's
+# Requires   :	
+##########################################################################
+
+#handle signals that might end the script
+trap "" 1 2 3 15 23 24
+
+#check so 'find' will work on Windows
+HOSTOS=unix
+
+case "$(uname -s)" in
+	QNX4*)
+		echo "QNX4 is not supported.  Exiting..."
+		exit 1
+		;;
+        QNX*)
+                ;;
+        Linux*)
+                ;;
+        SunOS*)
+                ;;
+        *Windows*|MINGW32*|mingw32*)
+			# This sequence "converts" the C:\ style of %QNX_HOST%
+			# to the /c/ style which mingw needs in its path
+			cwd=$(/bin/pwd)
+			cd $QNX_HOST
+			hostdir=$(/bin/pwd)
+			cd $cwd
+			export PATH=$hostdir/usr/bin:$PATH
+			unset cwd
+			unset hostdir
+           	HOSTOS=win32
+		;;
+        cygwin)
+			export PATH=$(cygpath -u $QNX_HOST/usr/bin):$PATH
+           	HOSTOS=win32
+		;;
+	*)
+		echo "This OS is not supported."
+		exit 1
+		;;
+esac
+
+#use message <use setupbsp>
+#__USAGE
+#
+#To run setup script:
+#setupbsp [options] <install_dir> <zip_file>
+#
+#Argument	Description
+#------------------------------------------------------------------------
+#<install_dir>	Directory to install into
+#<zip_file>	Name of zip file (filename.zip)
+#
+#
+#Option		Description
+#------------------------------------------------------------------------
+#-v     Turn verbose on
+#-h     This usage message
+#
+
+#usage message followed by the options to be passed via command line
+function USAGE {
+trap "" 1 2 3 15 23 24
+cat <<HERE
+To run setup script:
+setupbsp [options] <install_dir> <zip_file>
+
+Argument	Description
+------------------------------------------------------------------------
+<install_dir>	Directory to install into
+<zip_file>	Name of zip file (filename.zip)
+
+
+Option		Description
+------------------------------------------------------------------------
+-v      Turn verbose on
+-h      This usage message
+
+HERE
+exit 1
+}
+
+#default verbose value
+VERBOSE="false"
+IDE_INST=0
+
+#getopts from user
+while getopts ':*hv' OPTION;
+do
+	case "$OPTION" in
+		v) VERBOSE="true" ;;
+		h) USAGE ;;
+		*) echo "Invalid option used." 
+		USAGE
+		exit 1 ;;
+
+  	esac
+done
+	
+#i=OPTIND-1 gives the last option that was run while the 'shift'
+#shifts the given arguments over.
+let i=OPTIND-1
+shift $i
+
+#script inputs not handled by getopts
+install_dir=$1
+zip_file=$2
+
+#check that install_dir doesn't have any spaces
+if [ "$install_dir" != "${install_dir#* }" ]
+then
+	echo "ERROR:  Your install directory name cannot contain spaces.  Exiting..."
+	exit 1
+fi
+
+
+#converts relative install path to absolute
+
+if [ "$HOSTOS" = "win32" ]
+then
+	# The built-in pwd returns $PWD which may not be in the
+	# correct form for the Mingw32 path. To be safe use the
+	# executable instead
+	TMPPATH=$(/bin/pwd)
+else
+	TMPPATH=$(pwd)
+fi
+
+#checking for leading slash
+case $install_dir in
+	*:/*|*:\\*|/*|\*) ;;
+	*)	install_dir=$TMPPATH/$install_dir ;;
+esac
+
+#clean up function if zip exits early
+function CleanUp {
+	echo "  Cleaning up $install_dir..."
+	rm -rf $install_dir
+}
+
+
+#check that QNX_CONFIGURATION is present, if not then set
+if [ -z "$QNX_CONFIGURATION" ]; then
+	case "$(uname -s)" in
+		*Windows*) set $QNX_CONFIGURATION \Program Files\QNX Software Systems 
+		if [ $VERBOSE = "true" ]; then
+			echo "  QNX_CONFIGURATION was not set.  Now setting to \Program Files\QNX Software Systems."
+		fi
+			;;
+		*) set $QNX_CONFIGURATION /etc/qnx 
+		if [ $VERBOSE = "true" ]; then
+			echo "  QNX_CONFIGURATION was not set.  Now setting to /etc/qnx."
+		fi
+			;;
+	esac
+fi
+
+#if both dest directory and zip file are not specified then display error
+if [ $# -lt 2  ]
+then
+	echo "Invalid number of arguments"
+	USAGE
+	exit1
+fi
+
+# Remove trailing '/' if any
+install_dir=${install_dir%%/}
+
+if [ -z "$install_dir" -o "$install_dir" = "." ]
+then 
+	echo "ERROR: This BSP can not be installed in the current directory."
+	echo "       Please use a different name."
+	exit 1
+fi
+
+if [ -r $install_dir ]
+then
+	echo "ERROR: Destination already exists. Please use a different name."
+	exit 1
+fi
+
+if [ $VERBOSE = "true" ]; then
+   echo "  Checking that zip file was specified..."      
+fi
+
+#if no zip file is specified, print this error message
+if [ -z "$zip_file" ]; then
+	echo "A zip file must be specified."
+	echo ""
+	USAGE
+	exit 1
+fi
+
+#check for file existance
+if [ $VERBOSE = "true" ]; then
+   echo "  Checking that specified zip file exists..." 
+fi
+  
+#check for $zip_file existance
+if [ ! -f $zip_file ]; then
+	echo "Cannot find $zip_file, please check that you entered this correctly."
+	echo ""
+	USAGE
+	exit 1
+fi
+
+if [ $VERBOSE = "true" ]; then
+    echo "  Checking that $QNX_CONFIGURATION/qconfig is writable..."
+fi
+
+
+#check to make sure $QNX_CONFIGURATION/qconfig is writable
+if [ ! -w "$QNX_CONFIGURATION/qconfig" ]
+then
+	echo "ERROR: Cannot write to $QNX_CONFIGURATION/qconfig.  Please check permissions."
+ 	exit 1
+fi
+
+#check that directories are writable before unzipping and copying
+if [ $VERBOSE = "true" ]; then
+	echo "  Checking that $QNX_TARGET/usr/include/ is writable..."
+fi
+
+if [ ! -w $QNX_TARGET/usr/ ]
+then
+	echo "ERROR: cannot write to $QNX_TARGET/usr/.  Please check permissions."
+	exit 1
+fi
+
+if [ $VERBOSE = "true" ]; then
+	echo "  Checking that $QNX_TARGET/usr/src/archives/qnx/ exists..."
+fi
+
+if [ ! -d $QNX_TARGET/usr/src/archives/qnx/ ]
+then	
+	if [ $VERBOSE = "true" ]
+	then
+		echo "  $QNX_TARGET/usr/src/archives/qnx/ does not exist.  Creating..."
+	fi
+		
+	# Emulate 'mkdir -p' (i.e. create intermediate directories if they don't
+	# exist)
+	idesrcbase=$QNX_TARGET/usr
+	for idedirpath in src archives qnx
+	do
+		if [ ! -d ${idesrcbase}/${idedirpath} ]
+		then
+    		  mkdir ${idesrcbase}/${idedirpath}
+    		  if [ $? -gt 0 ]
+    		  then 
+    			echo "ERROR: Problem creating directory (${idesrcbase}/${idedirpath})."
+    			echo "       Cleaning up and exiting"
+    			CleanUp
+    			exit 1
+    		  fi
+		fi
+		idesrcbase=${idesrcbase}/${idedirpath}
+	done
+		
+	#check to make sure creation was successful
+	if [ ! -w $QNX_TARGET/usr/src/archives/qnx/ ]
+	then
+		echo "ERROR: cannot write to $QNX_TARGET/usr/src/archives/qnx/.  Please check permissions.  Cleaning up and exiting..."
+		CleanUp
+		exit 1
+	fi
+else
+	if [ $VERBOSE = "true" ]
+	then
+		echo "  Checking that $QNX_TARGET/usr/src/archives/qnx/ is writable..."
+	fi
+
+	#check to see that $QNX_TARGET/usr/src/archives/qnx/ is writable
+	if [ ! -w $QNX_TARGET/usr/src/archives/qnx/ ]
+	then
+		echo "ERROR: cannot write to $QNX_TARGET/usr/src/archives/qnx/.  Please check permissions."
+		exit 1
+	fi
+
+fi
+
+if [ $VERBOSE = "true" ]; then
+    echo "  Creating install directory..."
+fi
+
+mkdir $install_dir
+if [ $? -ne 0 ]
+then
+	echo "ERROR: Could not create installation directory."
+	exit 1
+fi
+
+if [ $VERBOSE = "true" ]; then
+    echo "  Checking that $install_dir is writable..."
+fi
+
+#check to make sure $install_dir is writeable
+if [ ! -w $install_dir ]
+then
+	echo "ERROR: Cannot write to $install_dir.  Please check permissions."
+	echo "Cleaning up and exiting..."
+	CleanUp
+	exit 1
+fi
+
+#test zip file and if it passes then unpack to $install_dir
+if [ $VERBOSE = "true" ]; then
+   echo "  Testing provided zip archive: $zip_file"
+   unzip -t $zip_file
+else
+   unzip -tqq $zip_file
+fi
+status=$?
+if [ $status = 0 ]; then
+   if [ $VERBOSE = "true" ]; then
+      echo "  Test passed, now unzipping..." 
+      unzip $zip_file -d $install_dir > $install_dir/out.$$ 2>&1
+      unzipstatus=$?
+      grep -v "CreateFile error 3.*file time" $install_dir/out.$$ | grep -v "^[[:space:]]*$"
+      rm -f $install_dir/out.$$
+   else
+      unzip -q $zip_file -d $install_dir > $install_dir/out.$$ 2>&1
+      unzipstatus=$?
+      grep -v "CreateFile error 3.*file time" $install_dir/out.$$ | grep -v "^[[:space:]]*$"
+      rm -f $install_dir/out.$$
+   fi
+else
+	echo "ERROR: $zip_file is corrupt or was interrupted during its unzip test."
+	CleanUp
+	echo "  Now exiting..."
+	exit 1
+fi
+
+if [ $VERBOSE = "true" ]; then
+	echo "  Checking Unzip exit status..."
+fi
+
+#check unzip status and if it doesn't equal 0 and user isn't in verbose mode then cleanup $install_dir
+if [ $unzipstatus = 0 ]; then
+   if [ $VERBOSE = "true" ]; then
+	echo "  Unzip exited properly.  Continuing with install..."
+   fi
+else
+   echo "  Unzip did not exit properly, it was interrupted during its execution.  Cleaning up and removing $install_dir..."
+   CleanUp
+   echo "  Now exiting..."
+   exit 1
+fi
+
+#check to verify that content in the shiplist exists in $install_dir
+if [ $VERBOSE = "true" ]; then
+	echo "  Verifying content in $install_dir/shiplist matches files in $install_dir..."
+fi
+
+for i in $(cat ${install_dir}/shiplist  | grep -v "^#"); do
+	if [ ! -e ${install_dir}/$i ]; then
+		echo "  ERROR:  Installation failed on ${install_dir}/$i.  Cleaning up $install_dir and exiting..."  
+		CleanUp
+		exit 1
+	fi
+done
+
+if [ -d "$QNX_TARGET/usr/help/product" ]
+then
+	if [ $VERBOSE = "true" ]; then
+	   echo "  Copying documentation over to $QNX_TARGET/usr/help/product..."      
+	fi
+
+	#copy documentation over to $QNX_TARGET/usr/help/product
+	for i in $(grep "/usr/help/product/" $install_dir/shiplist); do
+		
+		if [ $VERBOSE = "true" ]; then
+			echo "  Copying: $install_dir/$i to $QNX_TARGET/${i#docs/}"      
+		fi
+
+		qnx_cp -c $install_dir/$i $QNX_TARGET/${i#docs/}
+		if [ $? -ne 0 ]; then
+		echo "ERROR: $i was listed in your shiplist, but cannot copy it over to $QNX_TARGET/usr/help/product"
+		fi
+	done
+
+	if [ $VERBOSE = "true" ]; then
+	   echo "  Generating documentation index by running $QNX_HOST/usr/bin/mkbspindex..."      
+	fi
+
+	#method to be called upon when docs copied over and index needs to be regenerated.
+	if test -x $QNX_HOST/usr/bin/mkbspindex; then
+		ksh $QNX_HOST/usr/bin/mkbspindex
+	else
+		echo "Could not generate the documentation index for the installed $zip_file"
+	fi
+fi
+
+if [ $VERBOSE = "true" ]; then
+   cfgfile=${zip_file##*/}
+   echo "  Updating ${cfgfile%.zip}.xml and copying over to $QNX_CONFIGURATION/qconfig..."      
+fi
+
+# Install the documentation plugin (if it exists)
+if [ -d "$install_dir/plugin" ]
+then
+	plugin_cwd=$PWD
+	cd "$install_dir/plugin"; 
+	plug_list=$(echo *)
+	cd "$plugin_cwd"
+	rm -f "$install_dir/plugin_list"
+
+	ide_help_dir="$QNX_HOST/usr/qde/eclipse/plugins"
+	if [ -d "$ide_help_dir" ]
+	then
+		# There may be several plugins of varying types. Handle each the same.
+		qnx_cp -r "$install_dir/plugin"/* "$ide_help_dir"
+		# Add to uninstall list
+		for p in $plug_list
+		do
+			echo "$ide_help_dir/$p" >>"$install_dir/plugin_list"
+		done
+	fi
+
+	# Check for IDE 4
+	ide_info=$(qconfig -ap | sed -n '/package-name:.*QNX Momentics Professional .* IDE/,/^package-installLocation:/p')
+	ide_base=$(echo "$ide_info" | grep "package-installLocation")
+	if [ ! -z "$ide_base" ]
+	then
+		# Found extra IDE package. We assume only one can be installed.
+		ide_base=${ide_base#*: }
+
+		if [ -d "$ide_base/eclipse/plugins" ]
+		then
+			# There may be several plugins of varying types. Handle each the same.
+			qnx_cp -r "$install_dir/plugin"/* "$ide_base/eclipse/plugins"
+			# Add to uninstall list
+			for p in $plug_list
+			do
+				echo "$ide_base/eclipse/plugins/$p" >>"$install_dir/plugin_list"
+			done
+		fi
+	fi
+fi
+
+#update XML file with install location and copy to $QNX_CONFIGURATION/qconfig
+cfgfile=${zip_file##*/}
+sed s!@@INSTLOC@@!$install_dir! <$install_dir/xmlconfig >$QNX_CONFIGURATION/qconfig/${cfgfile%.zip}.xml
+
+#need check here to make sure xml file was copied over properly to $QNX_CONFIGURATION/qconfig
+if [ ! -f "$QNX_CONFIGURATION/qconfig/${cfgfile%.zip}.xml" ]; then
+        echo "The xml file was not copied over to ${QNX_CONFIGURATION}/qconfig."
+        exit 1
+  #check that uninstall file is not empty
+  elif [ ! -s "$QNX_CONFIGURATION/qconfig/${cfgfile%.zip}.xml" ]; then
+        echo "xml file is empty."
+        exit 1
+fi
+
+if [ $VERBOSE = "true" ]; then
+   echo "  Generating $install_dir/uninstall script..."      
+fi
+
+#This generates the uninstall script
+cat >$install_dir/uninstall <<HERE
+#!/bin/ksh
+trap "" 1 2 3 15 23 24
+
+#asks user if they are sure they want to uninstall the BSP
+function uninstContinue {
+	trap "" 1 2 3 15 23 24
+	echo "You are about to uninstall files from $install_dir, you should back up any files you wish to keep."
+	echo "Do you want to proceed with the uninstall (y/n)?"
+	read DECISION
+	case "\$DECISION" in
+	   Y*|y*)
+		echo "Continuing with uninstall..." 
+		return
+		;;
+	   N*|n*) echo "No files have been removed, aborting uninstall."
+	   	exit 1
+	    	;;
+	   *) echo "Please enter y or n."
+		uninstContinue
+                ;;
+        esac
+}
+uninstContinue
+
+if [ ! -w $install_dir -o ! -w "\$QNX_CONFIGURATION/qconfig" ] 
+then
+	echo "ERROR: Check that you have write access for the following directories:"
+	echo "       $install_dir"
+	echo "       \$QNX_CONFIGURATION/qconfig"
+	echo "       Or possibly the original installation directory was moved from ${install_dir}."
+	echo " "
+	exit 1
+fi
+
+#remove files and documentation
+for i in \$(grep "/usr/help/product/" ${install_dir}/shiplist); do
+	rm ${install_dir}/\${i}
+	if [ \$? -ne 0 ]; then
+	  echo "ERROR: Cannot remove \${i} that was listed in ${install_dir}/shiplist.  Please check your permissions, and that the file was removed."
+	fi
+ 
+	if [ -d "$QNX_TARGET/usr/help/product" ]
+	then
+		rm \$QNX_TARGET/\${i#docs/}
+		if [ \$? -ne 0 ]; then
+		  echo "ERROR: Cannot remove ${i} from \$QNX_TARGET/usr/help/product/docs.  Please check your permissions, and that the file was removed."
+		fi
+	fi
+	
+	
+	
+done
+
+#remove xml file from $QNX_CONFIGURATION/qconfig
+rm -rf "$QNX_CONFIGURATION/qconfig/${cfgfile%.zip}.xml"
+
+#check to make sure the xml file was removed
+if [ -r "$QNX_CONFIGURATION/qconfig/${cfgfile%.zip}.xml" ]; then
+	echo "The xml file $QNX_CONFIGURATION/qconfig/${cfgfile%.zip}.xml was not deleted, please remove manually."
+fi
+
+if [ -d "$QNX_TARGET/usr/help/product" ]
+then
+	#remove root level bsp folder from /usr/help/product/docs
+	a=\$(grep "bookset.html" ${install_dir}/shiplist)
+	if [ \$? -eq 0 ]; then
+	   b=\${a%%bookset.html}
+	   c=\${b#docs}
+	   rm -rf \$QNX_TARGET/\${c}
+
+	   #check to make sure directory was removed from $QNX_TARGET/usr/help/product
+	   if [ -d $QNX_TARGET/\${c} ]; then
+		echo "\$QNX_TARGET/\${c} was not deleted.  Please check permissions and remove directory manually."
+		exit 1
+	   fi
+	fi
+fi
+
+if [ -r ${install_dir}/plugin_list ]
+then
+	# Uninstall documentation plugins
+	for i in \$(cat ${install_dir}/plugin_list | grep -v "^#"); do
+		rm -rf \$i
+	done
+fi
+
+for i in \$(cat ${install_dir}/shiplist  | grep -v "^#"); do
+	rm -rf ${install_dir}/\$i
+done
+rm -rf ${install_dir}/*.gif
+
+if [ -r ${install_dir}/rootslist ]
+then
+	# Uninstall generated roots.mk files
+	for i in \$(cat ${install_dir}/rootslist  | grep -v "^#"); do
+		rm -rf ${install_dir}/\$i
+	done
+fi
+
+if [ -r ${install_dir}/idelist ]
+then
+	# Uninstall binaries copied to $QNX_TARGET
+	for i in \$(cat ${install_dir}/idelist  | grep -v "^#"); do
+		rm -rf \$QNX_TARGET/\$i
+	done
+fi
+
+if [ -d "$QNX_TARGET/usr/help/product" ]
+then
+	#rebuild index
+	if test -x \$QNX_HOST/usr/bin/mkbspindex; then
+		ksh \$QNX_HOST/usr/bin/mkbspindex
+	fi
+fi
+HERE
+
+if [ $VERBOSE = "true" ]; then
+   echo "  Checking that $install_dir/uninstall script was generated..."      
+fi
+
+#check to make sure uninstall file was copied
+if [ ! -f ${install_dir}/uninstall ]; then
+	echo "The uninstall file was not copied over to ${install_dir}."
+	exit 1
+  #check that uninstall file is not empty
+  elif [ ! -s ${install_dir}/uninstall ]; then
+	echo "$install_dir/uninstall file is empty."
+	exit 1
+fi
+
+#check so that no chmod is performed on uninstall file if on a Windows system
+(
+trap "" 1 2 3 15 23 24
+cd $install_dir
+case "$(uname -s)" in
+        *Windows*) ;;
+        *) 
+	if [ $VERBOSE = "true" ]; then
+           echo "  Performing chmod a+x on $install_dir/uninstall script..."
+        fi
+	chmod a+x uninstall ;;
+esac
+)
+
+# Install binary portion in $QNX_TARGET so the IDE can access them
+rm -f $install_dir/idelist
+
+#copy over the zip file to $QNX_TARGET/usr/src/archives/qnx/ for use with IDE
+ide_drop=usr/src/archives/qnx
+zip_name=${zip_file##*/}
+	
+if [ $VERBOSE = "true" ]; then
+	echo "  Copying over the $zip_name to $QNX_TARGET/$ide_drop for use with the IDE..."      
+fi
+qnx_cp "$zip_file" $QNX_TARGET/$ide_drop/$zip_name
+	
+#check to make sure the zip file was copied
+if [ ! -e $QNX_TARGET/$ide_drop/$zip_name ]; then
+	echo "ERROR: $zip_name was not copied over to $QNX_TARGET/$ide_drop"
+fi 
+
+if [ $VERBOSE = "true" ]; then
+	echo "  Updating $install_dir/idelist so that the uninstaller knows where to uninstall the IDE components from..."      
+fi
+
+#output zip file name to idelist so that uninstaller knows where to uninstall it from
+echo $ide_drop/$zip_name >>$install_dir/idelist
+
+if [ -d ${install_dir}/src ]
+then
+	(
+		trap "" 1 2 3 15 23 24
+		#set up the environment for the build
+		cd $install_dir
+
+		if [ $VERBOSE = "true" ]; then
+   			echo "  Creating roots.mk files at the same level as any common.mk files..."      
+		fi
+
+		# Create roots.mk files at the same level as any common.mk files
+		for cmk in $(find src -type f -name common.mk)
+		do
+			rootspath=${cmk%/common.mk}
+			echo "INSTALL_ROOT_nto=${install_dir}/install" >$rootspath/roots.mk
+			echo "USE_INSTALL_ROOT=1" >>$rootspath/roots.mk
+			# Record for uninstalling
+			echo $rootspath/roots.mk >>rootslist
+		done
+
+		# Prompt the user to perform a make install (to seed the staging area)
+		ANS=""
+		while true
+		do
+			echo 1>&2 ""
+			echo 1>&2 "The installation is complete. Prior to building any source from this BSP"
+			echo 1>&2 "a full build must be performed."
+			echo 1>&2 ""
+
+			read ANS?"Would you like to do this now? (y/n) "
+			if [ $? -gt 0 ]
+			then
+				echo 1>&2 ""
+				echo 1>&2 "Error reading response. Please try again."
+				echo 1>&2 ""
+			else 
+				case $ANS in
+				y|Y)
+					if [ $VERBOSE = "true" ]
+					then
+						echo "Performing initial build. Please wait..."
+					fi	
+
+					make install >$install_dir/makelog 2>&1
+
+					if [ $? -gt 0 ]
+					then
+						echo 1>&2 ""
+						echo 1>&2 "ERROR: Error occurred during 'make install'."
+						echo 1>&2 ""
+						echo 1>&2 "The output can be found in $install_dir/makelog"
+						echo 1>&2 ""
+						echo 1>&2 "The full build must still be completed. To run the full"
+						echo 1>&2 "build again run this command from within $install_dir:"
+						echo 1>&2 ""
+						echo 1>&2 "    make install"
+						echo 1>&2 ""
+					else 
+						if [ $VERBOSE = "true" ]
+						then
+							echo "Make successful"
+						fi
+						rm -f $install_dir/makelog
+					fi
+					break
+					;;
+
+				n|N)
+					echo ""
+					echo "Initial build NOT performed." 
+					echo ""
+					echo "You should change to the installation directory and"
+					echo "run this command prior to building source from this BSP:"
+					echo ""
+					echo "    make install"
+					echo ""
+					break
+					;;
+				*)
+					echo 1>&2 ""
+					echo 1>&2 "Invalid response ($ANS). Please enter \"Y\" or \"N\""
+					echo 1>&2 ""
+					;;
+				esac
+			fi
+		done
+	)
+fi
+
+#tell user where to find release notes
+echo "The release notes are installed with the documentation, which you can read in"
+echo "the IDE's help system, or in the Photon helpviewer on self-hosted Neutrino"
+echo "systems."
+
+if [ $VERBOSE = "true" ]; then
+   echo "Done."      
+fi
