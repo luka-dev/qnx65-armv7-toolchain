@@ -25,9 +25,8 @@ RUN dpkg --add-architecture i386 && apt-get update && \
         ca-certificates curl xz-utils && \
     rm -rf /var/lib/apt/lists/*
 
-COPY host/   /opt/qnx650/host/
-COPY target/ /opt/qnx650/target/
-COPY etc/    /opt/qnx650/etc/
+# The QNX 6.5 SDP tree (host tools + GCC 4.9.4, armle-v7 sysroot, config+license).
+COPY sdp/ /opt/qnx650/
 
 COPY tools/ /opt/tools/
 COPY entrypoint.sh /usr/local/bin/entrypoint

@@ -10,5 +10,5 @@ go/pkg/
 tools/*/
 !tools/.keep
 
-# NOTE: do NOT add target/ or *.so/*.a here — the QNX sysroot (target/qnx6/…)
+# NOTE: do NOT add target/ or *.so/*.a here — the QNX sysroot (sdp/target/qnx6/…)
 # and its libraries live in this repo and must stay tracked.

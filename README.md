@@ -197,7 +197,7 @@ One multi-stage `Dockerfile`:
 │   + libgmp10 libmpfr6 libmpc3      (GCC 4.9 host libs)          │
 │   + gcc libc6-dev                  (host cc for Cargo scripts)  │
 │   + make curl ca-certificates xz-utils                         │
-│ COPY host/ target/ etc/  →  /opt/qnx650                        │
+│ COPY sdp/  →  /opt/qnx650                                       │
 │   = QNX 6.5 SDP tree with GCC 4.9.4 in place of stock 4.4.2     │
 └────────────────────────────────────────────────────────────────┘
         │                                   │
@@ -229,17 +229,19 @@ GCC 4.9** — Go's external linker and Rust's final `.a → .so` step both call
 ```
 Dockerfile          the multi-stage build described above
 entrypoint.sh       prepends every /opt/tools/*/bin to PATH at container start
-host/               QNX 6.5 SDP host tree — GCC 4.9.4 drivers + cc1/cc1plus (stripped),
-                    binutils 2.19, qcc config removed
-target/             armle-v7 sysroot — headers, CRT, libc/libm/libstdc++ (the 6.5 runtime)
-etc/                QNX config + license key
+sdp/                the QNX 6.5 SDP base — the foundation all three languages link against:
+  ├ host/             GCC 4.9.4 drivers + cc1/cc1plus (stripped), binutils 2.19 (qcc removed)
+  ├ target/           armle-v7 sysroot — headers, CRT, libc/libm/libstdc++ (the 6.5 runtime)
+  └ etc/              QNX config + license key
 go/                 patched Go 1.26.4 source — src/ + lib/ only (~152 MB);
                     make.bash regenerates bin/ + pkg/ at build time
 rust/               custom target spec armv7-unknown-nto-qnx650.json + rust-toolchain.toml + build.sh
 tools/              extra drop-in compilers (each tools/<name>/bin joins PATH) — see tools/README.md
 ```
 
-`~387 MB` in git (host/target/etc ≈ 235 MB, go/ ≈ 152 MB). Final image ≈ **1.4 GB**.
+The three top-level inputs map 1:1 to the Docker stages: `sdp/` → `base`,
+`go/` → `go-build`, `rust/` → `rust-build`. `~387 MB` in git (`sdp/` ≈ 235 MB,
+`go/` ≈ 152 MB). Final image ≈ **1.4 GB**.
 
 ---
 
@@ -338,8 +340,8 @@ runtime `-v host:/opt/tools` mount. See `tools/README.md`.
 ## Updating / regenerating components
 
 - **C/C++ (GCC 4.9.4)** — rebuilt by the `qnx-gcc49` project (bring-up scripts +
-  the `arm/nto.h` port), then its `out/` is laid into `host/`. Host binaries are
-  stripped to keep size down.
+  the `arm/nto.h` port), then its `out/` is laid into `sdp/host/`. Host binaries
+  are stripped to keep size down.
 - **Go** — bump the patched tree in `go/src`; `make.bash` rebuilds at
   `docker build`. Only `src/` + `lib/` are vendored; `bin/` and `pkg/` regenerate.
 - **Rust** — edit `rust/armv7-unknown-nto-qnx650.json` or bump the pinned nightly
