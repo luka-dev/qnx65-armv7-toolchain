@@ -209,9 +209,9 @@ One multi-stage `Dockerfile`:
    ▼ FROM qnx-sdp         ▼ FROM qnx-sdp              ▼ FROM qnx-sdp
 ┌─ gcc-build ─────────┐ ┌─ go-build ───────────┐ ┌─ rust-build ────────────┐
 │ COPY gcc/ (port)    │ │ COPY go/ (patched src)│ │ rustup nightly+rust-src │
-│ curl gcc-4.9.4 src  │ │ curl Go bootstrap     │ │ COPY rust/ (target spec)│
-│ apply port+configure│ │ make.bash → host go + │ │                         │
-│ make gcc/libgcc/    │ │   qnx/arm stdlib      │ │ (links via gcc at use)  │
+│ curl gcc-4.9.4 src  │ │ curl Go bootstrap     │ │ COPY rust/ (std port)   │
+│ apply port+configure│ │ make.bash → host go + │ │ bake std: libc fork +   │
+│ make gcc/libgcc/    │ │   qnx/arm stdlib      │ │   std patches (apply)   │
 │   libstdc++ → /gcc-out│└──────────────────────┘ └─────────────────────────┘
 └─────────────────────┘        │                          │
    │                           │                          │
@@ -245,7 +245,8 @@ gcc/                GCC 4.9.4 port + build recipe (port/ patches, build.sh, READ
                     the arm-nto-qnx port applied to vanilla upstream at build time
 go/                 patched Go 1.26.4 source — src/ + lib/ only (~152 MB);
                     make.bash regenerates bin/ + pkg/ at build time
-rust/               custom target spec armv7-unknown-nto-qnx650.json + rust-toolchain.toml + build.sh
+rust/               full-std QNX port: target spec + rust-toolchain.toml + port/
+                    (libc fork + std patches) + qnx-cc linker shim + shim/ + build_std.sh
 tools/              extra drop-in compilers (each tools/<name>/bin joins PATH) — see tools/README.md
 ```
 
@@ -293,11 +294,13 @@ Not a cross-compile of existing code — QNX is not an upstream Go target. The p
 adds `GOOS=qnx GOARCH=arm`, a libc-call runtime, and a hand-written ARM asm
 bridge. See `go/src` and the upstream project notes.
 
-### Rust: build-std, softfp
-No prebuilt `std`; `-Z build-std` compiles `core`/`alloc` per build. The target
-spec uses `+v7,+vfp3,-d32` + `llvm-floatabi:soft` = **softfp**, matching stock
-QNX binaries (`Tag_VFP_arch: VFPv3-D16`, soft call ABI) so objects stay ABI-
-compatible with QNX libc/libsocket.
+### Rust: full std via build-std, softfp
+No prebuilt `std` for QNX, so `-Z build-std=std,panic_abort` compiles the whole
+std from source against a custom `nto65` libc fork + std source patches (baked
+into the image). The target spec uses `+v7,+vfp3,-d32,+strict-align` +
+`llvm-floatabi:soft` = **softfp**, matching stock QNX binaries (`Tag_VFP_arch:
+VFPv3-D16`, soft call ABI) so objects stay ABI-compatible with QNX libc/libsocket;
+`+strict-align` avoids SIGBUS under QNX's `SCTLR.A=1`.
 
 ---
 
@@ -440,6 +443,7 @@ licenses.
   (the `arm/nto.h` port + 12-defect bring-up). This repo no longer depends on it.
 - **`tailscale/go-qnx65`** — the upstream of the `GOOS=qnx` Go port (`go/` here is
   its trimmed source tree).
-- **`mhi2-carplay/tools/rust-qnx65`** — the upstream of the Rust target spec and
-  the `no_std` milestones (dltest, ffitest, sockfwd, alloctest, altpipe).
+- **`mhi2-carplay/tools/rust-qnx65`** — origin of the full-std Rust port now
+  vendored here in `rust/` (libc `nto65` fork, std patches, 56/56 upstream
+  core/alloc tests + M1–M5 validated on real QNX 6.5 QEMU).
 - **`qnx-gl-passthrough`** — QEMU cortex-a15 test bed (real QNX 6.5 runtime).
