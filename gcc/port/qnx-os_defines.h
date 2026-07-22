@@ -33,7 +33,7 @@
 // (0) Enable QNX's extension surface. Under strict -std=c++NN the compiler
 //     defines __STRICT_ANSI__, which makes QNX headers hide the POSIX/QNX
 //     extensions (pthread_cond_timedwait, PTHREAD_MUTEX_RECURSIVE, ...) that
-//     libstdc++'s gthr-posix layer needs — so <thread>/<mutex> fail to compile
+//     libstdc++'s gthr-posix layer needs - so <thread>/<mutex> fail to compile
 //     in strict mode even though they build fine under -std=gnu++NN. Defining
 //     _QNX_SOURCE turns the extensions back on regardless of the dialect; it
 //     only exposes more declarations, it does not change existing ABI.
@@ -57,7 +57,7 @@
 
 // (3) QNX's <string.h> and <wchar.h> unconditionally provide the ISO C++
 //     overloads of memchr/strchr/... and wcschr/... (no _NO_CPP_INLINES gate),
-//     so tell libstdc++ its <cstring>/<cwchar> must NOT add its own — the
+//     so tell libstdc++ its <cstring>/<cwchar> must NOT add its own - the
 //     system headers are already ISO-correct. (Guards use the __-prefixed
 //     spelling, not _GLIBCXX_.)
 #define __CORRECT_ISO_CPP_STRING_H_PROTO 1

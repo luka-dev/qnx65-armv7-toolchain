@@ -38,7 +38,7 @@
 // _CN=0x40, _BB=0x80, _XA=0x200, _XS=0x100, _XB=0x400). Those macros collide
 // with libstdc++ identifiers (e.g. _UP in <bits/unique_ptr.h>), so os_defines.h
 // undefs them project-wide. We therefore hardcode the mask values here instead
-// of referencing the macros — the QNX 6.5 ctype ABI is frozen, so these are
+// of referencing the macros - the QNX 6.5 ctype ABI is frozen, so these are
 // stable. (Keep in sync with <ctype.h> should the platform ever change.)
 
 namespace std _GLIBCXX_VISIBILITY(default)

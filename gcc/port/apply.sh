@@ -54,7 +54,7 @@ fi
 echo ">> arm.md: .inst -> .word/.short for the trap insn (gas 2.19 has no .inst)"
 # GCC 4.9 emits the trap (__builtin_trap / bounds check) as '.inst 0xe7f000f0'
 # (ARM) / '.inst 0xdeff' (Thumb); binutils 2.19's gas predates the .inst
-# pseudo-op. Emit the identical instruction word as data instead — the CPU
+# pseudo-op. Emit the identical instruction word as data instead - the CPU
 # executes it the same; only the disassembler's code/data marking differs.
 sed -i '/0xe7f000f0/ s/\.inst/.word/; /0xdeff/ s/\.inst/.short/' gcc/config/arm/arm.md
 
@@ -83,7 +83,7 @@ sed -i 's/_UnClos<_UName,/_UnClos<struct _UName,/g' \
 echo ">> installing QNX os_defines.h (global ptrdiff_t ordering + ISO string/wchar protos)"
 # configure.host has NO nto case, so arm-unknown-nto-qnx6.5.0eabi resolves its
 # host_os to a string that matches neither qnx6.[12]* nor the widened qnx6.[0-9]*
-# — libstdc++ actually selects os/generic (verified: OS_INC_SRCDIR=config/os/
+# - libstdc++ actually selects os/generic (verified: OS_INC_SRCDIR=config/os/
 # generic). So the fix MUST land in os/generic; the qnx6.1 copy is kept for the
 # i386-nto path but is unused for arm.
 for D in config/os/generic config/os/qnx/qnx6.1; do

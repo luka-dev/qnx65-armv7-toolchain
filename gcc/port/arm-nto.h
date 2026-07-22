@@ -42,7 +42,7 @@
    would also move the arch-independent headers in $sysroot/usr/include.) */
 // crtbegin/crtend come from our libgcc; use the PIC (S) variants for shared
 // objects / PIE, else the non-PIC ones. (armv7 uses movw/movt absolute relocs
-// that ld rejects in a .so — the S variants are built -fPIC.)
+// that ld rejects in a .so - the S variants are built -fPIC.)
 #undef  STARTFILE_SPEC
 #define STARTFILE_SPEC \
   "%{!shared: %{!symbolic: \
@@ -88,7 +88,7 @@
 /* QNX's system libraries are built with int-sized enums (Tag_ABI_enum_size:
    int), like the Linux ARM ABI. bpabi.h defaults to plain AAPCS, whose enum
    default is short/packed (arm.c: arm_default_short_enums() returns true unless
-   arm_abi == AAPCS_LINUX) — that mismatches QNX's libs and the linker warns.
+   arm_abi == AAPCS_LINUX) - that mismatches QNX's libs and the linker warns.
    Default to AAPCS_LINUX: still AAPCS-based/BPABI/EABI, but int enums, and it
    also enables 8-byte __sync_* atomics. */
 #undef  ARM_DEFAULT_ABI
@@ -98,7 +98,7 @@
    '.syntax unified' is active, which stock GCC 4.9 emits in Thumb-2 only
    (arm.h: TARGET_UNIFIED_ASM == TARGET_THUMB2). In ARM state it emits UAL
    mnemonics with no such header, so this old gas rejects them ("bad
-   instruction"). Force fully-unified output — header + mnemonics stay
+   instruction"). Force fully-unified output - header + mnemonics stay
    consistent and gas 2.19 accepts the lot. This is exactly what GCC 5+ later
    made the default (-masm-syntax-unified). */
 #undef  TARGET_UNIFIED_ASM

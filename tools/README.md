@@ -1,7 +1,7 @@
 # Drop-in toolchains
 
 Anything you put here shows up on `PATH` inside the container. One folder per
-toolchain, each with a `bin/` subdir — that's the only rule.
+toolchain, each with a `bin/` subdir - that's the only rule.
 
 ```
 tools/
@@ -29,7 +29,7 @@ Bake into the image (self-contained, rebuild on change):
 
     docker build --platform=linux/amd64 -t qnx65-armv7 .
 
-Or mount at runtime (no rebuild — add/remove folders and just re-run):
+Or mount at runtime (no rebuild - add/remove folders and just re-run):
 
     docker run --rm -it --platform=linux/amd64 \
         -v "$PWD/tools":/opt/tools -v "$PWD":/src qnx65-armv7 bash

@@ -1,5 +1,5 @@
 # Polyglot QNX 6.5 / ARMv7 (armle-v7) cross-toolchain: C/C++ + Go + Rust.
-# Single multi-stage build — one `docker build` yields an image that cross-
+# Single multi-stage build - one `docker build` yields an image that cross-
 # compiles all three for QNX Neutrino 6.5.0 armle-v7, no VM, no external QNX.
 #
 #   base  qnx-sdp     : QNX 6.5 SDP tree (binutils 2.19 + armle-v7 sysroot), no gcc
@@ -14,7 +14,7 @@
 #         docker run --rm -v "$PWD":/src qnx65-sdp-arm \
 #             sh -c 'cd proj && GOOS=qnx GOARCH=arm GOARM=7 go build ./...'
 
-# ──────────────────── base: QNX 6.5 SDP (binutils + sysroot, no gcc) ────────────
+# -------------------- base: QNX 6.5 SDP (binutils + sysroot, no gcc) ------------
 # Pinned by digest for reproducible builds (bullseye-slim as of 2026-07).
 FROM --platform=linux/amd64 debian:bullseye-slim@sha256:cba95a21c96c1f5fc2470081829363eed57706634f7dc26e8c6712934303d57a AS qnx-sdp
 # i386: QNX binutils (as/ld) are 32-bit x86. gmp/mpfr/mpc: GCC 4.9 host binaries
@@ -28,7 +28,7 @@ RUN dpkg --add-architecture i386 && apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # The QNX 6.5 SDP tree: binutils 2.19, armle-v7 sysroot, config+license.
-# GCC is NOT here — it's built from source in the gcc-build stage and merged in
+# GCC is NOT here - it's built from source in the gcc-build stage and merged in
 # the final stage.
 COPY sdp/ /opt/qnx650/
 
@@ -42,7 +42,7 @@ ENV QNX_HOST=/opt/qnx650/host/linux/x86 \
     PATH=/opt/qnx650/host/linux/x86/usr/bin:/usr/bin:/bin \
     LD_LIBRARY_PATH=/opt/qnx650/host/linux/x86/usr/lib
 
-# ─────────────────────────── gcc-build: GCC 4.9.4 from source ──────────────────
+# --------------------------- gcc-build: GCC 4.9.4 from source ------------------
 # Rebuilds the arm-nto-qnx6.5.0eabi GCC 4.9.4 from vanilla upstream + gcc/port,
 # against the SDP sysroot. Installs to /gcc-out (merged into the SDP host tree in
 # the final stage). ~20-40 min. See gcc/README.md for the port + defect log.
@@ -58,7 +58,7 @@ RUN curl -fsSL "https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.bz
     bash /opt/gcc-src/build.sh /tmp/gcc.tar.bz2 /gcc-out && \
     rm -rf /tmp/gcc.tar.bz2 /tmp/gccbuild
 
-# ─────────────────────────── go-build: GOOS=qnx port from source ───────────────
+# --------------------------- go-build: GOOS=qnx port from source ---------------
 FROM qnx-sdp AS go-build
 ARG GO_BOOTSTRAP=go1.26.4
 ARG GO_BOOTSTRAP_SHA256=1153d3d50e0ac764b447adfe05c2bcf08e889d42a02e0fe0259bd47f6733ad7f
@@ -73,7 +73,7 @@ RUN curl -fsSL "https://go.dev/dl/${GO_BOOTSTRAP}.linux-amd64.tar.gz" -o /tmp/go
     GOROOT=/opt/go GOROOT_BOOTSTRAP=/tmp/go GOTOOLCHAIN=local CGO_ENABLED=0 ./make.bash && \
     rm -rf /tmp/go /opt/go/pkg/obj
 
-# ─────────────────────────── rust-build: nightly + rust-src ────────────────────
+# --------------------------- rust-build: nightly + rust-src --------------------
 FROM qnx-sdp AS rust-build
 COPY rust/ /opt/rust/
 ENV RUSTUP_HOME=/opt/rustup CARGO_HOME=/opt/cargo
@@ -86,7 +86,7 @@ RUN curl -fsSL https://sh.rustup.rs | \
     rm -rf /opt/cargo/registry/cache
 ENV PATH=/opt/cargo/bin:/opt/qnx650/host/linux/x86/usr/bin:/usr/bin:/bin
 # Bake the full-std QNX port. A first build-std pulls libc-0.2.185 into the
-# registry (the link step fails — no gcc in this stage — but that's after the
+# registry (the link step fails - no gcc in this stage - but that's after the
 # download); apply_std_port then installs the nto libc fork + std source patches
 # onto the active toolchain (rustc --print sysroot). std then builds clean in the
 # final stage, which has the gcc linker.
@@ -97,7 +97,7 @@ RUN cd /opt/rust/tests/stdhello && \
     cd /opt/rust && bash port/apply_std_port.sh && \
     rm -rf /opt/rust/tests/stdhello/target /opt/cargo/registry/cache
 
-# ─────────────────────────── final: qnx65-sdp-arm ─────────────────────────────
+# --------------------------- final: qnx65-sdp-arm -----------------------------
 FROM qnx-sdp AS full
 # GCC 4.9.4 built from source, merged into the SDP host tree (drivers, cc1/cc1plus,
 # libgcc, libstdc++ headers; binutils symlinks resolve to the SDP's binutils).
