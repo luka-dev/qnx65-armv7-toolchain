@@ -5,7 +5,7 @@
   "data-layout": "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64",
   "target-pointer-width": 32,
   "target-endian": "little",
-  "features": "+v7,+vfp3,-d32,+thumb2,-neon",
+  "features": "+v7,+vfp3,-d32,+thumb2,-neon,+strict-align",
   "llvm-floatabi": "soft",
   "max-atomic-width": 64,
   "os": "nto",
@@ -16,11 +16,13 @@
   "dynamic-linking": true,
   "executables": true,
   "relocation-model": "pic",
-  "position-independent-executables": true,
+  "position-independent-executables": false,
   "has-rpath": true,
   "panic-strategy": "abort",
   "has-thread-local": false,
   "crt-static-respected": false,
-  "target-family": ["unix"],
+  "target-family": [
+    "unix"
+  ],
   "emit-debug-gdb-scripts": false
 }
