@@ -193,36 +193,39 @@ not a Rust target); this is `no_std` + `core`/`alloc` today.
 One multi-stage `Dockerfile`:
 
 ```
-┌─ base: qnx-gcc ────────────────────────────────────────────────┐
-│ debian:bullseye-slim (amd64 + i386 multilib)                   │
+┌─ base: qnx-sdp ────────────────────────────────────────────────┐
+│ debian:bullseye-slim@sha256 (amd64 + i386 multilib)            │
 │   + libc6/libstdc++6/zlib1g:i386   (QNX binutils are 32-bit x86)│
 │   + libgmp10 libmpfr6 libmpc3      (GCC 4.9 host libs)          │
 │   + gcc libc6-dev                  (host cc for Cargo scripts)  │
 │   + make curl ca-certificates xz-utils                         │
 │ COPY sdp/  →  /opt/qnx650                                       │
-│   = QNX 6.5 SDP tree with GCC 4.9.4 in place of stock 4.4.2     │
+│   = QNX 6.5 SDP: binutils 2.19 + armle-v7 sysroot (NO gcc)      │
 └────────────────────────────────────────────────────────────────┘
-        │                                   │
-        ▼ FROM qnx-gcc                       ▼ FROM qnx-gcc
-┌─ go-build ───────────────┐        ┌─ rust-build ─────────────────┐
-│ COPY go/ (patched src)   │        │ rustup nightly + rust-src    │
-│ curl official Go bootstrap│        │ COPY rust/ (target spec)     │
-│ make.bash → host go +    │        │                              │
-│   qnx/arm stdlib          │        │ (links via base gcc at use)  │
-└──────────────────────────┘        └──────────────────────────────┘
-        │                                   │
-        └───────────────┬───────────────────┘
-                        ▼ FROM qnx-gcc
-        ┌─ final: qnx65-armv7-toolchain ──────────────────┐
-        │ COPY --from=go-build   /opt/go                  │
-        │ COPY --from=rust-build /opt/rustup /opt/cargo   │
-        │ ENV GOROOT, PATH=go/cargo/qnx-gcc, …            │
-        └─────────────────────────────────────────────────┘
+   │                     │                          │
+   ▼ FROM qnx-sdp         ▼ FROM qnx-sdp              ▼ FROM qnx-sdp
+┌─ gcc-build ─────────┐ ┌─ go-build ───────────┐ ┌─ rust-build ────────────┐
+│ COPY gcc/ (port)    │ │ COPY go/ (patched src)│ │ rustup nightly+rust-src │
+│ curl gcc-4.9.4 src  │ │ curl Go bootstrap     │ │ COPY rust/ (target spec)│
+│ apply port+configure│ │ make.bash → host go + │ │                         │
+│ make gcc/libgcc/    │ │   qnx/arm stdlib      │ │ (links via gcc at use)  │
+│   libstdc++ → /gcc-out│└──────────────────────┘ └─────────────────────────┘
+└─────────────────────┘        │                          │
+   │                           │                          │
+   └─────────────┬─────────────┴──────────────────────────┘
+                 ▼ FROM qnx-sdp
+   ┌─ final: qnx65-armv7-toolchain ──────────────────────┐
+   │ COPY --from=gcc-build  /gcc-out → SDP host tree      │
+   │ COPY --from=go-build   /opt/go                       │
+   │ COPY --from=rust-build /opt/rustup /opt/cargo        │
+   └──────────────────────────────────────────────────────┘
 ```
 
-Go and Rust stages are `FROM qnx-gcc` because **both link through the base's
-GCC 4.9** — Go's external linker and Rust's final `.a → .so` step both call
-`arm-unknown-nto-qnx6.5.0eabi-gcc`. That is also why no QNX VM is needed anymore.
+The base carries **binutils + the sysroot but no compiler**; GCC 4.9.4 is compiled
+from source in `gcc-build` (~20-40 min, see `gcc/`) and merged into the host tree
+in the final stage. Go and Rust stages are `FROM qnx-sdp` and **link through that
+GCC** — Go's external linker and Rust's `.a → .so` step both call
+`arm-unknown-nto-qnx6.5.0eabi-gcc`. That is why no QNX VM is needed anymore.
 
 ---
 
@@ -231,19 +234,21 @@ GCC 4.9** — Go's external linker and Rust's final `.a → .so` step both call
 ```
 Dockerfile          the multi-stage build described above
 entrypoint.sh       prepends every /opt/tools/*/bin to PATH at container start
-sdp/                the QNX 6.5 SDP base — the foundation all three languages link against:
-  ├ host/             GCC 4.9.4 drivers + cc1/cc1plus (stripped), binutils 2.19 (qcc removed)
+sdp/                the QNX 6.5 SDP base — the foundation all languages link against:
+  ├ host/             binutils 2.19 (as/ld) + QNX host tools (no gcc — built from source)
   ├ target/           armle-v7 sysroot — headers, CRT, libc/libm/libstdc++ (the 6.5 runtime)
   └ etc/              QNX config + license key
+gcc/                GCC 4.9.4 port + build recipe (port/ patches, build.sh, README):
+                    the arm-nto-qnx port applied to vanilla upstream at build time
 go/                 patched Go 1.26.4 source — src/ + lib/ only (~152 MB);
                     make.bash regenerates bin/ + pkg/ at build time
 rust/               custom target spec armv7-unknown-nto-qnx650.json + rust-toolchain.toml + build.sh
 tools/              extra drop-in compilers (each tools/<name>/bin joins PATH) — see tools/README.md
 ```
 
-The three top-level inputs map 1:1 to the Docker stages: `sdp/` → `base`,
-`go/` → `go-build`, `rust/` → `rust-build`. `~387 MB` in git (`sdp/` ≈ 235 MB,
-`go/` ≈ 152 MB). Final image ≈ **1.4 GB**.
+The top-level inputs map 1:1 to the Docker stages: `sdp/` → `base`, `gcc/` →
+`gcc-build`, `go/` → `go-build`, `rust/` → `rust-build`. `~310 MB` in git
+(`sdp/` ≈ 161 MB, `go/` ≈ 152 MB). Final image ≈ **1.4 GB**.
 
 ---
 
@@ -315,8 +320,10 @@ docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 - Rust nightly pinned by **date** in `rust/rust-toolchain.toml` (rustup verifies
   component checksums).
 - Go bootstrap pinned by the `GO_BOOTSTRAP` version arg.
-- GCC 4.9.4 ships as a prebuilt binary under `sdp/host` (built by the separate
-  `qnx-gcc49` bring-up); it is not rebuilt here.
+- GCC 4.9.4 is **built from source** in the `gcc-build` stage from vanilla
+  upstream + the vendored port (`gcc/port`). `sdp/host` carries only binutils.
+  The `gcc-4.9.4.tar.bz2` is fetched from ftp.gnu.org at build (byte-identical to
+  the canonical release); vendor it under `gcc/` for a fully offline build.
 - Not pinned: `apt` package versions (float with the Debian mirror) and the
   `rustup`/crate downloads. For a hermetic build, vendor those too.
 
@@ -354,9 +361,11 @@ runtime `-v host:/opt/tools` mount. See `tools/README.md`.
 
 ## Updating / regenerating components
 
-- **C/C++ (GCC 4.9.4)** — rebuilt by the `qnx-gcc49` project (bring-up scripts +
-  the `arm/nto.h` port), then its `out/` is laid into `sdp/host/`. Host binaries
-  are stripped to keep size down.
+- **C/C++ (GCC 4.9.4)** — the port lives in `gcc/port` (the `arm-nto-qnx`
+  `config.gcc` stanza, `arm/nto.h`, `arm.md` gas-2.19 fixups, the libstdc++
+  os_defines/ctype_base/valarray patches for QNX Dinkum headers, the wchar_t
+  fix). `gcc/build.sh` applies it to vanilla gcc-4.9.4 and builds. To change the
+  compiler, edit `gcc/port/*` and rebuild — no external project needed.
 - **Go** — bump the patched tree in `go/src`; `make.bash` rebuilds at
   `docker build`. Only `src/` + `lib/` are vendored; `bin/` and `pkg/` regenerate.
 - **Rust** — edit `rust/armv7-unknown-nto-qnx650.json` or bump the pinned nightly
@@ -394,7 +403,8 @@ Package binaries into a bootable image with the QNX `mkifs`/`mkefs` tools.
 ## Status & limitations
 
 - **C/C++** — C99 + full C++11 + partial C++14 (GCC 4.9, `__cplusplus=201300L`;
-  no variable templates, no C++17). Verified building and linking.
+  no variable templates, no C++17). Runtime-validated on real QNX 6.5 ARM
+  (thread/atomic/chrono/shared_ptr all run on QEMU cortex-a15 — see gcc/README.md).
 - **Go** — the `GOOS=qnx` port compiles and the full stdlib builds for `qnx/arm`;
   internal-link binaries are produced. Full on-device runtime coverage (cgo,
   external-link defaults) is the ongoing work of the upstream port.
@@ -419,8 +429,8 @@ licenses.
 
 ## Related projects
 
-- **`qnx-gcc49`** — builds the GCC 4.9.4 cross-compiler used here (from-source
-  bring-up against the 6.5 sysroot, the `arm/nto.h` port, defect log).
+- **`qnx-gcc49`** — origin of the GCC 4.9.4 port now vendored here in `gcc/`
+  (the `arm/nto.h` port + 12-defect bring-up). This repo no longer depends on it.
 - **`tailscale/go-qnx65`** — the upstream of the `GOOS=qnx` Go port (`go/` here is
   its trimmed source tree).
 - **`mhi2-carplay/tools/rust-qnx65`** — the upstream of the Rust target spec and
