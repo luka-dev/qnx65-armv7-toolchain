@@ -16,7 +16,7 @@ we add a *target* and cross-build from the dev box. The QNX assets are the
 |---|---|
 | **QNX 6.5 SDP toolchain** (in this image: `arm-unknown-nto-qnx6.5.0eabi-gcc` + binutils 2.19 + `target/qnx6/armle-v7` sysroot + `mkifs`) | the linker + sysroot the Rust target links against (Rust doesn't host on QNX; rustc emits objects, the QNX gcc links the ELF). |
 | ~~qnx66 / qnx800~~ | rejected: qnx66 = 6.6 (gcc 4.6, wrong ver, ABI risk); qnx800 = QNX 8 aarch64 (diff OS gen). Neither fits a 6.5-armv7 target. |
-| **`Tools/qnx-gl-passthrough`** QEMU harness | the on-device test bed: `qemu-system-arm -M virt -cpu cortex-a15` (armv7-A, runs our armv7 `.so`), boots real `procnto-smp` + `libc.so.3`, IFS has `sh`/`ls`/`cat`/`pidin`. dlopen milestone runs here - no real HU needed. |
+| **QEMU harness** (cortex-a15) | the on-device test bed: `qemu-system-arm -M virt -cpu cortex-a15` (armv7-A, runs our armv7 `.so`), boots real `procnto-smp` + `libc.so.3`, IFS has `sh`/`ls`/`cat`/`pidin`. dlopen milestone runs here - no real HU needed. |
 | QNX 6.3.0 source | reference for libc struct layouts / syscall shims **only if** full `std` is attempted |
 
 ## Scope decision (pick before writing tooling)
@@ -99,9 +99,9 @@ uses the `qnx-gl-passthrough` QEMU (cortex-a15, real procnto + libc.so.3).
       libc `abort()` (was a silent `loop{}` deadlock). alloc OOM handler aborts too.
 - note: `ntoarm-ld` warns `Unknown EABI object attribute 34` (softfp/vfp3 -> LLVM emits Tag_MPextension_use;
   binutils 2.19 doesn't know it) - benign, linker skips it; runtime verified working.
-- [x] **VM-FREE toolchain (2026-07)** - link step moved from the SSH-to-VM path onto the local
-      `qnx65-armv7` docker image (`Tools/qnx-sdp-docker`, gcc 4.4.2 / ld 2.19.1, x86-Linux host tools).
-      `build.sh` now links in docker; no VM needed for the whole build->link->mkifs->QEMU loop.
+- [x] **VM-FREE toolchain (2026-07)** - link step moved from the SSH-to-VM path onto the
+      in-image QNX toolchain (x86-Linux host tools). No VM needed for the whole
+      build->link->mkifs->QEMU loop; now the in-image gcc links (see the top-level README).
 - [x] **FULL `std` - M1 PASSED (2026-07)** - Scope B is now real, not just no_std. A full-`std` Rust
       executable (`stdhello/`, `fn main(){ println!("std boot"); }`) built with
       `-Z build-std=std,panic_abort -Z build-std-features=` and BOOTED on real QNX 6.5 armv7 in QEMU:
