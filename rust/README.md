@@ -150,6 +150,15 @@ after the manual smoke test passes — until then, 2 steps by hand.
       Panic=abort (a thread panic aborts the process — by design; no catch_unwind/backtrace, since 6.5
       lacks dl_iterate_phdr and shared unwind). All deltas reproducible: `./port/apply_std_port.sh`
       then `./build_std.sh <crate>` (+ `./run_qemu.sh`/`run_qemu_net.sh <bin>` to boot in QEMU).
+- [x] **smallest dynamic binary (2026-07)** — binaries are already dynamically linked (NEEDED
+      libc.so.3 [+ libsocket.so.3]); std itself is linked *statically* (build-std emits only rlibs, no
+      shared libstd.so — Rust dylib crate-type isn't produced for a custom target, so `-C
+      prefer-dynamic` has nothing to bind and falls back to static). Practical size floor for a
+      static-std binary: `[profile.release] panic="abort", opt-level="z", strip=true` + build-std
+      `-Z build-std-features=` (backtrace off) → **stdhello 202KB → 122KB**. Do NOT use `lto` — with
+      build-std it makes the binary BIGGER (274KB) and interferes with stripping. A shared libstd.so
+      (≈15KB/binary + one ~2-3MB .so) would need manually building the std dylib; only worth it with
+      many Rust binaries, not a single hook/.so.
 
 ## Reproduce milestone 1
 ```
