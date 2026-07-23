@@ -18,3 +18,8 @@ tools/*/
 # Rust unwind shim: .a/.o rebuilt from shim/unwind_shim.c at image build
 rust/shim/*.o
 rust/shim/*.a
+
+# ports/: downloaded source tarballs (build.sh re-fetches on demand) and logs.
+# The built sysroot/ libraries stay tracked, like the rest of the QNX sysroot.
+ports/**/*.tar.*
+ports/**/build.log
