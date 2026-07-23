@@ -1,7 +1,7 @@
 #!/bin/sh
 # Run the QNX 6.5 / armle-v7 polyglot cross-toolchain (C/C++ GCC 4.9.4 +
 # Go GOOS=qnx + Rust armv7-nto-qnx650) on the current directory: mounts the cwd
-# as /src inside the qnx65-sdp-arm image and runs the command there.
+# as /src inside the qnx65-armv7-toolchain image and runs the command there.
 #
 #   ./qnx-run.sh                                                  # interactive shell
 #   ./qnx-run.sh arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++14 -O2 a.cpp -o a
@@ -17,7 +17,7 @@
 # interp /usr/lib/ldqnx.so.2. Note: QNX Dinkum headers don't pull <stddef.h>
 # transitively - add -include stddef.h for code that assumes it.
 
-IMG=qnx65-sdp-arm
+IMG=qnx65-armv7-toolchain
 CTX="$(cd "$(dirname "$0")/.." && pwd)"   # repo root (Dockerfile / build context)
 PLAT=linux/amd64
 
