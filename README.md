@@ -23,6 +23,7 @@ docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
   - [C / C++](#c--c)
   - [Go](#go)
   - [Rust](#rust)
+- [Cross-building real software (CMake / Autotools / Meson)](#cross-building-real-software-cmake--autotools--meson)
 - [How the image is built](#how-the-image-is-built)
 - [Repository layout](#repository-layout)
 - [Design decisions](#design-decisions)
@@ -191,6 +192,62 @@ not just for reproducibility. **Stable can't build this**: `-Z build-std` and
 
 ---
 
+## Cross-building real software (CMake / Autotools / Meson)
+
+The direct compilers cross-build a single file fine; real projects also need
+their build system pointed at the target and their cross **run-tests** answered
+(a cross-compiler can't *execute* a probe binary at configure time - the classic
+`cannot run test program` / gnulib `conftest` wall). The image ships ready-made
+cross files at `/opt/qnx-cross/` and host wrappers so you rarely type them:
+
+| Build system | In-image file | Host wrapper |
+|--------------|---------------|--------------|
+| Autotools    | `config.site` | `host-scripts/qnx-configure` |
+| CMake        | `qnx-armv7.cmake` | `host-scripts/qnx-cmake` |
+| Meson        | `qnx-armv7.ini` | `host-scripts/qnx-meson` |
+
+```sh
+# Autotools - config.site pre-answers the cross run-tests
+cd myproject && /path/to/host-scripts/qnx-configure --disable-shared && make
+
+# CMake - the toolchain file is injected on configure, not on --build
+qnx-cmake -S . -B build && qnx-cmake --build build
+
+# Meson - --cross-file injected on 'setup'
+qnx-meson setup build && qnx-meson compile -C build
+```
+
+Or run the raw tools inside the image (what the wrappers do):
+
+```sh
+CONFIG_SITE=/opt/qnx-cross/config.site ./configure --host=arm-unknown-nto-qnx6.5.0eabi
+cmake -DCMAKE_TOOLCHAIN_FILE=/opt/qnx-cross/qnx-armv7.cmake -S . -B build
+meson setup --cross-file /opt/qnx-cross/qnx-armv7.ini build
+```
+
+What the files set up: the target triplet + compilers/`ar`/`strip`, the QNX
+sysroot for `find_*`/pkg-config (host libs excluded), `needs_exe_wrapper`, and -
+for autotools - a curated set of `ac_cv_*`/`gl_cv_*` results (malloc/realloc(0),
+memcmp, mmap, mktime, ...) plus `CPPFLAGS=-include stddef.h`. gnulib defines
+hundreds of `gl_cv_*` run-tests; the common offenders are covered, and a stubborn
+project just adds its own to `cross/config.site`. `cmake`, `meson`, `ninja`, and
+`pkg-config` are installed in the image for this.
+
+Two toolchain-level fixes make most C/C++ software link and compile without
+per-project patching (both in `gcc/port/arm-nto.h`):
+
+- **Static-only libc functions resolve automatically.** 113 libc functions -
+  the regex family (`regcomp`/`regexec`/`regfree`/`regerror`), `glob`/`globfree`,
+  `wordexp`, `scandir`, ... - live only in `libc.a`, not the shared `libc.so.3`,
+  so software that uses them used to fail to link. The default link now appends
+  `-l:libc.a`, and the linker pulls those members statically on demand (programs
+  that don't use them pull nothing).
+- **`_QNX_SOURCE` is predefined** (QNX's `_GNU_SOURCE` analog), so the POSIX/
+  pthread extensions that headers hide under strict `-std=cNN` are visible. Stock
+  QNX's own libstdc++ predefines it too; it gates declarations, not ABI.
+
+---
+
 ## How the image is built
 
 One multi-stage `Dockerfile`:
@@ -221,8 +278,9 @@ One multi-stage `Dockerfile`:
 | COPY --from=gcc-build   /gcc-out -> SDP host tree   |
 | COPY --from=go-build    /opt/go                     |
 | COPY --from=rust-build  /opt/rustup /opt/cargo      |
+| + cmake/meson/ninja/pkg-config (cross build systems)|
 | build the unwind shim; install the build-std wrapper|
-| COPY tools/ (qcc shim) + entrypoint   <- LAST/cheap |
+| COPY tools/ (qcc shim) + cross/ + entrypoint <- LAST |
 +-----------------------------------------------------+
 ```
 
@@ -253,8 +311,11 @@ rust/               full-std QNX port: target spec + rust-toolchain.toml + port/
                     (libc fork + std patches) + qnx-cc linker shim + shim/ + build_std.sh
 tools/              in-container PATH additions - the bundled qcc/ shim (for mkifs)
                     plus any user drop-in compilers; see tools/README.md
+cross/              cross-build files baked to /opt/qnx-cross: config.site (autotools),
+                    qnx-armv7.cmake (CMake toolchain), qnx-armv7.ini (Meson cross file)
 host-scripts/       host-side runners: qnx-run.sh (run the toolchain on the cwd),
-                    qnx-mkifs.sh (build a QNX IFS with mkifs)
+                    qnx-mkifs.sh (build a QNX IFS), qnx-configure/qnx-cmake/qnx-meson
+                    (cross-configure autotools/CMake/Meson projects)
 ```
 
 The top-level inputs map 1:1 to the Docker stages: `sdp/` -> `base`, `gcc/` ->
