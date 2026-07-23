@@ -19,6 +19,11 @@
 	builtin_define ("__ARM__");			\
 	builtin_define ("__unix__");			\
 	builtin_define ("__unix");			\
+	/* QNX's _GNU_SOURCE analog: exposes the POSIX/pthread extensions	\
+	   that headers gate on _QNX_SOURCE (hidden under strict -std=cNN	\
+	   otherwise). Stock QNX's own libstdc++ predefines it too; it gates	\
+	   declarations, not struct layout, so it's ABI-safe. */		\
+	builtin_define ("_QNX_SOURCE");			\
 	builtin_assert ("system=qnx");			\
 	builtin_assert ("system=qnxnto");		\
 	builtin_assert ("system=nto");			\
@@ -68,8 +73,15 @@
    -L%R/armle-v7/lib -L%R/armle-v7/usr/lib \
    %{!shared: --dynamic-linker /usr/lib/ldqnx.so.2}"
 
+/* -lc pulls the shared libc (libc.so.3); -l:libc.a appends the static libc as a
+   fallback. 113 libc functions live ONLY in libc.a - the regex family
+   (regcomp/regexec/regfree/regerror), glob/globfree, wordexp, scandir, ... -
+   and are NOT exported by libc.so.3, so software that uses them fails to link
+   by default. ld pulls archive members only to satisfy still-undefined symbols,
+   so this resolves those functions statically while everything else stays
+   dynamic; programs that don't use them pull nothing and pay nothing. */
 #undef  LIB_SPEC
-#define LIB_SPEC "%{!shared:%{!symbolic:-lc}}"
+#define LIB_SPEC "%{!shared:%{!symbolic:-lc -l:libc.a}}"
 
 /* QNX is a full unix; its headers already guard extern "C" themselves. */
 #define NO_IMPLICIT_EXTERN_C 1

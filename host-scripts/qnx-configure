@@ -1,0 +1,10 @@
+#!/bin/sh
+# Cross-./configure an autotools project for QNX 6.5 armle-v7 in the toolchain
+# image. Run from the project dir (cwd -> /src):
+#   qnx-configure [configure args...]
+# Sets CONFIG_SITE (pre-answers the cross run-tests) and --host for you; extra
+# args pass straight to ./configure.
+IMG=qnx65-armv7-toolchain
+docker image inspect "$IMG" >/dev/null 2>&1 || { echo "image '$IMG' missing - run host-scripts/qnx-run.sh build" >&2; exit 1; }
+exec docker run --rm --platform=linux/amd64 -v "$PWD":/src "$IMG" \
+    sh -c 'CONFIG_SITE=/opt/qnx-cross/config.site ./configure --host=arm-unknown-nto-qnx6.5.0eabi "$@"' sh "$@"

@@ -1,0 +1,13 @@
+#!/bin/sh
+# Cross-drive Meson for QNX 6.5 armle-v7 in the toolchain image. Run from the
+# project dir (cwd -> /src):
+#   qnx-meson setup build         # configure (cross file auto-added)
+#   qnx-meson compile -C build    # build
+# The --cross-file is injected only on 'setup'; other subcommands pass through.
+IMG=qnx65-armv7-toolchain
+docker image inspect "$IMG" >/dev/null 2>&1 || { echo "image '$IMG' missing - run host-scripts/qnx-run.sh build" >&2; exit 1; }
+if [ "${1:-}" = setup ]; then
+    shift
+    set -- setup --cross-file /opt/qnx-cross/qnx-armv7.ini "$@"
+fi
+exec docker run --rm --platform=linux/amd64 -v "$PWD":/src "$IMG" meson "$@"

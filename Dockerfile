@@ -114,6 +114,13 @@ ENV GOROOT=/opt/go \
     PATH=/opt/go/bin:/opt/cargo/bin:/opt/qnx650/host/linux/x86/usr/bin:/usr/local/bin:/usr/bin:/bin \
     LD_LIBRARY_PATH=/opt/qnx650/host/linux/x86/usr/lib
 
+# Cross-build drivers so the cross/ files (config.site, cmake toolchain, meson
+# cross file) are usable in-container end to end. autotools ./configure needs
+# only sh+make+gcc (already present), so autoconf/automake aren't installed.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        cmake meson ninja-build pkg-config file && \
+    rm -rf /var/lib/apt/lists/*
+
 # Build the Rust std linker's unwind shim with the in-image gcc (defines the
 # EHABI _Unwind_GetIP symbol std wants), and expose the one-command std builder.
 RUN cd /opt/rust/shim && \
@@ -127,6 +134,9 @@ RUN cd /opt/rust/shim && \
 # rust stages. (For rapid qcc-shim iteration, skip rebuilding entirely and mount
 # tools/ at runtime: -v "$PWD/tools":/opt/tools.)
 COPY tools/ /opt/tools/
+# Cross-build helper files (autotools config.site, CMake toolchain, Meson cross
+# file) at a stable path the wrappers/docs reference.
+COPY cross/ /opt/qnx-cross/
 COPY entrypoint.sh /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint
 
