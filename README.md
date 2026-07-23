@@ -141,6 +141,30 @@ on the device's older one):
 arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++14 -static-libstdc++ -static-libgcc app.cpp -o app
 ```
 
+**C++ shared objects / mkifs grafts / preloads.** Linking a `.so` with `g++` puts
+`libstdc++.so.6` in its `DT_NEEDED`. If the target IFS/graft image doesn't ship
+that library, QNX's loader **silently drops the whole preload/graft** - no error,
+no output. Three ways out, depending on what the code uses:
+
+```sh
+# full C++ (new/delete, STL, exceptions): statically fold libstdc++/libgcc in -
+# no libstdc++ dependency, no dangling symbols. General fix.
+arm-unknown-nto-qnx6.5.0eabi-g++ -shared -fPIC -static-libstdc++ -static-libgcc mod.cpp -o mod.so
+
+# minimal C++ only (NO new/delete/STL/exceptions/rtti): compile freestanding-ish
+# and link with gcc so libstdc++ is never pulled. VERIFY nothing dangles:
+arm-unknown-nto-qnx6.5.0eabi-g++ -c -fPIC -fno-exceptions -fno-rtti mod.cpp -o mod.o
+arm-unknown-nto-qnx6.5.0eabi-gcc -shared mod.o -o mod.so
+arm-unknown-nto-qnx6.5.0eabi-nm -D -u mod.so   # must show NO _Znwj/_ZdlPv/_ZNSt* (new/delete/std::)
+
+# or: actually ship libstdc++.so.6 in the image (it's in the SDP sysroot at
+# target/qnx6/armle-v7/lib/libstdc++.so.6.0.13 + the .so.6 symlink).
+```
+
+`gcc -shared` alone won't error on the missing symbols - shared objects allow
+undefined references - so a `new`/STL module links "clean" but leaves `_Znwj`
+&co. unresolved and fails the same silent way at load. Always check with `nm -D -u`.
+
 ### Go
 
 A **new-GOOS port** (`GOOS=qnx GOARCH=arm`). QNX is a message-passing microkernel
@@ -483,6 +507,13 @@ bootable image with the QNX `mkifs`/`mkefs` tools (in the image);
   image).
 - **Binary won't resolve libc on device** with pure internal linking - use
   external linking (`-linkmode=external -extld=arm-unknown-nto-qnx6.5.0eabi-gcc`).
+- **A C++ preload / mkifs graft is silently ignored** (loads nothing, no output) -
+  its `.so` was linked with `g++`, which adds `libstdc++.so.6` to `DT_NEEDED`, and
+  that library isn't in the target image, so the loader drops the whole object
+  without a diagnostic. Link it self-contained with `-static-libstdc++
+  -static-libgcc`, or (minimal C++ only) build with `-fno-exceptions -fno-rtti`
+  and link via `gcc -shared` - then confirm with `nm -D -u` that no `_Znwj`/`_ZNSt*`
+  symbols dangle. See [C / C++](#c--c).
 
 ---
 
