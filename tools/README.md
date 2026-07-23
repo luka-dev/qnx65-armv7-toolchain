@@ -53,11 +53,11 @@ rewritten command. This is toolchain glue - keep it tracked, unlike user drop-in
 
 Bake into the image (self-contained, rebuild on change):
 
-    docker build --platform=linux/amd64 -t qnx65-sdp-arm .
+    docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 
 Or mount at runtime (no rebuild - add/remove folders and just re-run):
 
     docker run --rm -it --platform=linux/amd64 \
-        -v "$PWD/tools":/opt/tools -v "$PWD":/src qnx65-sdp-arm bash
+        -v "$PWD/tools":/opt/tools -v "$PWD":/src qnx65-armv7-toolchain bash
 
 Binaries must be `linux/amd64` (the image runs under amd64, emulated on Apple Silicon).

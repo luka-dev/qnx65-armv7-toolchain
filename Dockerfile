@@ -6,12 +6,12 @@
 #   stage gcc-build   : builds GCC 4.9.4 for the target from source (gcc/port)
 #   stage go-build    : builds the GOOS=qnx GOARCH=arm port from source (make.bash)
 #   stage rust-build  : rustup nightly + rust-src (custom armv7-nto-qnx650 target)
-#   final qnx65-sdp-arm: base + the built GCC, Go and Rust toolchains
+#   final qnx65-armv7-toolchain: base + the built GCC, Go and Rust toolchains
 #
-# Build:  docker build --platform=linux/amd64 -t qnx65-sdp-arm .
-# Use:    docker run --rm -v "$PWD":/src qnx65-sdp-arm \
+# Build:  docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
+# Use:    docker run --rm -v "$PWD":/src qnx65-armv7-toolchain \
 #             arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++14 -O2 a.cpp -o a
-#         docker run --rm -v "$PWD":/src qnx65-sdp-arm \
+#         docker run --rm -v "$PWD":/src qnx65-armv7-toolchain \
 #             sh -c 'cd proj && GOOS=qnx GOARCH=arm GOARM=7 go build ./...'
 
 # -------------------- base: QNX 6.5 SDP (binutils + sysroot, no gcc) ------------
@@ -32,9 +32,9 @@ RUN dpkg --add-architecture i386 && apt-get update && \
 # the final stage.
 COPY sdp/ /opt/qnx650/
 
-COPY tools/ /opt/tools/
-COPY entrypoint.sh /usr/local/bin/entrypoint
-RUN chmod +x /usr/local/bin/entrypoint
+# NOTE: tools/ and entrypoint are intentionally NOT copied here - they go in the
+# final stage (bottom) so iterating on them never invalidates this base and the
+# gcc/go/rust stages built FROM it. See the tail of the file.
 
 ENV QNX_HOST=/opt/qnx650/host/linux/x86 \
     QNX_TARGET=/opt/qnx650/target/qnx6 \
@@ -97,7 +97,7 @@ RUN cd /opt/rust/tests/stdhello && \
     cd /opt/rust && bash port/apply_std_port.sh && \
     rm -rf /opt/rust/tests/stdhello/target /opt/cargo/registry/cache
 
-# --------------------------- final: qnx65-sdp-arm -----------------------------
+# --------------------------- final: qnx65-armv7-toolchain -----------------------------
 FROM qnx-sdp AS full
 # GCC 4.9.4 built from source, merged into the SDP host tree (drivers, cc1/cc1plus,
 # libgcc, libstdc++ headers; binutils symlinks resolve to the SDP's binutils).
@@ -121,6 +121,14 @@ RUN cd /opt/rust/shim && \
     arm-unknown-nto-qnx6.5.0eabi-ar rcs libqnxunwind.a unwind_shim.o && \
     printf '#!/bin/sh\nexec /opt/rust/build_std.sh "$@"\n' > /usr/local/bin/build-std && \
     chmod +x /usr/local/bin/build-std
+
+# tools/ (bundled qcc shim + user drop-ins) and the entrypoint come LAST, so
+# editing them re-runs only these cheap copy layers - never the cached gcc/go/
+# rust stages. (For rapid qcc-shim iteration, skip rebuilding entirely and mount
+# tools/ at runtime: -v "$PWD/tools":/opt/tools.)
+COPY tools/ /opt/tools/
+COPY entrypoint.sh /usr/local/bin/entrypoint
+RUN chmod +x /usr/local/bin/entrypoint
 
 WORKDIR /src
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
