@@ -103,15 +103,21 @@ Verify any output binary:
 file hello    # -> ELF 32-bit LSB executable, ARM, EABI5 ..., interpreter /usr/lib/ldqnx.so.2
 ```
 
+Shortcut: `host-scripts/qnx-run.sh <cmd>` runs any of the above in the image with
+the cwd mounted, e.g. `./host-scripts/qnx-run.sh build-std ./mycrate` or
+`./host-scripts/qnx-run.sh` for an interactive shell.
+
 ---
 
 ## Usage per language
 
 ### C / C++
 
-The compiler is invoked **directly** by its target triplet - there is **no
-`qcc`** (see [Design decisions](#why-no-qcc)). The driver sets all QNX defines
-(`__QNXNTO__`, `__QNX__`, `__ELF__`, `__ARM__`) itself.
+Invoke the compiler **directly** by its target triplet - it sets all QNX defines
+(`__QNXNTO__`, `__QNX__`, `__ELF__`, `__ARM__`), sysroot, CRT and specs itself.
+The stock SDP `qcc` driver was replaced by GCC, but a **`qcc` shim** on `PATH`
+translates qcc-style invocations to gcc/g++ for anything that still calls it
+(`mkifs`, qcc-based Makefiles) - see [The `qcc` shim](#the-qcc-shim).
 
 ```sh
 # C
@@ -216,6 +222,7 @@ One multi-stage `Dockerfile`:
 | COPY --from=go-build    /opt/go                     |
 | COPY --from=rust-build  /opt/rustup /opt/cargo      |
 | build the unwind shim; install the build-std wrapper|
+| COPY tools/ (qcc shim) + entrypoint   <- LAST/cheap |
 +-----------------------------------------------------+
 ```
 
@@ -224,6 +231,8 @@ from source in `gcc-build` (~20-40 min, see `gcc/`) and merged into the host tre
 in the final stage. Go and Rust stages are `FROM qnx-sdp` and **link through that
 GCC** - Go's external linker and Rust's `.a -> .so` step both call
 `arm-unknown-nto-qnx6.5.0eabi-gcc`. That is why no QNX VM is needed anymore.
+`tools/` and the entrypoint are copied **last**, so editing the `qcc` shim (or any
+drop-in) re-runs only those cheap layers, never the cached gcc/go/rust stages.
 
 ---
 
@@ -242,7 +251,10 @@ go/                 patched Go 1.26.4 source - src/ + lib/ only (~152 MB);
                     make.bash regenerates bin/ + pkg/ at build time
 rust/               full-std QNX port: target spec + rust-toolchain.toml + port/
                     (libc fork + std patches) + qnx-cc linker shim + shim/ + build_std.sh
-tools/              extra drop-in compilers (each tools/<name>/bin joins PATH) - see tools/README.md
+tools/              in-container PATH additions - the bundled qcc/ shim (for mkifs)
+                    plus any user drop-in compilers; see tools/README.md
+host-scripts/       host-side runners: qnx-run.sh (run the toolchain on the cwd),
+                    qnx-mkifs.sh (build a QNX IFS with mkifs)
 ```
 
 The top-level inputs map 1:1 to the Docker stages: `sdp/` -> `base`, `gcc/` ->
@@ -259,42 +271,44 @@ git. (The stock `cc`/`CC`/`QCC` names were symlinks to `qcc` and collided by cas
 on macOS/APFS; with `qcc` removed this is no longer relevant.)
 
 ### GCC 4.4.2 -> 4.9.4, in place
-The stock SDP compiler was **fully replaced** by a custom GCC 4.9.4 built for the
-same `arm-unknown-nto-qnx6.5.0eabi` target (see [qnx-gcc49](#related-projects)).
-It reuses the SDP's binutils 2.19 and the 6.5 sysroot, and lives exactly where
-4.4.2 did (`usr/bin` drivers, `usr/lib/gcc/.../4.9.4`, `usr/libexec/gcc/.../4.9.4`).
+The stock SDP compiler was **fully replaced** by a custom GCC 4.9.4 built from
+source (recipe in `gcc/`) for the same `arm-unknown-nto-qnx6.5.0eabi` target. It
+reuses the SDP's binutils 2.19 and the 6.5 sysroot, and lives exactly where 4.4.2
+did (`usr/bin` drivers, `usr/lib/gcc/.../4.9.4`, `usr/libexec/gcc/.../4.9.4`).
 Gains: full **C++11** and most of **C++14** (generic lambdas, return-type
 deduction, `make_unique`, `<thread>`/`<chrono>`/atomics), better ARM/NEON codegen -
-while keeping the pre-C++11 libstdc++ ABI so output stays compatible with the 6.5
-device libraries. C++14 is GCC 4.9's experimental level (`__cplusplus = 201300L`;
-**no variable templates**, those need GCC 5); there is **no C++17**. For a newer
-standard you'd build a newer GCC against this sysroot (as `qnx-gcc49` did for 4.9).
+while keeping the pre-C++11 libstdc++ ABI so output stays link-compatible with the
+6.5 device libraries. C++14 is GCC 4.9's experimental level (`__cplusplus =
+201300L`; **no variable templates** - those need GCC 5 - and **no C++17**). For a
+newer standard, rebuild a newer GCC against this sysroot the same way.
 
-### <a name="why-no-qcc"></a>No `qcc`
-`qcc` exists to select among **multiple** {arch x compiler version x C++ library}
-combos via `-V`. This image has exactly one of each (armv7 x GCC 4.9 x GNU
-libstdc++), so there is nothing to select. The direct driver
-`arm-unknown-nto-qnx6.5.0eabi-gcc` already sets every QNX define, knows the
-sysroot/CRT/specs, and links correctly - verified for C and C++14. `qcc` and its
-4.4.2 `-V` config (which assumed the incompatible Dinkum C++ headers) were removed.
+### <a name="the-qcc-shim"></a>The `qcc` shim
+The stock SDP `qcc` was removed: it exists only to select among **multiple**
+{arch x compiler version x C++ library} combos via `-V`, and this image has
+exactly one of each (armv7 x GCC 4.9 x GNU libstdc++). The direct driver already
+sets every QNX define, sysroot, CRT and specs and links correctly.
+
+But `mkifs` build files (and some Makefiles) literally invoke `qcc`, so
+`tools/qcc/bin/qcc` is a small **qcc-to-gcc translator** (validated against the
+decompiled stock qcc). It drops `-V`/`-Y`/`-cxxlib*`/`-*-intel`, maps
+`-bootstrap`->`-nostdlib`, `-EL/-EB`->endian, `-Wc,`->compiler opts, `-lang-*`->`-x`,
+expands `@response-files`, and picks **g++** for C++ (a C++ `-V` variant, a C++
+source extension, `-lang-c++`, or a `CC`/`c++` driver name) so C++ links
+libstdc++. Everything gcc already understands passes through. Full flag table in
+`tools/README.md`.
 
 ### armv7-only
 Only the `armle-v7` (EABI) target is kept. The other SDP arches (arm-old-abi,
 x86, mips, ppc, sh), the Momentics IDE, docs, and WebKit were trimmed from the
 SDP tree, shrinking it from ~1.1 GB to ~235 MB.
 
-### Go: a real GOOS port
-Not a cross-compile of existing code - QNX is not an upstream Go target. The port
-adds `GOOS=qnx GOARCH=arm`, a libc-call runtime, and a hand-written ARM asm
-bridge. See `go/src` and the upstream project notes.
-
-### Rust: full std via build-std, softfp
-No prebuilt `std` for QNX, so `-Z build-std=std,panic_abort` compiles the whole
-std from source against a custom `nto65` libc fork + std source patches (baked
-into the image). The target spec uses `+v7,+vfp3,-d32,+strict-align` +
-`llvm-floatabi:soft` = **softfp**, matching stock QNX binaries (`Tag_VFP_arch:
-VFPv3-D16`, soft call ABI) so objects stay ABI-compatible with QNX libc/libsocket;
-`+strict-align` avoids SIGBUS under QNX's `SCTLR.A=1`.
+### Go and Rust are real ports, not cross-compiles
+QNX is an upstream target for neither. Go adds a `GOOS=qnx GOARCH=arm` libc-call
+runtime + a hand-written ARM asm bridge (`go/`). Rust adds a custom
+`armv7-nto-qnx650` target + an `nto65` libc fork + std source patches, built via
+`-Z build-std` (`rust/`). Both are **softfp** to match the 6.5 ABI (`Tag_VFP_arch:
+VFPv3-D16`); Rust's target also carries `+strict-align` for QNX's `SCTLR.A=1`.
+Full details in `go/README.md` and `rust/README.md`.
 
 ---
 
@@ -330,13 +344,18 @@ docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
   versions. For bit-reproducibility, point `sources.list` at snapshot.debian.org
   (a dated snapshot) - omitted here as it is slower and occasionally flaky.
 
-**Partial builds** (handy while iterating):
+**Partial builds** (build one stage while iterating - each is an intermediate
+build stage, not a ready polyglot image):
 
 ```sh
-docker build --platform=linux/amd64 --target qnx-gcc     -t qnx65-gcc .   # C/C++ only
-docker build --platform=linux/amd64 --target go-build    -t _go .          # + Go
-docker build --platform=linux/amd64 --target rust-build  -t _rust .        # + Rust toolchain
+docker build --platform=linux/amd64 --target qnx-sdp    -t _sdp .   # base: binutils + sysroot
+docker build --platform=linux/amd64 --target gcc-build  -t _gcc .   # + build GCC 4.9.4
+docker build --platform=linux/amd64 --target go-build   -t _go .    # + build the Go port
+docker build --platform=linux/amd64 --target rust-build -t _rust .  # + rust toolchain + std port
 ```
+
+Iterating on the `qcc` shim or `tools/` needs no rebuild at all - mount them at
+runtime: `-v "$PWD/tools":/opt/tools` (this is what `host-scripts/qnx-mkifs.sh` does).
 
 ---
 
@@ -352,12 +371,13 @@ GOROOT=/opt/go
 GOTOOLCHAIN=local
 RUSTUP_HOME=/opt/rustup
 CARGO_HOME=/opt/cargo
-PATH=/opt/go/bin:/opt/cargo/bin:/opt/qnx650/host/linux/x86/usr/bin:/usr/bin:/bin
+PATH=/opt/go/bin:/opt/cargo/bin:/opt/qnx650/host/linux/x86/usr/bin:/usr/local/bin:/usr/bin:/bin
 LD_LIBRARY_PATH=/opt/qnx650/host/linux/x86/usr/lib
 ```
 
-Drop extra compilers into `tools/<name>/` (each with a `bin/`); `entrypoint.sh`
-adds them to `PATH` at container start - works for baked-in `COPY` and for a
+`/usr/local/bin` holds `build-std`; `entrypoint.sh` additionally prepends every
+`/opt/tools/*/bin` at container start (so the bundled `qcc` shim and any drop-in
+under `tools/<name>/bin` land on `PATH`) - works for baked-in `COPY` and for a
 runtime `-v host:/opt/tools` mount. See `tools/README.md`.
 
 ---
@@ -381,7 +401,9 @@ runtime `-v host:/opt/tools` mount. See `tools/README.md`.
 The compilers are `linux/amd64` and cannot execute ARM QNX output directly.
 Run and validate on `qemu-system-arm -M virt -cpu cortex-a15` (boots real
 `procnto` + `libc.so.3`) or a physical QNX 6.5 board. Package binaries into a
-bootable image with the QNX `mkifs`/`mkefs` tools (both are in the image).
+bootable image with the QNX `mkifs`/`mkefs` tools (in the image);
+`host-scripts/qnx-mkifs.sh <build-file> <out.bin>` wraps that, and `dumpifs`
+(also in the image) extracts an existing image to rebuild it with a file added.
 
 ---
 
@@ -408,9 +430,10 @@ bootable image with the QNX `mkifs`/`mkefs` tools (both are in the image).
 - **C/C++** - C99 + full C++11 + partial C++14 (GCC 4.9, `__cplusplus=201300L`;
   no variable templates, no C++17). Runtime-validated on real QNX 6.5 ARM
   (thread/atomic/chrono/shared_ptr all run on QEMU cortex-a15 - see gcc/README.md).
-- **Go** - the `GOOS=qnx` port compiles and the full stdlib builds for `qnx/arm`;
-  internal-link binaries are produced. Full on-device runtime coverage (cgo,
-  external-link defaults) is the ongoing work of the upstream port.
+- **Go** - the `GOOS=qnx GOARCH=arm` port builds the full stdlib and links
+  internally (`DT_NEEDED libc.so.3`); binaries **run on real QNX 6.5 hardware** -
+  TCP end-to-end validated on the MHI2q head unit (see `go/README.md`). cgo uses
+  external linking through the in-image gcc.
 - **Rust** - **full `std`** via `build-std=std,panic_abort` (threads, fs, net,
   Command, collections), runtime-validated on real QNX 6.5 QEMU. `panic=abort`,
   no unwind/backtrace. Port baked into the image (`build-std <crate>`).
