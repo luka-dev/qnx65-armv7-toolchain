@@ -1,0 +1,32 @@
+#!/bin/sh
+# qcc shim -> the SDP's cross GCC.
+#
+# Why: `mkifs` build files carry a [linker=...] spec that literally invokes `qcc`
+# (QNX's compiler driver). This image ships GCC for the target but not qcc, so
+# mkifs fails with "qcc: not found / Unable to link relocatable elf file
+# <startup>" when it has to link a relocatable startup into an IFS.
+#
+# This translates the two qcc-only flags and execs the real cross driver:
+#   -bootstrap   : link with no standard startup files/libs. The build files
+#                  already pass -nostdlib, which is the gcc equivalent, so drop it.
+#   -V<spec>     : selects a qcc compiler profile (e.g. -Vgcc_ntoarmv7le).
+#                  We only have one target here, so drop it.
+# Everything else (-Wl,..., -o, -L, -l, inputs) passes through untouched.
+#
+# QCC_TARGET overrides the driver if this image ever grows a second target.
+: "${QCC_TARGET:=arm-unknown-nto-qnx6.5.0eabi}"
+CC="${QCC_CC:-${QCC_TARGET}-gcc}"
+
+args=""
+for a in "$@"; do
+    case "$a" in
+        -bootstrap) ;;                 # gcc: covered by -nostdlib
+        -V*)        ;;                 # qcc profile selector, single-target here
+        -EL)        args="$args \"-mlittle-endian\"" ;;   # qcc spells endianness -EL/-EB
+        -EB)        args="$args \"-mbig-endian\"" ;;
+        *)          args="$args \"$a\"" ;;
+    esac
+done
+
+[ -n "$QCC_DEBUG" ] && echo "qcc-shim: $CC $args" >&2
+eval exec "$CC" $args
