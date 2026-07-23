@@ -1,0 +1,38 @@
+#!/bin/sh
+# Flag QNX ELFs that will be *silently dropped* by the loader on a device/IFS -
+# the classic "C++ preload/mkifs graft loads nothing, no output". Run it on a
+# .so (or executable) before grafting:
+#   qnx-check-so mod.so [more.so ...]
+# Warns on two conditions that both fail silently at load time:
+#   1. a libstdc++.so.6 DT_NEEDED   -> the image must ship that lib, else drop.
+#   2. undefined C++ runtime symbols (operator new/delete, std::*) left dangling
+#      -> happens when a new/STL module was linked with `gcc -shared`.
+# Exit: 0 clean, 1 warnings found, 2 usage/not-found.
+IMG=qnx65-armv7-toolchain
+[ $# -ge 1 ] || { echo "usage: $(basename "$0") <elf> [elf...]" >&2; exit 2; }
+docker image inspect "$IMG" >/dev/null 2>&1 || { echo "image '$IMG' missing - run host-scripts/qnx-run.sh build" >&2; exit 1; }
+exec docker run --rm --platform=linux/amd64 -v "$PWD":/src -w /src "$IMG" sh -c '
+RE=arm-unknown-nto-qnx6.5.0eabi-readelf
+NM=arm-unknown-nto-qnx6.5.0eabi-nm
+rc=0
+for f in "$@"; do
+  [ -f "$f" ] || { echo "$f: not found"; rc=2; continue; }
+  echo "== $f =="
+  need=$($RE -d "$f" 2>/dev/null | sed -n "s/.*Shared library: \[\(.*\)\]/\1/p")
+  echo "  NEEDED: $(echo $need)"
+  w=0
+  if echo "$need" | grep -q "^libstdc++"; then
+    # depends on libstdc++.so.6: fine only if the image ships it (else silent drop)
+    echo "  WARN: needs libstdc++.so.6 - ship it in the image, or relink"
+    echo "        g++ -shared -static-libstdc++ -static-libgcc"; w=1
+  else
+    # no libstdc++ dependency: any undefined C++ runtime symbol has no provider
+    # (typical when a new/STL module was linked with plain gcc -shared)
+    dang=$($NM -D -u "$f" 2>/dev/null | grep -oE "_Zn[wa][jm]|_Zd[la]Pv|_ZNSt[0-9A-Za-z_]+|_ZSt[0-9A-Za-z_]+" | sort -u)
+    [ -n "$dang" ] && {
+      echo "  WARN: undefined C++ runtime symbols, no libstdc++ to resolve them (fails at load):"
+      echo "$dang" | sed "s/^/          /"; w=1; }
+  fi
+  [ $w = 0 ] && echo "  ok" || rc=1
+done
+exit $rc' sh "$@"

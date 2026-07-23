@@ -28,7 +28,7 @@ cd "$WORK/obj"
   --with-arch=armv7-a --with-fpu=vfpv3-d16 --with-float=softfp \
   --enable-languages=c,c++ \
   --enable-threads=posix --disable-tls --disable-libssp \
-  --enable-__cxa_atexit --enable-shared --disable-multilib \
+  --enable-__cxa_atexit --enable-shared --enable-static --disable-multilib \
   --disable-nls --disable-libstdcxx-pch --disable-libmudflap \
   --disable-werror
 
@@ -46,6 +46,38 @@ fi
 make -j"$J" all-target-libgcc
 make -j"$J" all-target-libstdc++-v3
 make install-gcc install-target-libgcc install-target-libstdc++-v3
+
+# Static libstdc++.a: the shared-enabled libtool build for this target produces
+# only libstdc++.so (libstdc++.la carries old_library='' - no non-PIC archive),
+# so -static-libstdc++ has nothing to link and self-contained C++ (exes and the
+# .so/graft modules that need it on a device without libstdc++.so.6) is
+# impossible. Assemble it from the per-standard convenience archives the shared
+# lib itself was built from - PIC objects archive into a .a and link fine into
+# both exes and shared objects.
+AR="$QNX_HOST/usr/bin/$TGT-ar"; RANLIB="$QNX_HOST/usr/bin/$TGT-ranlib"
+DEST="$PREFIX/$TGT/lib/libstdc++.a"
+LV="$WORK/obj/$TGT/libstdc++-v3"
+# diagnostic: what did libstdc++-v3's OWN libtool decide (root cause of old_library='')
+echo ">> libstdc++-v3 static state:"
+grep -E '^build_old_libs=' "$LV/libtool" 2>/dev/null | sed 's/^/     /' || true
+grep -E '^old_library=' "$LV/src/libstdc++.la" 2>/dev/null | sed 's/^/     /' || true
+if [ ! -f "$DEST" ]; then
+  conv=$(find "$LV" -name 'lib*convenience.a' 2>/dev/null)
+  if [ -n "$conv" ]; then
+    echo ">> assembling static libstdc++.a from convenience archives + src compat objects:"
+    echo "$conv" | sed 's/^/     /'
+    tmp="$WORK/lsa"; rm -rf "$tmp"; i=0
+    for a in $conv; do d="$tmp/$i"; mkdir -p "$d"; ( cd "$d" && "$AR" x "$a" ); i=$((i+1)); done
+    # compatibility*.o are compiled straight into libstdc++.la (not a convenience
+    # .a); include them so the archive matches a normal static-enabled libstdc++.a
+    compat=$(find "$LV/src/.libs" -maxdepth 1 -name '*.o' 2>/dev/null)
+    "$AR" qcs "$DEST" $(find "$tmp" -name '*.o') $compat
+    "$RANLIB" "$DEST"
+    echo ">> created $DEST ($("$AR" t "$DEST" | wc -l) objects)"
+  else
+    echo ">> WARNING: no libstdc++ convenience archives found - libstdc++.a not built" >&2
+  fi
+fi
 
 # reuse QNX's binutils: expose them where the installed gcc looks for as/ld
 # ($prefix/$target/bin), so the toolchain works with no -B/PATH gymnastics.
