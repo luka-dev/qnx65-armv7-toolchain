@@ -1,0 +1,715 @@
+configure: WARNING: if you wanted to set the --build type, don't use --host.
+    If a cross compiler is detected then cross compile mode will be used
+checking for a BSD-compatible install... /usr/bin/install -c
+checking whether build environment is sane... yes
+checking for arm-unknown-nto-qnx6.5.0eabi-strip... arm-unknown-nto-qnx6.5.0eabi-strip
+checking for a thread-safe mkdir -p... /bin/mkdir -p
+checking for gawk... no
+checking for mawk... mawk
+checking whether make sets $(MAKE)... yes
+checking whether make sets $(MAKE)... (cached) yes
+checking for arm-unknown-nto-qnx6.5.0eabi-gcc... arm-unknown-nto-qnx6.5.0eabi-gcc
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables... 
+checking whether we are cross compiling... yes
+checking for suffix of object files... o
+checking whether we are using the GNU C compiler... yes
+checking whether arm-unknown-nto-qnx6.5.0eabi-gcc accepts -g... yes
+checking for arm-unknown-nto-qnx6.5.0eabi-gcc option to accept ISO C89... none needed
+checking for style of include used by make... GNU
+checking dependency style of arm-unknown-nto-qnx6.5.0eabi-gcc... none
+checking how to run the C preprocessor... arm-unknown-nto-qnx6.5.0eabi-gcc -E
+checking for strip... /usr/bin/strip
+checking for arm-unknown-nto-qnx6.5.0eabi-strip... (cached) arm-unknown-nto-qnx6.5.0eabi-strip
+checking build system type... x86_64-unknown-linux-gnu
+checking host system type... arm-unknown-nto-qnx6.5.0eabi
+checking for grep that handles long lines and -e... /bin/grep
+checking for egrep... /bin/grep -E
+checking for arm-unknown-nto-qnx6.5.0eabi-ranlib... arm-unknown-nto-qnx6.5.0eabi-ranlib
+checking whether arm-unknown-nto-qnx6.5.0eabi-gcc and cc understand -c and -o together... yes
+checking for ANSI C header files... yes
+checking for sys/types.h... yes
+checking for sys/stat.h... yes
+checking for stdlib.h... yes
+checking for string.h... yes
+checking for memory.h... yes
+checking for strings.h... yes
+checking for inttypes.h... yes
+checking for stdint.h... yes
+checking for unistd.h... yes
+checking minix/config.h usability... no
+checking minix/config.h presence... no
+checking for minix/config.h... no
+checking whether it is safe to define __EXTENSIONS__... yes
+checking for ld used by GCC... /opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld
+checking if the linker (/opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld) is GNU ld... yes
+checking for shared library path variable... LD_LIBRARY_PATH
+checking whether to activate relocatable installation... no
+checking how to copy files... cp -p
+checking how to make hard links... ln
+checking whether ln -s works... yes
+checking how to print strings... printf
+checking for a sed that does not truncate output... /bin/sed
+checking for fgrep... /bin/grep -F
+checking for ld used by arm-unknown-nto-qnx6.5.0eabi-gcc... /opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld
+checking if the linker (/opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld) is GNU ld... yes
+checking for BSD- or MS-compatible name lister (nm)... /opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-nm -B
+checking the name lister (/opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-nm -B) interface... BSD nm
+checking the maximum length of command line arguments... 1572864
+checking whether the shell understands some XSI constructs... yes
+checking whether the shell understands "+="... yes
+checking how to convert x86_64-unknown-linux-gnu file names to arm-unknown-nto-qnx6.5.0eabi format... func_convert_file_noop
+checking how to convert x86_64-unknown-linux-gnu file names to toolchain format... func_convert_file_noop
+checking for /opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld option to reload object files... -r
+checking for arm-unknown-nto-qnx6.5.0eabi-objdump... arm-unknown-nto-qnx6.5.0eabi-objdump
+checking how to recognize dependent libraries... pass_all
+checking for arm-unknown-nto-qnx6.5.0eabi-dlltool... no
+checking for dlltool... no
+checking how to associate runtime and link libraries... printf %s\n
+checking for arm-unknown-nto-qnx6.5.0eabi-ar... ar
+checking for archiver @FILE support... @
+checking for arm-unknown-nto-qnx6.5.0eabi-strip... (cached) arm-unknown-nto-qnx6.5.0eabi-strip
+checking for arm-unknown-nto-qnx6.5.0eabi-ranlib... (cached) arm-unknown-nto-qnx6.5.0eabi-ranlib
+checking command to parse /opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-nm -B output from arm-unknown-nto-qnx6.5.0eabi-gcc object... ok
+checking for sysroot... no
+checking for arm-unknown-nto-qnx6.5.0eabi-mt... no
+checking for mt... no
+checking if : is a manifest tool... no
+checking for dlfcn.h... yes
+checking for objdir... .libs
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc supports -fno-rtti -fno-exceptions... no
+checking for arm-unknown-nto-qnx6.5.0eabi-gcc option to produce PIC... -fPIC -shared -DPIC
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc PIC flag -fPIC -shared -DPIC works... yes
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc static flag -static works... no
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc supports -c -o file.o... yes
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc supports -c -o file.o... (cached) yes
+checking whether the arm-unknown-nto-qnx6.5.0eabi-gcc linker (/opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld) supports shared libraries... yes
+checking dynamic linker characteristics... ldqnx.so
+checking how to hardcode library paths into programs... immediate
+checking whether stripping libraries is possible... yes
+checking if libtool supports shared libraries... yes
+checking whether to build shared libraries... no
+checking whether to build static libraries... yes
+checking for arm-unknown-nto-qnx6.5.0eabi-windres... no
+checking for windres... no
+checking whether the -Werror option is usable... yes
+checking for simple visibility declarations... yes
+checking for shared library run path origin... done
+checking for iconv... no, consider installing GNU libiconv
+checking whether NLS is requested... no
+checking for msgfmt... no
+checking for gmsgfmt... :
+checking for xgettext... no
+checking for msgmerge... no
+checking for CFPreferencesCopyAppValue... no
+checking for CFLocaleCopyCurrent... no
+checking whether to use NLS... no
+checking for mbstate_t... yes
+checking for wchar_t... yes
+checking for getc_unlocked... yes
+checking for mbrtowc... yes
+checking for wcrtomb... yes
+checking for mbsinit... yes
+checking for setlocale... yes
+checking whether <wchar.h> is standalone... yes
+checking for memmove... yes
+checking for nl_langinfo and CODESET... no
+checking for working fcntl.h... cross-compiling
+checking wchar.h usability... yes
+checking wchar.h presence... yes
+checking for wchar.h... yes
+checking for EILSEQ... yes
+checking byte ordering... guessing little endian
+checking for size_t... yes
+checking for working alloca.h... yes
+checking for alloca... yes
+checking for stdlib.h... (cached) yes
+checking for string.h... (cached) yes
+checking for sys/param.h... yes
+checking for unistd.h... (cached) yes
+checking for wchar.h... (cached) yes
+checking for stdint.h... (cached) yes
+checking for sys/socket.h... yes
+checking for sys/stat.h... (cached) yes
+checking for sys/time.h... yes
+checking for canonicalize_file_name... no
+checking for getcwd... yes
+checking for readlink... yes
+checking for realpath... yes
+checking for readlinkat... no
+checking for lstat... yes
+checking for setenv... yes
+checking whether // is distinct from /... unknown, assuming no
+checking whether realpath works... guessing no
+checking if environ is properly declared... yes
+checking whether the preprocessor supports include_next... yes
+checking whether system header files limit the line length... no
+checking for complete errno.h... yes
+checking whether strerror_r is declared... yes
+checking for strerror_r... yes
+checking whether strerror_r returns char *... no
+checking for inline... inline
+checking whether lstat correctly handles trailing slash... no
+checking for stdlib.h... (cached) yes
+checking for GNU libc compatible malloc... no
+checking for unsigned long long int... yes
+checking for long long int... yes
+checking whether setenv is declared... yes
+checking for ssize_t... yes
+checking for sigset_t... yes
+checking for uid_t in sys/types.h... yes
+checking for SIGPIPE... yes
+checking whether C symbols are prefixed with underscore at the linker level... no
+checking for stdbool.h that conforms to C99... yes
+checking for _Bool... yes
+checking whether stdint.h conforms to C99... no
+checking sys/inttypes.h usability... no
+checking sys/inttypes.h presence... no
+checking for sys/inttypes.h... no
+checking sys/bitypes.h usability... no
+checking sys/bitypes.h presence... no
+checking for sys/bitypes.h... no
+checking for bit size of ptrdiff_t... 32
+checking for bit size of size_t... 32
+checking for bit size of sig_atomic_t... 32
+checking for bit size of wchar_t... 32
+checking for bit size of wint_t... 32
+checking whether sig_atomic_t is signed... yes
+checking whether wchar_t is signed... no
+checking whether wint_t is signed... yes
+checking for ptrdiff_t integer literal suffix... 
+checking for size_t integer literal suffix... u
+checking for sig_atomic_t integer literal suffix... 
+checking for wchar_t integer literal suffix... u
+checking for wint_t integer literal suffix... l
+checking whether strerror(0) succeeds... guessing no
+checking for C/C++ restrict keyword... __restrict
+checking whether ffsl is declared without a macro... no
+checking whether ffsll is declared without a macro... no
+checking whether memmem is declared without a macro... no
+checking whether mempcpy is declared without a macro... no
+checking whether memrchr is declared without a macro... no
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 config.status: creating Makefile
+config.status: creating lib/Makefile
+config.status: creating srclib/Makefile
+config.status: creating src/Makefile
+config.status: creating po/Makefile.in
+config.status: creating man/Makefile
+config.status: creating tests/Makefile
+config.status: creating include/iconv.h
+config.status: creating include/iconv.h.inst
+config.status: creating config.h
+config.status: creating lib/config.h
+config.status: executing depfiles commands
+config.status: executing libtool commands
+config.status: executing po-directories commands
+config.status: creating po/POTFILES
+config.status: creating po/Makefile
+=== configuring in libcharset (/build/libiconv-1.14/libcharset)
+configure: running /bin/bash ./configure --disable-option-checking '--prefix=/ports/sysroot'  '--host=arm-unknown-nto-qnx6.5.0eabi' 'CC=arm-unknown-nto-qnx6.5.0eabi-gcc' 'CFLAGS=-O2 -D__EXT -D__SIZE_T=__SIZE_TYPE__ -include stddef.h' '--enable-static' '--disable-shared' '--disable-nls' '--disable-rpath' 'host_alias=arm-unknown-nto-qnx6.5.0eabi' --cache-file=/dev/null --srcdir=.
+configure: WARNING: if you wanted to set the --build type, don't use --host.
+    If a cross compiler is detected then cross compile mode will be used
+checking whether make sets $(MAKE)... yes
+checking for arm-unknown-nto-qnx6.5.0eabi-gcc... arm-unknown-nto-qnx6.5.0eabi-gcc
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables... 
+checking whether we are cross compiling... yes
+checking for suffix of object files... o
+checking whether we are using the GNU C compiler... yes
+checking whether arm-unknown-nto-qnx6.5.0eabi-gcc accepts -g... yes
+checking for arm-unknown-nto-qnx6.5.0eabi-gcc option to accept ISO C89... none needed
+checking how to run the C preprocessor... arm-unknown-nto-qnx6.5.0eabi-gcc -E
+checking for a BSD-compatible install... /usr/bin/install -c
+checking build system type... x86_64-unknown-linux-gnu
+checking host system type... arm-unknown-nto-qnx6.5.0eabi
+checking whether to activate relocatable installation... no
+checking for grep that handles long lines and -e... /bin/grep
+checking for egrep... /bin/grep -E
+checking for ANSI C header files... yes
+checking for sys/types.h... yes
+checking for sys/stat.h... yes
+checking for stdlib.h... yes
+checking for string.h... yes
+checking for memory.h... yes
+checking for strings.h... yes
+checking for inttypes.h... yes
+checking for stdint.h... yes
+checking for unistd.h... yes
+checking minix/config.h usability... no
+checking minix/config.h presence... no
+checking for minix/config.h... no
+checking whether it is safe to define __EXTENSIONS__... yes
+checking how to print strings... printf
+checking for a sed that does not truncate output... /bin/sed
+checking for fgrep... /bin/grep -F
+checking for ld used by arm-unknown-nto-qnx6.5.0eabi-gcc... /opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld
+checking if the linker (/opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld) is GNU ld... yes
+checking for BSD- or MS-compatible name lister (nm)... /opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-nm -B
+checking the name lister (/opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-nm -B) interface... BSD nm
+checking whether ln -s works... yes
+checking the maximum length of command line arguments... 1572864
+checking whether the shell understands some XSI constructs... yes
+checking whether the shell understands "+="... yes
+checking how to convert x86_64-unknown-linux-gnu file names to arm-unknown-nto-qnx6.5.0eabi format... func_convert_file_noop
+checking how to convert x86_64-unknown-linux-gnu file names to toolchain format... func_convert_file_noop
+checking for /opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld option to reload object files... -r
+checking for arm-unknown-nto-qnx6.5.0eabi-objdump... arm-unknown-nto-qnx6.5.0eabi-objdump
+checking how to recognize dependent libraries... pass_all
+checking for arm-unknown-nto-qnx6.5.0eabi-dlltool... no
+checking for dlltool... no
+checking how to associate runtime and link libraries... printf %s\n
+checking for arm-unknown-nto-qnx6.5.0eabi-ar... arm-unknown-nto-qnx6.5.0eabi-ar
+checking for archiver @FILE support... @
+checking for arm-unknown-nto-qnx6.5.0eabi-strip... arm-unknown-nto-qnx6.5.0eabi-strip
+checking for arm-unknown-nto-qnx6.5.0eabi-ranlib... arm-unknown-nto-qnx6.5.0eabi-ranlib
+checking for gawk... no
+checking for mawk... mawk
+checking command to parse /opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-nm -B output from arm-unknown-nto-qnx6.5.0eabi-gcc object... ok
+checking for sysroot... no
+checking for arm-unknown-nto-qnx6.5.0eabi-mt... no
+checking for mt... no
+checking if : is a manifest tool... no
+checking for dlfcn.h... yes
+checking for objdir... .libs
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc supports -fno-rtti -fno-exceptions... no
+checking for arm-unknown-nto-qnx6.5.0eabi-gcc option to produce PIC... -fPIC -shared -DPIC
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc PIC flag -fPIC -shared -DPIC works... yes
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc static flag -static works... no
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc supports -c -o file.o... yes
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc supports -c -o file.o... (cached) yes
+checking whether the arm-unknown-nto-qnx6.5.0eabi-gcc linker (/opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld) supports shared libraries... yes
+checking dynamic linker characteristics... ldqnx.so
+checking how to hardcode library paths into programs... immediate
+checking whether stripping libraries is possible... yes
+checking if libtool supports shared libraries... yes
+checking whether to build shared libraries... no
+checking whether to build static libraries... yes
+checking for simple visibility declarations... yes
+checking for nl_langinfo and CODESET... no
+checking for working fcntl.h... cross-compiling
+checking whether we are using the GNU C Library 2.1 or newer... no
+checking for setlocale... yes
+configure: creating ./config.status
+config.status: creating Makefile
+config.status: creating lib/Makefile
+config.status: creating include/localcharset.h
+config.status: creating include/localcharset.h.inst
+config.status: creating config.h
+config.status: executing libtool commands
+=== configuring in preload (/build/libiconv-1.14/preload)
+configure: running /bin/bash ./configure --disable-option-checking '--prefix=/ports/sysroot'  '--host=arm-unknown-nto-qnx6.5.0eabi' 'CC=arm-unknown-nto-qnx6.5.0eabi-gcc' 'CFLAGS=-O2 -D__EXT -D__SIZE_T=__SIZE_TYPE__ -include stddef.h' '--enable-static' '--disable-shared' '--disable-nls' '--disable-rpath' 'host_alias=arm-unknown-nto-qnx6.5.0eabi' --cache-file=/dev/null --srcdir=.
+configure: WARNING: if you wanted to set the --build type, don't use --host.
+    If a cross compiler is detected then cross compile mode will be used
+checking whether make sets $(MAKE)... yes
+checking for arm-unknown-nto-qnx6.5.0eabi-gcc... arm-unknown-nto-qnx6.5.0eabi-gcc
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables... 
+checking whether we are cross compiling... yes
+checking for suffix of object files... o
+checking whether we are using the GNU C compiler... yes
+checking whether arm-unknown-nto-qnx6.5.0eabi-gcc accepts -g... yes
+checking for arm-unknown-nto-qnx6.5.0eabi-gcc option to accept ISO C89... none needed
+checking how to run the C preprocessor... arm-unknown-nto-qnx6.5.0eabi-gcc -E
+checking for a BSD-compatible install... /usr/bin/install -c
+checking build system type... x86_64-unknown-linux-gnu
+checking host system type... arm-unknown-nto-qnx6.5.0eabi
+checking whether to activate relocatable installation... no
+checking whether ln -s works... yes
+checking for grep that handles long lines and -e... /bin/grep
+checking for egrep... /bin/grep -E
+checking for ANSI C header files... yes
+checking for sys/types.h... yes
+checking for sys/stat.h... yes
+checking for stdlib.h... yes
+checking for string.h... yes
+checking for memory.h... yes
+checking for strings.h... yes
+checking for inttypes.h... yes
+checking for stdint.h... yes
+checking for unistd.h... yes
+checking minix/config.h usability... no
+checking minix/config.h presence... no
+checking for minix/config.h... no
+checking whether it is safe to define __EXTENSIONS__... yes
+checking how to print strings... printf
+checking for a sed that does not truncate output... /bin/sed
+checking for fgrep... /bin/grep -F
+checking for ld used by arm-unknown-nto-qnx6.5.0eabi-gcc... /opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld
+checking if the linker (/opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld) is GNU ld... yes
+checking for BSD- or MS-compatible name lister (nm)... /opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-nm -B
+checking the name lister (/opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-nm -B) interface... BSD nm
+checking the maximum length of command line arguments... 1572864
+checking whether the shell understands some XSI constructs... yes
+checking whether the shell understands "+="... yes
+checking how to convert x86_64-unknown-linux-gnu file names to arm-unknown-nto-qnx6.5.0eabi format... func_convert_file_noop
+checking how to convert x86_64-unknown-linux-gnu file names to toolchain format... func_convert_file_noop
+checking for /opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld option to reload object files... -r
+checking for arm-unknown-nto-qnx6.5.0eabi-objdump... arm-unknown-nto-qnx6.5.0eabi-objdump
+checking how to recognize dependent libraries... pass_all
+checking for arm-unknown-nto-qnx6.5.0eabi-dlltool... no
+checking for dlltool... no
+checking how to associate runtime and link libraries... printf %s\n
+checking for arm-unknown-nto-qnx6.5.0eabi-ar... arm-unknown-nto-qnx6.5.0eabi-ar
+checking for archiver @FILE support... @
+checking for arm-unknown-nto-qnx6.5.0eabi-strip... arm-unknown-nto-qnx6.5.0eabi-strip
+checking for arm-unknown-nto-qnx6.5.0eabi-ranlib... arm-unknown-nto-qnx6.5.0eabi-ranlib
+checking for gawk... no
+checking for mawk... mawk
+checking command to parse /opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-nm -B output from arm-unknown-nto-qnx6.5.0eabi-gcc object... ok
+checking for sysroot... no
+checking for arm-unknown-nto-qnx6.5.0eabi-mt... no
+checking for mt... no
+checking if : is a manifest tool... no
+checking for dlfcn.h... yes
+checking for objdir... .libs
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc supports -fno-rtti -fno-exceptions... no
+checking for arm-unknown-nto-qnx6.5.0eabi-gcc option to produce PIC... -fPIC -shared -DPIC
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc PIC flag -fPIC -shared -DPIC works... yes
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc static flag -static works... no
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc supports -c -o file.o... yes
+checking if arm-unknown-nto-qnx6.5.0eabi-gcc supports -c -o file.o... (cached) yes
+checking whether the arm-unknown-nto-qnx6.5.0eabi-gcc linker (/opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/bin/ld) supports shared libraries... yes
+checking whether -lc should be explicitly linked in... yes
+checking dynamic linker characteristics... ldqnx.so
+checking how to hardcode library paths into programs... immediate
+checking whether stripping libraries is possible... yes
+checking if libtool supports shared libraries... yes
+checking whether to build shared libraries... yes
+checking whether to build static libraries... no
+checking whether the -Werror option is usable... yes
+checking for simple visibility declarations... yes
+configure: creating ./config.status
+config.status: creating Makefile
+config.status: executing libtool commands
+builddir="`pwd`"; cd libcharset && make all && make install-lib libdir="$builddir/lib" includedir="$builddir/lib"
+make[1]: Entering directory `/build/libiconv-1.14/libcharset'
+if [ ! -d include ] ; then mkdir include ; fi
+cp ./include/libcharset.h.in include/libcharset.h
+cd lib && make all
+make[2]: Entering directory `/build/libiconv-1.14/libcharset/lib'
+/bin/bash ../libtool --mode=compile arm-unknown-nto-qnx6.5.0eabi-gcc -I. -I. -I.. -I./.. -I../include -O2 -D__EXT -D__SIZE_T=__SIZE_TYPE__ -include stddef.h -fvisibility=hidden  -DLIBDIR=\"/ports/sysroot/lib\" -DBUILDING_LIBCHARSET -DBUILDING_DLL -DENABLE_RELOCATABLE=1 -DIN_LIBRARY -DINSTALLDIR=\"/ports/sysroot/lib\" -DNO_XMALLOC -Dset_relocation_prefix=libcharset_set_relocation_prefix -Drelocate=libcharset_relocate -DHAVE_CONFIG_H -c ./localcharset.c
+/bin/bash ../libtool --mode=compile arm-unknown-nto-qnx6.5.0eabi-gcc -I. -I. -I.. -I./.. -I../include -O2 -D__EXT -D__SIZE_T=__SIZE_TYPE__ -include stddef.h -fvisibility=hidden  -DLIBDIR=\"/ports/sysroot/lib\" -DBUILDING_LIBCHARSET -DBUILDING_DLL -DENABLE_RELOCATABLE=1 -DIN_LIBRARY -DINSTALLDIR=\"/ports/sysroot/lib\" -DNO_XMALLOC -Dset_relocation_prefix=libcharset_set_relocation_prefix -Drelocate=libcharset_relocate -DHAVE_CONFIG_H -c ./relocatable.c
+/bin/sh ./config.charset 'arm-unknown-nto-qnx6.5.0eabi' > t-charset.alias
+sed -e '/^#/d' -e 's/@''PACKAGE''@//g' ./ref-add.sin > t-ref-add.sed
+sed -e '/^#/d' -e 's/@''PACKAGE''@//g' ./ref-del.sin > t-ref-del.sed
+mv t-ref-add.sed ref-add.sed
+mv t-ref-del.sed ref-del.sed
+mv t-charset.alias charset.alias
+libtool: compile:  arm-unknown-nto-qnx6.5.0eabi-gcc -I. -I. -I.. -I./.. -I../include -O2 -D__EXT -D__SIZE_T=__SIZE_TYPE__ -include stddef.h -fvisibility=hidden -DLIBDIR=\"/ports/sysroot/lib\" -DBUILDING_LIBCHARSET -DBUILDING_DLL -DENABLE_RELOCATABLE=1 -DIN_LIBRARY -DINSTALLDIR=\"/ports/sysroot/lib\" -DNO_XMALLOC -Dset_relocation_prefix=libcharset_set_relocation_prefix -Drelocate=libcharset_relocate -DHAVE_CONFIG_H -c ./localcharset.c -o localcharset.o
+libtool: compile:  arm-unknown-nto-qnx6.5.0eabi-gcc -I. -I. -I.. -I./.. -I../include -O2 -D__EXT -D__SIZE_T=__SIZE_TYPE__ -include stddef.h -fvisibility=hidden -DLIBDIR=\"/ports/sysroot/lib\" -DBUILDING_LIBCHARSET -DBUILDING_DLL -DENABLE_RELOCATABLE=1 -DIN_LIBRARY -DINSTALLDIR=\"/ports/sysroot/lib\" -DNO_XMALLOC -Dset_relocation_prefix=libcharset_set_relocation_prefix -Drelocate=libcharset_relocate -DHAVE_CONFIG_H -c ./relocatable.c -o relocatable.o
+In file included from /opt/qnx650/target/qnx6/usr/include/fcntl.h:36:0,
+                 from ./localcharset.c:27:
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:343:65: error: unknown type name 'size_t'
+ extern _CSTD ssize_t pread64(int __filedes, void *__buff, _CSTD size_t __nbytes, off64_t __offset);
+                                                                 ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:344:72: error: unknown type name 'size_t'
+ extern _CSTD ssize_t pwrite64(int __filedes, const void *__buff, _CSTD size_t __nbytes, off64_t __offset);
+                                                                        ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:364:14: error: unknown type name 'size_t'
+ extern _CSTD size_t confstr(int __name, char *__buf, _CSTD size_t __len);
+              ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:364:60: error: unknown type name 'size_t'
+ extern _CSTD size_t confstr(int __name, char *__buf, _CSTD size_t __len);
+                                                            ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:378:40: error: unknown type name 'size_t'
+ extern char *getcwd(char *__buf, _CSTD size_t __size);
+                                        ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:392:63: error: unknown type name 'size_t'
+ extern _CSTD ssize_t pread(int __filedes, void *__buff, _CSTD size_t __nbytes, off_t __offset) __ALIAS64("pread64");
+                                                               ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:393:70: error: unknown type name 'size_t'
+ extern _CSTD ssize_t pwrite(int __filedes, const void *__buff, _CSTD size_t __nbytes, off_t __offset) __ALIAS64("pwrite64");
+                                                                      ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:394:63: error: unknown type name 'size_t'
+ extern _CSTD ssize_t read(int __fildes, void *__buffer, _CSTD size_t __len);
+                                                               ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:395:60: error: unknown type name 'size_t'
+ extern int readlink(const char *__path, char *__buf, _CSTD size_t __bufsiz);
+                                                            ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:407:67: error: unknown type name 'size_t'
+ extern _CSTD ssize_t write(int __fildes, const void *__buf, _CSTD size_t __len);
+                                                                   ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:417:44: error: unknown type name 'size_t'
+ extern int  getlogin_r(char* __name, _CSTD size_t __namesize);
+                                            ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:418:56: error: unknown type name 'size_t'
+ extern int  ttyname_r(int __fildes, char *__buf, _CSTD size_t __bufsize);
+                                                        ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:471:52: error: unknown type name 'size_t'
+ extern int sethostname(const char *__buffer, _CSTD size_t __buffer_length);
+                                                    ^
+In file included from /opt/qnx650/target/qnx6/usr/include/fcntl.h:36:0,
+                 from ./localcharset.c:27:
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:486:46: error: unknown type name 'size_t'
+ extern int gethostname(char *__buffer, _CSTD size_t __buffer_length);
+                                              ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:527:66: error: unknown type name 'size_t'
+ extern _CSTD ssize_t  _readx(int __fildes, void *__buffer, _CSTD size_t __len, unsigned __xtype, void *__xdata, _CSTD size_t __xdatalen);
+                                                                  ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:527:119: error: unknown type name 'size_t'
+ extern _CSTD ssize_t  _readx(int __fildes, void *__buffer, _CSTD size_t __len, unsigned __xtype, void *__xdata, _CSTD size_t __xdatalen);
+                                                                                                                       ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:528:38: error: unknown type name 'size_t'
+ extern int readblock(int __fd, _CSTD size_t __blksize, unsigned __block, int __numblks, void *__buff);
+                                      ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:529:73: error: unknown type name 'size_t'
+ extern _CSTD ssize_t  _writex(int __fildes, const void *__buffer, _CSTD size_t __len, unsigned __xtype, void *__xdata, _CSTD size_t __xdatalen);
+                                                                         ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:529:126: error: unknown type name 'size_t'
+ extern _CSTD ssize_t  _writex(int __fildes, const void *__buffer, _CSTD size_t __len, unsigned __xtype, void *__xdata, _CSTD size_t __xdatalen);
+                                                                                                                              ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:530:39: error: unknown type name 'size_t'
+ extern int writeblock(int __fd, _CSTD size_t __blksize, unsigned __block, int __numblks, const void *__buff);
+                                       ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:544:46: error: unknown type name 'size_t'
+ extern int getdomainname(char *__name, _CSTD size_t __namelen);
+                                              ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/unistd.h:545:52: error: unknown type name 'size_t'
+ extern int setdomainname(const char *__name, _CSTD size_t __namelen);
+                                                    ^
+In file included from ./localcharset.c:29:0:
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdio.h:223:8: error: unknown type name 'size_t'
+ extern size_t fread(void *__ptr, size_t __size, size_t __n, FILE *__fp);
+        ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdio.h:223:34: error: unknown type name 'size_t'
+ extern size_t fread(void *__ptr, size_t __size, size_t __n, FILE *__fp);
+                                  ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdio.h:223:49: error: unknown type name 'size_t'
+ extern size_t fread(void *__ptr, size_t __size, size_t __n, FILE *__fp);
+                                                 ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdio.h:229:8: error: unknown type name 'size_t'
+ extern size_t fwrite(const void *__ptr, size_t __size, size_t __n, FILE *__fp);
+        ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdio.h:229:41: error: unknown type name 'size_t'
+ extern size_t fwrite(const void *__ptr, size_t __size, size_t __n, FILE *__fp);
+                                         ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdio.h:229:56: error: unknown type name 'size_t'
+ extern size_t fwrite(const void *__ptr, size_t __size, size_t __n, FILE *__fp);
+                                                        ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdio.h:239:57: error: unknown type name 'size_t'
+ extern int setvbuf(FILE *__fp, char *__buf, int __mode, size_t __size);
+                                                         ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdio.h:248:33: error: unknown type name 'size_t'
+ extern int vsnprintf(char *__s, size_t __size, const char *__format, __NTO_va_list __arg) __attribute__((__format__(__printf__, 3, 0)));
+                                 ^
+In file included from ./localcharset.c:29:0:
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdio.h:259:38: error: unknown type name 'size_t'
+ extern int snprintf(char *__s, _CSTD size_t __size, const char *__format, ...) __attribute__((__format__(__printf__, 3, 4)));
+                                      ^
+In file included from /opt/qnx650/target/qnx6/usr/include/strings.h:33:0,
+                 from /opt/qnx650/target/qnx6/usr/include/string.h:35,
+                 from ./localcharset.c:30:
+/opt/qnx650/target/qnx6/usr/include/string.h:70:61: error: unknown type name 'size_t'
+ extern _Const_return void *memchr(const void *__s, int __c, size_t __n);
+                                                             ^
+/opt/qnx650/target/qnx6/usr/include/string.h:76:57: error: unknown type name 'size_t'
+ extern int   memcmp(const void *__s1, const void *__s2, size_t __n);
+                                                         ^
+/opt/qnx650/target/qnx6/usr/include/string.h:77:51: error: unknown type name 'size_t'
+ extern void *memcpy(void *__s1, const void *__s2, size_t __n);
+                                                   ^
+/opt/qnx650/target/qnx6/usr/include/string.h:78:52: error: unknown type name 'size_t'
+ extern void *memmove(void *__s1, const void *__s2, size_t __n);
+                                                    ^
+/opt/qnx650/target/qnx6/usr/include/string.h:81:41: error: unknown type name 'size_t'
+ extern void *memset(void *__s, int __c, size_t __n);
+                                         ^
+/opt/qnx650/target/qnx6/usr/include/string.h:86:8: error: unknown type name 'size_t'
+ extern size_t strxfrm(char *__s1, const char *__s2, size_t __n);
+        ^
+/opt/qnx650/target/qnx6/usr/include/string.h:86:53: error: unknown type name 'size_t'
+ extern size_t strxfrm(char *__s1, const char *__s2, size_t __n);
+                                                     ^
+/opt/qnx650/target/qnx6/usr/include/string.h:88:8: error: unknown type name 'size_t'
+ extern size_t strcspn(const char *__s1, const char *__s2);
+        ^
+/opt/qnx650/target/qnx6/usr/include/string.h:90:8: error: unknown type name 'size_t'
+ extern size_t strlen(const char *__s);
+        ^
+/opt/qnx650/target/qnx6/usr/include/string.h:91:52: error: unknown type name 'size_t'
+ extern char *strncat(char *__s1, const char *__s2, size_t __n);
+                                                    ^
+/opt/qnx650/target/qnx6/usr/include/string.h:92:56: error: unknown type name 'size_t'
+ extern int strncmp(const char *__s1, const char *__s2, size_t __n);
+                                                        ^
+/opt/qnx650/target/qnx6/usr/include/string.h:93:52: error: unknown type name 'size_t'
+ extern char *strncpy(char *__s1, const char *__s2, size_t __n);
+                                                    ^
+/opt/qnx650/target/qnx6/usr/include/string.h:94:8: error: unknown type name 'size_t'
+ extern size_t strspn(const char *__s1, const char *__s2);
+        ^
+/opt/qnx650/target/qnx6/usr/include/string.h:106:57: error: unknown type name 'size_t'
+ extern int strerror_r(int __errnum, char * __buf, _CSTD size_t __len);
+                                                         ^
+/opt/qnx650/target/qnx6/usr/include/string.h:110:91: error: unknown type name 'size_t'
+ extern void *memccpy(void * __restrict __s1, const void * __restrict __s2, int __c, _CSTD size_t __n);
+                                                                                           ^
+/opt/qnx650/target/qnx6/usr/include/string.h:119:14: error: unknown type name 'size_t'
+ extern _CSTD size_t memcpyv(const struct iovec *__dst, int __dparts, int __doff, const struct iovec *__src, int __sparts, int __soff);
+              ^
+In file included from /opt/qnx650/target/qnx6/usr/include/strings.h:33:0,
+                 from /opt/qnx650/target/qnx6/usr/include/string.h:35,
+                 from ./localcharset.c:30:
+/opt/qnx650/target/qnx6/usr/include/string.h:120:62: error: unknown type name 'size_t'
+ extern int memicmp(const void *__s1, const void *__s2, _CSTD size_t __n);
+                                                              ^
+/opt/qnx650/target/qnx6/usr/include/string.h:121:63: error: unknown type name 'size_t'
+ extern int _memicmp(const void *__s1, const void *__s2, _CSTD size_t __n);
+                                                               ^
+/opt/qnx650/target/qnx6/usr/include/string.h:128:63: error: unknown type name 'size_t'
+ extern int strnicmp(const char *__s1, const char *__s2, _CSTD size_t __n);
+                                                               ^
+/opt/qnx650/target/qnx6/usr/include/string.h:129:64: error: unknown type name 'size_t'
+ extern int _strnicmp(const char *__s1, const char *__s2, _CSTD size_t __n);
+                                                                ^
+/opt/qnx650/target/qnx6/usr/include/string.h:130:53: error: unknown type name 'size_t'
+ extern char *strnset(char *__string, int __c, _CSTD size_t __len);
+                                                     ^
+/opt/qnx650/target/qnx6/usr/include/string.h:139:73: error: unknown type name 'size_t'
+ extern int straddstr(const char *__str, int __len, char **__pbuf, _CSTD size_t *__pmaxbuf);
+                                                                         ^
+/opt/qnx650/target/qnx6/usr/include/string.h:148:7: error: unknown type name 'size_t'
+ _CSTD size_t strlcat(char *__s1, const char *__s2, _CSTD size_t __n);
+       ^
+/opt/qnx650/target/qnx6/usr/include/string.h:148:58: error: unknown type name 'size_t'
+ _CSTD size_t strlcat(char *__s1, const char *__s2, _CSTD size_t __n);
+                                                          ^
+/opt/qnx650/target/qnx6/usr/include/string.h:149:7: error: unknown type name 'size_t'
+ _CSTD size_t strlcpy(char *__s1, const char *__s2, _CSTD size_t __n);
+       ^
+/opt/qnx650/target/qnx6/usr/include/string.h:149:58: error: unknown type name 'size_t'
+ _CSTD size_t strlcpy(char *__s1, const char *__s2, _CSTD size_t __n);
+                                                          ^
+In file included from /opt/qnx650/target/qnx6/usr/include/string.h:35:0,
+                 from ./localcharset.c:30:
+/opt/qnx650/target/qnx6/usr/include/strings.h:65:46: error: unknown type name 'size_t'
+ extern int  bcmp(const void *, const void *, size_t);
+                                              ^
+/opt/qnx650/target/qnx6/usr/include/strings.h:66:41: error: unknown type name 'size_t'
+ extern void bcopy(const void *, void *, size_t);
+                                         ^
+/opt/qnx650/target/qnx6/usr/include/strings.h:67:27: error: unknown type name 'size_t'
+ extern void bzero(void *, size_t);
+                           ^
+/opt/qnx650/target/qnx6/usr/include/strings.h:72:53: error: unknown type name 'size_t'
+ extern int  strncasecmp(const char *, const char *, size_t);
+                                                     ^
+In file included from /opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:38:0,
+                 from ./localcharset.c:31:
+/opt/qnx650/target/qnx6/usr/include/malloc.h:56:21: error: unknown type name 'size_t'
+ extern void *calloc(size_t __n, size_t __size);
+                     ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:56:33: error: unknown type name 'size_t'
+ extern void *calloc(size_t __n, size_t __size);
+                                 ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:57:21: error: unknown type name 'size_t'
+ extern void *malloc(size_t __size);
+                     ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:58:35: error: unknown type name 'size_t'
+ extern void *realloc(void *__ptr, size_t __size);
+                                   ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:64:50: error: unknown type name 'size_t'
+ extern int posix_memalign(void **__memptr, _CSTD size_t __alignment, _CSTD size_t __size);
+                                                  ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:64:76: error: unknown type name 'size_t'
+ extern int posix_memalign(void **__memptr, _CSTD size_t __alignment, _CSTD size_t __size);
+                                                                            ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:68:27: error: unknown type name 'size_t'
+ extern void *valloc(_CSTD size_t __size);
+                           ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:73:29: error: unknown type name 'size_t'
+ extern void *_scalloc(_CSTD size_t __size);
+                             ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:74:29: error: unknown type name 'size_t'
+ extern void *_smalloc(_CSTD size_t __size);
+                             ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:75:43: error: unknown type name 'size_t'
+ extern void *_srealloc(void *__ptr, _CSTD size_t __old_size, _CSTD size_t __new_size);
+                                           ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:75:68: error: unknown type name 'size_t'
+ extern void *_srealloc(void *__ptr, _CSTD size_t __old_size, _CSTD size_t __new_size);
+                                                                    ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:76:39: error: unknown type name 'size_t'
+ extern void _sfree(void *__ptr, _CSTD size_t __size);
+                                       ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:147:29: error: unknown type name 'size_t'
+ extern void *memalign(_CSTD size_t __alignment, _CSTD size_t __size);
+                             ^
+/opt/qnx650/target/qnx6/usr/include/malloc.h:147:55: error: unknown type name 'size_t'
+ extern void *memalign(_CSTD size_t __alignment, _CSTD size_t __size);
+                                                       ^
+In file included from ./localcharset.c:31:0:
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:139:61: error: unknown type name 'size_t'
+ extern void *bsearch(const void *__key, const void *__base, size_t __nmemb, size_t __size, int (*__compar)(const void *__pkey, const void *__pbase));
+                                                             ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:139:77: error: unknown type name 'size_t'
+ extern void *bsearch(const void *__key, const void *__base, size_t __nmemb, size_t __size, int (*__compar)(const void *__pkey, const void *__pbase));
+                                                                             ^
+In file included from ./localcharset.c:31:0:
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:145:35: error: unknown type name 'size_t'
+ extern int mblen(const char *__s, size_t __n);
+                                   ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:146:8: error: unknown type name 'size_t'
+ extern size_t mbstowcs(wchar_t *__pwcs, const char *__s, size_t __n);
+        ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:146:58: error: unknown type name 'size_t'
+ extern size_t mbstowcs(wchar_t *__pwcs, const char *__s, size_t __n);
+                                                          ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:147:52: error: unknown type name 'size_t'
+ extern int mbtowc(wchar_t *__pwc, const char *__s, size_t __n);
+                                                    ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:148:33: error: unknown type name 'size_t'
+ extern void qsort(void *__base, size_t __nmemb, size_t __size, int (*__compar)(const void *, const void *));
+                                 ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:148:49: error: unknown type name 'size_t'
+ extern void qsort(void *__base, size_t __nmemb, size_t __size, int (*__compar)(const void *, const void *));
+                                                 ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:156:8: error: unknown type name 'size_t'
+ extern size_t wcstombs(char *__s, const wchar_t *__pwcs, size_t __n);
+        ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:156:58: error: unknown type name 'size_t'
+ extern size_t wcstombs(char *__s, const wchar_t *__pwcs, size_t __n);
+                                                          ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:177:62: error: unknown type name 'size_t'
+ extern char *initstate(unsigned __seed, char *__state, _CSTD size_t __size);
+                                                              ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:192:60: error: unknown type name 'size_t'
+ extern char *ptsname_r(int __fildes, char *__buffer, _CSTD size_t __buflen);
+                                                            ^
+/opt/qnx650/host/linux/x86/usr/lib/gcc/arm-unknown-nto-qnx6.5.0eabi/4.9.4/include-fixed/stdlib.h:281:63: error: unknown type name 'size_t'
+ extern char *_fullpath(char *__buf, const char *__path, _CSTD size_t __size);
+                                                               ^
+./localcharset.c: In function 'get_charset_aliases':
+./localcharset.c:140:9: error: unknown type name 'size_t'
+         size_t dir_len = strlen (dir);
+         ^
+./localcharset.c:141:9: error: unknown type name 'size_t'
+         size_t base_len = strlen (base);
+         ^
+./localcharset.c:143:30: warning: incompatible implicit declaration of built-in function 'malloc'
+         file_name = (char *) malloc (dir_len + add_slash + base_len + 1);
+                              ^
+./localcharset.c:146:13: warning: incompatible implicit declaration of built-in function 'memcpy'
+             memcpy (file_name, dir, dir_len);
+             ^
+./localcharset.c:187:19: error: unknown type name 'size_t'
+                   size_t res_size = 0;
+                   ^
+./localcharset.c:194:23: error: unknown type name 'size_t'
+                       size_t l1, l2;
+                       ^
+./localcharset.c:221:46: warning: incompatible implicit declaration of built-in function 'malloc'
+                           res_ptr = (char *) malloc (res_size + 1);
+                                              ^
+./localcharset.c:226:46: warning: incompatible implicit declaration of built-in function 'realloc'
+                           res_ptr = (char *) realloc (res_ptr, res_size + 1);
+                                              ^
+make[2]: *** [localcharset.lo] Error 1
+make[2]: *** Waiting for unfinished jobs....
+make[2]: Leaving directory `/build/libiconv-1.14/libcharset/lib'
+make[1]: *** [all] Error 2
+make[1]: Leaving directory `/build/libiconv-1.14/libcharset'
+make: *** [lib/localcharset.h] Error 2
