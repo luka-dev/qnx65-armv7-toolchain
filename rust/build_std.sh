@@ -6,16 +6,18 @@
 set -euo pipefail
 export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CRATE="${1:?usage: build_std.sh <crate-dir>}"
+# Resolve the crate dir against the caller's cwd (NOT $HERE) so it works from any
+# working dir - e.g. `build-std ./mycrate` with the project mounted at /src.
+CRATE="$(cd "${1:?usage: build_std.sh <crate-dir>}" && pwd)"
 TGT="$HERE/armv7-unknown-nto-qnx650.json"
 
 # backtrace off: QNX 6.5 has no dl_iterate_phdr and only inline EHABI _Unwind_GetIP.
 # qnx-cc linker shim handles -lgcc_s->-lgcc, sysroot -L, and the _Unwind_GetIP shim.
-( cd "$HERE/$CRATE" && \
+( cd "$CRATE" && \
   RUSTFLAGS="-C linker=$HERE/qnx-cc" cargo build \
     -Z build-std=std,panic_abort -Z build-std-features= -Z json-target-spec \
     --target "$TGT" --release )
-BIN="$HERE/$CRATE/target/armv7-unknown-nto-qnx650/release/$(basename "$CRATE")"
+BIN="$CRATE/target/armv7-unknown-nto-qnx650/release/$(basename "$CRATE")"
 echo "OK -> $BIN"
 arm-unknown-nto-qnx6.5.0eabi-readelf -hA "$BIN" 2>/dev/null | \
   grep -iE 'Type:|Machine:|CPU_arch:|FP_arch|Tag_ABI_align' | head
