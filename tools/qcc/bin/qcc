@@ -1,32 +1,87 @@
-#!/bin/sh
-# qcc shim -> the SDP's cross GCC.
+#!/usr/bin/env bash
+# qcc shim -> this image's cross GCC 4.9. A faithful QNX-qcc-to-gcc translator so
+# anything that invokes `qcc` works against our GCC (mkifs [linker=] specs,
+# qcc-based Makefiles, hand invocations). This image replaced the stock SDP qcc
+# with GCC directly; without this shim, `mkifs` fails "qcc: not found" when it
+# links a relocatable startup into an IFS.
 #
-# Why: `mkifs` build files carry a [linker=...] spec that literally invokes `qcc`
-# (QNX's compiler driver). This image ships GCC for the target but not qcc, so
-# mkifs fails with "qcc: not found / Unable to link relocatable elf file
-# <startup>" when it has to link a relocatable startup into an IFS.
+# Option handling was derived from the decompiled stock 6.5 qcc (main's argv
+# switch): every option qcc forwards to the compiler/assembler/linker is already
+# gcc-compatible (-c/-S/-E/-g/-O*/-I/-D/-U/-L/-l/-f*/-m*/-p/-v/-w/-x/-ansi/-W{p,a,l},
+# -shared/-static/-std=/-M*/-o/-nostdlib/-nostartfiles/-nodefaultlibs/-nostdinc*)
+# so it passes straight through. Only qcc's own driver options are translated:
 #
-# This translates the two qcc-only flags and execs the real cross driver:
-#   -bootstrap   : link with no standard startup files/libs. The build files
-#                  already pass -nostdlib, which is the gcc equivalent, so drop it.
-#   -V<spec>     : selects a qcc compiler profile (e.g. -Vgcc_ntoarmv7le).
-#                  We only have one target here, so drop it.
-# Everything else (-Wl,..., -o, -L, -l, inputs) passes through untouched.
+#   -V[ver,]variant  selects a compiler profile; also picks C vs C++ and the C++
+#                    library. We have one target + GNU libstdc++, so we drop the
+#                    profile but honour its language: *cpp/*gpp/*acpp/*ecpp/*c++
+#                    -> use g++ (so C++ links libstdc++), else gcc.
+#   -Y<variant>      older spelling of the profile selector -> same handling.
+#   -bootstrap       link with no standard startup/libs -> gcc -nostdlib.
+#   -EL / -EB        endianness -> -mlittle-endian / -mbig-endian.
+#   -Wc,a,b          options for the compiler proper -> pass a b straight to gcc.
+#   -lang-c++/-c/-asm  source language override -> -x c++ / c / assembler.
+#   @file            response file -> expanded and re-translated.
+#   C++ source (.cc/.cpp/.cxx/.C/.c++/.mm) also selects g++.
 #
-# QCC_TARGET overrides the driver if this image ever grows a second target.
+# Env: QCC_TARGET (triplet, default arm-unknown-nto-qnx6.5.0eabi), QCC_CC/QCC_CXX
+#      to override the drivers, QCC_DEBUG=1 to echo the rewritten command.
+set -u
 : "${QCC_TARGET:=arm-unknown-nto-qnx6.5.0eabi}"
 CC="${QCC_CC:-${QCC_TARGET}-gcc}"
+CXX="${QCC_CXX:-${QCC_TARGET}-g++}"
 
-args=""
-for a in "$@"; do
-    case "$a" in
-        -bootstrap) ;;                 # gcc: covered by -nostdlib
-        -V*)        ;;                 # qcc profile selector, single-target here
-        -EL)        args="$args \"-mlittle-endian\"" ;;   # qcc spells endianness -EL/-EB
-        -EB)        args="$args \"-mbig-endian\"" ;;
-        *)          args="$args \"$a\"" ;;
+want_cxx=0
+args=()
+
+# qcc picks C vs C++ by the driver name too (CC / c++ -> C++). Match that.
+case "$(basename -- "$0")" in CC|c++|*-c++|g++|*-g++) want_cxx=1 ;; esac
+
+# mark C++ if the variant name names a C++ library/profile
+variant_lang() {
+    case "$1" in
+        *cpp*|*gpp*|*acpp*|*ecpp*|*c++*) want_cxx=1 ;;
     esac
-done
+}
 
-[ -n "$QCC_DEBUG" ] && echo "qcc-shim: $CC $args" >&2
-eval exec "$CC" $args
+translate() {
+    while [ $# -gt 0 ]; do
+        a="$1"; shift
+        case "$a" in
+            @?*)                                    # response file: expand + retranslate
+                f="${a#@}"
+                if [ -f "$f" ]; then
+                    # shellcheck disable=SC2046
+                    set -- $(cat "$f") "$@"
+                else args+=("$a"); fi
+                ;;
+            -V|-Y)     variant_lang "${1:-}"; shift || true ;;   # separate arg form
+            -V*)       variant_lang "${a#-V}" ;;                  # -Vspec
+            -Y*)       variant_lang "${a#-Y}" ;;
+            -bootstrap) args+=(-nostdlib) ;;
+            -EL)       args+=(-mlittle-endian) ;;
+            -EB)       args+=(-mbig-endian) ;;
+            -lang-c++) want_cxx=1; args+=(-x c++) ;;
+            -lang-c)   args+=(-x c) ;;
+            -lang-asm) args+=(-x assembler) ;;
+            # qcc C++-library / Intel-compiler selectors: N/A with one GNU
+            # libstdc++ target -> drop (else gcc chokes on -cxxlib / -*-intel).
+            -cxxlib|-cxxlib-*|-no-cxxlib|-*-intel) ;;
+            -Wc,*)     IFS=',' read -ra _p <<< "${a#-Wc,}"; args+=("${_p[@]}") ;;
+            *.cc|*.cpp|*.cxx|*.[Cc]++|*.C|*.mm|*.CPP|*.CXX)
+                       want_cxx=1; args+=("$a") ;;
+            *)         args+=("$a") ;;
+        esac
+    done
+}
+
+translate "$@"
+
+drv="$CC"; [ "$want_cxx" = 1 ] && drv="$CXX"
+
+if [ -n "${QCC_DEBUG:-}" ]; then
+    printf 'qcc-shim: %s' "$drv" >&2
+    for x in "${args[@]:-}"; do printf ' %s' "$x" >&2; done
+    printf '\n' >&2
+fi
+
+exec "$drv" "${args[@]}"

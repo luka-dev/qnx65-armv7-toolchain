@@ -31,16 +31,23 @@ files carry a `[linker=...]` spec that literally invokes `qcc` - and this image
 replaced the stock SDP `qcc` with GCC 4.9 directly. Without it, building an IFS
 image fails with `qcc: not found` when it links a relocatable startup.
 
-The shim just translates the qcc-only flags and execs the real cross driver
-(`arm-unknown-nto-qnx6.5.0eabi-gcc`):
+It's a full qcc-to-gcc translator, not just a passthrough - qcc-based Makefiles
+and hand invocations work too, not only mkifs. It maps the qcc-only options and
+execs the real cross driver (`arm-unknown-nto-qnx6.5.0eabi-{gcc,g++}`):
 
-- `-bootstrap`  -> dropped (the build files also pass `-nostdlib`, the gcc equivalent)
-- `-V<spec>`    -> dropped (single target here)
-- `-EL` / `-EB` -> `-mlittle-endian` / `-mbig-endian`
-- everything else (`-Wl,...`, `-o`, `-L`, `-l`, inputs) passes through
+- `-V[ver,]variant` / `-Y` -> dropped (single target), but its language is
+  honoured: a C++ profile (`*cpp/*gpp/*acpp/*ecpp/*c++`) selects **g++** so C++
+  links libstdc++; else gcc. C++ source extensions (`.cc/.cpp/.cxx/...`) also pick g++.
+- `-bootstrap`      -> `-nostdlib`
+- `-EL` / `-EB`     -> `-mlittle-endian` / `-mbig-endian`
+- `-Wc,a,b`         -> `a b` (options to the compiler proper)
+- `-lang-c++/-c/-asm` -> `-x c++ / c / assembler`
+- `@file`           -> response file expanded and re-translated
+- everything gcc already knows (`-Wl,`/`-Wa,`/`-Wp,`, `-o`, `-L`, `-l`, `-std=`,
+  `-M*`, `-shared`, inputs, ...) passes through untouched
 
-`QCC_TARGET` / `QCC_CC` override the driver; `QCC_DEBUG=1` echoes the rewritten
-command. This is toolchain glue - keep it tracked, unlike user drop-ins.
+`QCC_TARGET` / `QCC_CC` / `QCC_CXX` override the drivers; `QCC_DEBUG=1` echoes the
+rewritten command. This is toolchain glue - keep it tracked, unlike user drop-ins.
 
 ## Two ways to use them
 
