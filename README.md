@@ -163,7 +163,9 @@ arm-unknown-nto-qnx6.5.0eabi-nm -D -u mod.so   # must show NO _Znwj/_ZdlPv/_ZNSt
 
 `gcc -shared` alone won't error on the missing symbols - shared objects allow
 undefined references - so a `new`/STL module links "clean" but leaves `_Znwj`
-&co. unresolved and fails the same silent way at load. Always check with `nm -D -u`.
+&co. unresolved and fails the same silent way at load. Check any module before
+grafting with `host-scripts/qnx-check-so mod.so` (flags a libstdc++ NEEDED or
+dangling C++ runtime symbols), or by hand with `nm -D -u`.
 
 ### Go
 
@@ -339,7 +341,8 @@ cross/              cross-build files baked to /opt/qnx-cross: config.site (auto
                     qnx-armv7.cmake (CMake toolchain), qnx-armv7.ini (Meson cross file)
 host-scripts/       host-side runners: qnx-run.sh (run the toolchain on the cwd),
                     qnx-mkifs.sh (build a QNX IFS), qnx-configure/qnx-cmake/qnx-meson
-                    (cross-configure autotools/CMake/Meson projects)
+                    (cross-configure autotools/CMake/Meson projects), qnx-check-so
+                    (flag .so's that will be silently dropped by the loader)
 ```
 
 The top-level inputs map 1:1 to the Docker stages: `sdp/` -> `base`, `gcc/` ->
