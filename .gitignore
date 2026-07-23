@@ -6,10 +6,9 @@ go/bin/
 go/pkg/
 
 # User-dropped toolchains in tools/ are large third-party binaries - keep the
-# repo for the recipe, not the blobs. Track structure via tools/.keep + README.
+# repo for the recipe, not the blobs (tools/README documents the mechanism).
 # EXCEPTION: tools/qcc/ is a bundled shim script (not a blob) - track it.
 tools/*/
-!tools/.keep
 !tools/qcc/
 !tools/qcc/**
 
