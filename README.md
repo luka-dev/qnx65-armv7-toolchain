@@ -340,7 +340,8 @@ tools/              in-container PATH additions - the bundled qcc/ shim (for mki
 cross/              cross-build files baked to /opt/qnx-cross: config.site (autotools),
                     qnx-armv7.cmake (CMake toolchain), qnx-armv7.ini (Meson cross file)
 host-scripts/       host-side runners: qnx-run.sh (run the toolchain on the cwd),
-                    qnx-mkifs.sh (build a QNX IFS), qnx-configure/qnx-cmake/qnx-meson
+                    qnx-mkifs.sh (build a QNX IFS), qnx-mkqnx6fs.sh (build a qnx6
+                    Power-Safe fs image), qnx-configure/qnx-cmake/qnx-meson
                     (cross-configure autotools/CMake/Meson projects), qnx-check-so
                     (flag .so's that will be silently dropped by the loader)
 ```
@@ -492,6 +493,15 @@ Run and validate on `qemu-system-arm -M virt -cpu cortex-a15` (boots real
 bootable image with the QNX `mkifs`/`mkefs` tools (in the image);
 `host-scripts/qnx-mkifs.sh <build-file> <out.bin>` wraps that, and `dumpifs`
 (also in the image) extracts an existing image to rebuild it with a file added.
+
+To build a **qnx6 Power-Safe filesystem image** (mountable on 6.5 with `mount -t
+qnx6`, e.g. over a loopback device), use `mkqnx6fsimg` /
+`host-scripts/qnx-mkqnx6fs.sh <build-file> <out.img>`. The stock 6.5 `mkxfs`
+can't build qnx6 images, so the 6.6 `mkxfs` (which adds the qnx6fs/fatfs modes)
+was vendored in its place - its IFS/EFS output is byte-identical to the 6.5 one
+(verified: same build file -> identical image bytes modulo the embedded
+timestamp), and the qnx6 superblock it writes (magic `0x68191122`) is the
+standard Power-Safe format 6.5's `fs-qnx6.so` mounts.
 
 ---
 
