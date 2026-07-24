@@ -138,7 +138,20 @@
 #define	PL011_ICR_TXIC		(1 << 5)	/* Transmit interrupt clear */
 #define	PL011_ICR_RXIC		(1 << 4)	/* Receive interrupt clear */
 
-
+/* Register offsets, control/interrupt/DMA bits - backported verbatim from QNX
+   6.6 arm/pl011.h; PrimeCell PL011 UART is a fixed hardware block, additive. */
+#define	PL011_DMAWM		0x08	/* DMA Water Mark register */
+#define	PL011_TIMEOUT		0x0C	/* Timeout register */
+#define	PL011_LCR_R		0x1C	/* Receive Line control register */
+#define	PL011_CR_OVSFACT	(1 <<  3)	/* UART Over Sampling Factor */
+#define	PL011_IMSC_TXFEIM	(1 << 12)	/* Transmit FIFO Empty interrupt */
+#define	PL011_IMSC_CTSRM	(1 <<  1)	/* Clear To Send Modem masked interrupt status */
+#define	PL011_MIS_TXFES		(1 << 12)	/* Transmit FIFO Empty interrupt */
+#define	PL011_MIS_CTSRMIS	(1 <<  1)	/* Clear To Send Modem interrupt status */
+/* DMACR register bits */
+#define	PL011_DMACR_ONERR	(1 << 2)	/* Receive DMA on error */
+#define	PL011_DMACR_TXE		(1 << 1)	/* Transmit DMA Enable */
+#define	PL011_DMACR_RXE		(1 << 0)	/* Receive DMA Enable */
 
 #endif		/* __ARM_PL011_INC__ */
 

@@ -48,6 +48,12 @@ extern struct cpupage_entry *_cpupage_ptr;
 #define ARM_CPU_FLAG_V7				0x0020		/* ARMv7 architecture */
 #define ARM_CPU_FLAG_NEON			0x0040		/* Neon Media Engine */
 #define ARM_CPU_FLAG_WMMX2			0x0080		/* iWMMX2 coprocessor */
+/* Backported from QNX 6.6 arm/syspage.h - new feature-flag bits (no collision
+   with the 0x0001-0x0080 above). Additive: 6.5 procnto does not set them, so a
+   `flags & ARM_CPU_FLAG_x` test just reads false - safe to compile against. */
+#define ARM_CPU_FLAG_V7_MP_ERRATA	0x0100		/* needs SMP TLB workarounds */
+#define ARM_CPU_FLAG_CC_INCR_BIT_32	0x0200		/* CLOCKCYCLES_INCR_BIT == 32 */
+#define ARM_CPU_FLAG_IDIV			0x0400		/* h/w divide: UDIV, SDIV supported */
 
 #if defined(ENABLE_DEPRECATED_SYSPAGE_SECTIONS)
 struct	arm_boxinfo_entry {

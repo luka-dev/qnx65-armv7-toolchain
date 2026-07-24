@@ -143,6 +143,11 @@
 #define	OPCODE_DIV0		0xe7fffffe
 #define	OPCODE_CRASH	0xe7fffffd
 
+/* Thumb BKPT encodings - backported verbatim from QNX 6.6 arm/opcode.h; fixed
+   architectural instruction encodings, additive. */
+#define	OPCODE_THUMB_BREAK	0xdefe
+#define	OPCODE_THUMB_KDBREAK	0xdeff
+
 #endif
 
 

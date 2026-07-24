@@ -80,6 +80,12 @@
 #define ARM_CPSR_Z				(1 << 30)
 #define ARM_CPSR_N				(1 << 31)
 
+/* CPSR IT[7:0] Thumb-2 If-Then execution-state bits - backported verbatim from
+   QNX 6.6 arm/cpu.h; architectural ARMv7 CPSR fields, additive. */
+#define ARM_CPSR_IT_1_0			0x06000000
+#define ARM_CPSR_IT_7_2			0x0000fc00
+#define ARM_CPSR_ITSTATE		(ARM_CPSR_IT_1_0|ARM_CPSR_IT_7_2)
+
 #endif /* __ARM_CPU_H_INCLUDED */
 
 
