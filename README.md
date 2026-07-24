@@ -580,6 +580,13 @@ why that swap is format-safe. The full tool list is in the [Inventory](#inventor
 - **`Unknown EABI object attribute 34`** during link - cosmetic. Binutils 2.19
   doesn't recognize a newer EABI attribute tag emitted by GCC 4.9 / LLVM; the
   linker skips it and the binary is correct.
+- **Debug symbols / `addr2line` / `objdump -S`** - `-g` defaults to **DWARF 3**
+  (set in `gcc/port/arm-nto.h`), because the SDP's binutils 2.19 read DWARF <= 3
+  and GCC 4.9's own default (DWARF 4) makes them warn `unsupported version 4` and
+  drop file:line. So the in-image `addr2line`/`objdump`/`readelf` symbolize `-g`
+  output out of the box. This only sets the *version*; `-g` isn't forced, an
+  explicit `-gdwarf-N` still wins, and it never touches the code (debug lives in
+  non-loadable `.debug_*` sections the device never maps).
 - **Rust: `linker cc not found` / `cannot open Scrt1.o`** - the image needs a
   *host* C toolchain (`gcc` + `libc6-dev`) for Cargo build scripts and
   proc-macros; both are installed in the base. (This is separate from the QNX

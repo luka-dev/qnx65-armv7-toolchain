@@ -115,3 +115,18 @@
    made the default (-masm-syntax-unified). */
 #undef  TARGET_UNIFIED_ASM
 #define TARGET_UNIFIED_ASM 1
+
+/* Default -g to DWARF 3, not GCC 4.9's DWARF 4: the SDP's binutils 2.19
+   readelf/objdump/addr2line (and any gdb built on that BFD) only understand
+   DWARF <= 3 - DWARF 4 makes them warn "unsupported version 4" and drop
+   file:line - so -g output stays symbolizable with the in-image tools. DWARF 3
+   (not 2) keeps the richer debug info that 2.19 still reads. This only changes
+   the *version*; -g is not forced, an explicit -gdwarf-N still wins, and it has
+   zero effect on the emitted code (debug lives in non-loadable .debug_* sections
+   the target never maps). arm.c's arm_option_override() invokes this hook. */
+#undef  SUBTARGET_OVERRIDE_OPTIONS
+#define SUBTARGET_OVERRIDE_OPTIONS			\
+  do {							\
+    if (!global_options_set.x_dwarf_version)		\
+      global_options.x_dwarf_version = 3;		\
+  } while (0)
