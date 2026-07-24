@@ -43,6 +43,9 @@ execs the real cross driver (`arm-unknown-nto-qnx6.5.0eabi-{gcc,g++}`):
 - `-nopipe`         -> dropped (gcc uses temp files by default anyway)
 - `-nostdlib++`     -> link via the C driver (gcc 4.9 predates gcc 9's
   `-nostdlib++`; the C driver still compiles C++ but never auto-links libstdc++)
+- `-a <archive>`    -> librarian mode: `<target>-ar rc <archive> <objs>`. QNX's
+  qcc-driver make rules build static libs with `qcc -V... -a` (`AR_..._gcc_qcc`
+  in `qconf-*.mk`), so a qcc-based `libfoo.a` build works. `QCC_AR` overrides ar.
 - `-EL` / `-EB`     -> `-mlittle-endian` / `-mbig-endian`
 - `-Wc,a,b`         -> `a b` (options to the compiler proper)
 - `-lang-c++/-c/-asm` -> `-x c++ / c / assembler`

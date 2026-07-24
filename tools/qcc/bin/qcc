@@ -21,7 +21,12 @@
 #   -nopipe          use temp files not pipes (gcc's default) -> dropped.
 #   -nostdlib++      no C++ stdlib -> link via the C driver (gcc 4.9 has no
 #                    -nostdlib++; the C driver compiles C++ but omits libstdc++).
+#   -a <archive>     librarian mode (QNX's qcc-driver make builds static libs
+#                    with `qcc -a`) -> run `<target>-ar rc <archive> <objs>`.
 #   -EL / -EB        endianness -> -mlittle-endian / -mbig-endian.
+# (Bare -M is NOT special-cased: qcc-gcc treats it as gcc does - emit make
+# dependencies - so it passes through. Only the Watcom driver used -M for a link
+# map, which this gcc toolchain never invokes.)
 #   -Wc,a,b          options for the compiler proper -> pass a b straight to gcc.
 #   -lang-c++/-c/-asm  source language override -> -x c++ / c / assembler.
 #   @file            response file -> expanded and re-translated.
@@ -36,6 +41,7 @@ CXX="${QCC_CXX:-${QCC_TARGET}-g++}"
 
 want_cxx=0
 args=()
+ar_target=""      # set by qcc's -a (librarian mode); handled after translate()
 
 # qcc picks C vs C++ by the driver name too (CC / c++ -> C++). Match that.
 case "$(basename -- "$0")" in CC|c++|*-c++|g++|*-g++) want_cxx=1 ;; esac
@@ -68,6 +74,7 @@ translate() {
                                                          # (added in gcc 9), so link via the C driver: it
                                                          # still compiles C++ (cc1plus) but never auto-adds
                                                          # libstdc++ - the -nostdlib++ intent.
+            -a)        ar_target="${1:-}"; shift || true ;;  # qcc librarian: qcc -a <archive> <objs> -> ar (after translate)
             -EL)       args+=(-mlittle-endian) ;;
             -EB)       args+=(-mbig-endian) ;;
             -lang-c++) want_cxx=1; args+=(-x c++) ;;
@@ -85,6 +92,19 @@ translate() {
 }
 
 translate "$@"
+
+# qcc -a <archive> <objs>: build a static library. QNX's qcc-driver make rules
+# use `qcc -V... -a` as the librarian (AR_nto_arm_gcc_qcc in qconf-*.mk), so a
+# qcc-based static-lib build lands here. Run binutils ar directly - ar rc =
+# create/replace - over the object inputs. QCC_AR overrides the archiver.
+if [ -n "$ar_target" ]; then
+    ar_objs=()
+    for x in "${args[@]:-}"; do case "$x" in *.o|*.a) ar_objs+=("$x") ;; esac; done
+    ar="${QCC_AR:-${QCC_TARGET}-ar}"
+    [ -n "${QCC_DEBUG:-}" ] && printf 'qcc-shim: %s rc %s%s\n' "$ar" "$ar_target" "$(printf ' %s' "${ar_objs[@]:-}")" >&2
+    rm -f "$ar_target"
+    exec "$ar" rc "$ar_target" "${ar_objs[@]}"
+fi
 
 drv="$CC"; { [ "$want_cxx" = 1 ] && [ "${force_cdriver:-0}" = 0 ]; } && drv="$CXX"
 
