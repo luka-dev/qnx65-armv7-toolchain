@@ -51,6 +51,7 @@
 #define	MPCORE_SCU_CONFIG		0x04	/* SCU configuration register */
 #define	MPCORE_CPU_STATUS		0x08	/* SCU CPU status register */
 #define	MPCORE_SCU_INVALIDATE	0x0c	/* SCU invalidate all register */
+#define MPCORE_SCU_DIAGNOSTIC	0x30	/* SCU diagnostic register (backported from QNX 6.6) */
 
 /*
  * SCU_CTRL bits
