@@ -39,6 +39,10 @@ execs the real cross driver (`arm-unknown-nto-qnx6.5.0eabi-{gcc,g++}`):
   honoured: a C++ profile (`*cpp/*gpp/*acpp/*ecpp/*c++`) selects **g++** so C++
   links libstdc++; else gcc. C++ source extensions (`.cc/.cpp/.cxx/...`) also pick g++.
 - `-bootstrap`      -> `-nostdlib`
+- `-nostartup`      -> `-nostartfiles` (no crt startup files)
+- `-nopipe`         -> dropped (gcc uses temp files by default anyway)
+- `-nostdlib++`     -> link via the C driver (gcc 4.9 predates gcc 9's
+  `-nostdlib++`; the C driver still compiles C++ but never auto-links libstdc++)
 - `-EL` / `-EB`     -> `-mlittle-endian` / `-mbig-endian`
 - `-Wc,a,b`         -> `a b` (options to the compiler proper)
 - `-lang-c++/-c/-asm` -> `-x c++ / c / assembler`
@@ -61,3 +65,23 @@ Or mount at runtime (no rebuild - add/remove folders and just re-run):
         -v "$PWD/tools":/opt/tools -v "$PWD":/src qnx65-armv7-toolchain bash
 
 Binaries must be `linux/amd64` (the image runs under amd64, emulated on Apple Silicon).
+
+
+## neon-as/bin/as — NEON alignment-hint shim
+
+`gas` 2.19 (stock QNX SDP) supports the ARM NEON element-alignment hint but only
+in the UAL comma spelling `[Rn, :align]`. GCC 4.9 and hand-written core NEON emit
+the no-comma spelling `[Rn:align]`, which 2.19 rejects with "']' expected". The
+shim rewrites the former to the latter and calls the real `…-as-2.19`; it touches
+only operands of the exact shape `[<reg>:<num>]`.
+
+This was long recorded as a "binutils 2.19 ceiling" that forced NEON off. It is
+not a ceiling — the assembler accepts the hint, just spelled with a comma. No
+binutils upgrade needed.
+
+GCC resolves `as` by ABSOLUTE path, not PATH, so unlike the qcc shim this cannot
+work via PATH. It is picked up with:  `gcc -B/opt/tools/neon-as/bin`  (GCC looks
+for a plain-named `as` in each -B dir first). Verified: autovec NEON and
+hand-written `[Rn:64/128/256]` incl. writeback `[Rn:64]!` all assemble; the
+retroarch griffin build enables it via `-mfpu=neon -B/opt/tools/neon-as/bin` in
+Makefile.griffin's qnx stanza.
