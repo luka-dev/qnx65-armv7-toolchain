@@ -17,6 +17,7 @@ docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 ## Table of contents
 
 - [What you get](#what-you-get)
+- [Inventory](#inventory)
 - [The target](#the-target)
 - [Quick start](#quick-start)
 - [Usage per language](#usage-per-language)
@@ -52,6 +53,66 @@ ELF 32-bit LSB, ARM, EABI5, dynamically linked, interpreter /usr/lib/ldqnx.so.2
 
 The host binaries (compilers) run as `linux/amd64`; on Apple Silicon they run
 under emulation, but the ARM **output** is native QNX regardless.
+
+---
+
+## Inventory
+
+Everything the image ships, in one place. The **toolchain, languages and
+utilities** are on `PATH` inside the container; the **target sysroot** is what
+your builds link and run against; the **host-scripts** run on your machine and
+drive the container. Other sections show *how* to use these - this is *what
+exists*.
+
+### Toolchain (on `PATH`, prefix `arm-unknown-nto-qnx6.5.0eabi-`)
+- **GCC 4.9.4** - `gcc` / `g++` / `cpp`. C99, C++11, partial C++14. Ships a static
+  `libstdc++.a` (so `-static-libstdc++` works) beside the shared one.
+- **Binutils 2.19** - `as ld ar nm ranlib strip objcopy objdump readelf size
+  strings addr2line c++filt gprof`.
+- **`qcc`** - qcc-to-gcc shim for `mkifs` / qcc Makefiles (`tools/qcc`; full flag
+  table in `tools/README.md`).
+- **`neon-as`** - gas-2.19 NEON alignment-hint shim, via `-B/opt/tools/neon-as/bin`.
+
+### Languages
+- **Go 1.26.4** - `go` / `gofmt`, `GOOS=qnx GOARCH=arm` port.
+- **Rust nightly** - `rustc` / `cargo` / `build-std`, full `std` for `armv7-nto-qnx650`.
+
+### Image & filesystem builders
+The QNX `mkxfs` family (the 6.6 `mkxfs`, [vendored](#selectively-backported-from-qnx-66)):
+- `mkifs` + `dumpifs` - IFS boot image.
+- `mkefs` / `mketfs` + `dumpefs` - flash / ETFS images.
+- `mkqnx6fsimg` - qnx6 Power-Safe fs image (`mount -t qnx6`).
+- `mkfatfsimg` - FAT fs image. `mkrcfsimg` / `mkrcfs` - RCFS.
+- `mkifsf_{elf,srec,openbios,coff,bswap,opah,densan}` - mkifs output-format
+  filters. `mkrec` - record/S-record tool.
+
+### Cross-build systems
+`cmake`, `meson`, `ninja`, `pkg-config`, with ready cross files at
+`/opt/qnx-cross/` (`config.site`, `qnx-armv7.cmake`, `qnx-armv7.ini`).
+
+### Other host utilities
+`rpcgen` (ONC-RPC stub generator), `deflate`, `use` / `usemsg` (QNX
+usage-message tools), `file`.
+
+### Target sysroot (`$QNX_TARGET = /opt/qnx650/target/qnx6`, arch `armle-v7`)
+What output links against and the runtime it targets:
+- **Shared libs** (`armle-v7/lib`): `libc` (`.so.3`), `libm`, `libstdc++`
+  (`.so.6.0.13`), `libsocket`, `libcpp` / `libecpp`, `libasound`, `libimg`,
+  `libfont`, `libusbdi`, `libsnmp`, `libcam`, `libhiddi`, `libpps`, ...
+- **Static libs**: 27 in `lib/` + 117 in `usr/lib/` (including the built `libstdc++.a`).
+- **CRT**: `crt1 crti crtbegin crtend crtn mcrt1 .o`.
+- **Driver / resource-manager DLLs** (`armle-v7/lib/dll`, ~60): `fs-qnx6`,
+  `fs-qnx4`, `fs-ext2`, `fs-dos`, `fs-udf`, `io-blk`, `io-winmgr-*`, `devc-*`, ...
+- **Prebuilt kernels** (`armle-v7/boot/sys`): `procnto`, `procnto-instr`,
+  `procnto-smp`, `procnto-smp-instr` - drop straight into an IFS build file.
+- **Headers** (`usr/include`, ~1700 `.h`): C / POSIX, `arm/`, `sys/`, `net*/`,
+  plus bundled `openssl/`, `curl/`, `libxml/`, `c++/`, `io-pkt/`, `photon/`, ...
+
+### Host-scripts (`host-scripts/`, run on your machine)
+- `qnx-run.sh` - run any toolchain command on the cwd (or an interactive shell).
+- `qnx-mkifs.sh` / `qnx-mkqnx6fs.sh` - build an IFS / qnx6 fs image.
+- `qnx-configure` / `qnx-cmake` / `qnx-meson` - cross-configure autotools/CMake/Meson.
+- `qnx-check-so` - flag a `.so` the QNX loader would silently drop.
 
 ---
 
@@ -339,11 +400,8 @@ tools/              in-container PATH additions - the bundled qcc/ shim (for mki
                     plus any user drop-in compilers; see tools/README.md
 cross/              cross-build files baked to /opt/qnx-cross: config.site (autotools),
                     qnx-armv7.cmake (CMake toolchain), qnx-armv7.ini (Meson cross file)
-host-scripts/       host-side runners: qnx-run.sh (run the toolchain on the cwd),
-                    qnx-mkifs.sh (build a QNX IFS), qnx-mkqnx6fs.sh (build a qnx6
-                    Power-Safe fs image), qnx-configure/qnx-cmake/qnx-meson
-                    (cross-configure autotools/CMake/Meson projects), qnx-check-so
-                    (flag .so's that will be silently dropped by the loader)
+host-scripts/       host-side runners (qnx-run.sh, qnx-mkifs.sh, qnx-mkqnx6fs.sh,
+                    qnx-configure/qnx-cmake/qnx-meson, qnx-check-so) - see the Inventory
 ```
 
 The top-level inputs map 1:1 to the Docker stages: `sdp/` -> `base`, `gcc/` ->
@@ -353,11 +411,6 @@ The top-level inputs map 1:1 to the Docker stages: `sdp/` -> `base`, `gcc/` ->
 ---
 
 ## Design decisions
-
-### Files-based tree, not a tarball
-The QNX tree is stored unpacked so it can be browsed, patched, and versioned in
-git. (The stock `cc`/`CC`/`QCC` names were symlinks to `qcc` and collided by case
-on macOS/APFS; with `qcc` removed this is no longer relevant.)
 
 ### GCC 4.4.2 -> 4.9.4, in place
 The stock SDP compiler was **fully replaced** by a custom GCC 4.9.4 built from
@@ -379,17 +432,36 @@ sets every QNX define, sysroot, CRT and specs and links correctly.
 
 But `mkifs` build files (and some Makefiles) literally invoke `qcc`, so
 `tools/qcc/bin/qcc` is a small **qcc-to-gcc translator** (validated against the
-decompiled stock qcc). It drops `-V`/`-Y`/`-cxxlib*`/`-*-intel`, maps
-`-bootstrap`->`-nostdlib`, `-EL/-EB`->endian, `-Wc,`->compiler opts, `-lang-*`->`-x`,
-expands `@response-files`, and picks **g++** for C++ (a C++ `-V` variant, a C++
-source extension, `-lang-c++`, or a `CC`/`c++` driver name) so C++ links
-libstdc++. Everything gcc already understands passes through. Full flag table in
-`tools/README.md`.
+decompiled stock qcc and the QNX make rules). It drops `-V`/`-Y`/`-cxxlib*`/`-*-intel`/`-nopipe`,
+maps `-bootstrap`->`-nostdlib`, `-nostartup`->`-nostartfiles`, `-EL/-EB`->endian,
+`-Wc,`->compiler opts, `-lang-*`->`-x`, runs `-a <lib>` as the `ar` librarian
+(QNX's qcc-driver make builds static libs that way), expands `@response-files`,
+and picks **g++** for C++ (a C++ `-V` variant, a C++ source extension, `-lang-c++`,
+or a `CC`/`c++` driver name) so C++ links libstdc++. Everything gcc already
+understands passes through. Full flag table in `tools/README.md`.
 
 ### armv7-only
 Only the `armle-v7` (EABI) target is kept. The other SDP arches (arm-old-abi,
 x86, mips, ppc, sh), the Momentics IDE, docs, and WebKit were trimmed from the
 SDP tree, shrinking it from ~1.1 GB to ~235 MB.
+
+### <a name="selectively-backported-from-qnx-66"></a>Selectively backported from QNX 6.6
+A few 6.6 host tools and headers are vendored where 6.5 lacked them, always kept
+6.5-compatible:
+- **`mkxfs`** (6.6) replaces the 6.5 one - it adds the qnx6fs / FAT / RCFS image
+  modes (`mkqnx6fsimg`/`mkfatfsimg`/`mkrcfsimg`), and its IFS/EFS output is
+  byte-identical to 6.5's (verified: same build file -> identical bytes modulo
+  the embedded timestamp), so `mkifs`/`mkefs`/`mketfs` (symlinks to it) are
+  unchanged in behaviour.
+- The extra `mkifsf_*` filters, `mkrcfs`, and `rpcgen` (small standalone tools).
+- Architectural `arm/*.h` macros 6.6 added and 6.6-vintage startup/BSP code needs
+  (`arm/mmu.h` TTBR/PTE, `arm/cpu.h` CPSR IT, `arm/pl011.h`, `arm/gic.h`,
+  `arm/mpcore.h` SCU, `arm/opcode.h`, `arm/syspage.h` CPU-flag bits).
+
+Only silicon-/ISA-defined, purely additive bits are taken - never changed struct
+layouts, macro values, or anything that needs the 6.6 runtime. The 6.6 cross
+toolchain (gcc 4.7.3 / binutils 2.24) is **not** used: it targets qnx6.6 and its
+gcc is older than the 4.9.4 built here.
 
 ### Go and Rust are real ports, not cross-compiles
 QNX is an upstream target for neither. Go adds a `GOOS=qnx GOARCH=arm` libc-call
@@ -496,12 +568,10 @@ bootable image with the QNX `mkifs`/`mkefs` tools (in the image);
 
 To build a **qnx6 Power-Safe filesystem image** (mountable on 6.5 with `mount -t
 qnx6`, e.g. over a loopback device), use `mkqnx6fsimg` /
-`host-scripts/qnx-mkqnx6fs.sh <build-file> <out.img>`. The stock 6.5 `mkxfs`
-can't build qnx6 images, so the 6.6 `mkxfs` (which adds the qnx6fs/fatfs modes)
-was vendored in its place - its IFS/EFS output is byte-identical to the 6.5 one
-(verified: same build file -> identical image bytes modulo the embedded
-timestamp), and the qnx6 superblock it writes (magic `0x68191122`) is the
-standard Power-Safe format 6.5's `fs-qnx6.so` mounts.
+`host-scripts/qnx-mkqnx6fs.sh <build-file> <out.img>` (`mkfatfsimg` builds a FAT
+image the same way). These come from the vendored 6.6 `mkxfs` - see
+[Selectively backported from QNX 6.6](#selectively-backported-from-qnx-66) for
+why that swap is format-safe. The full tool list is in the [Inventory](#inventory).
 
 ---
 
