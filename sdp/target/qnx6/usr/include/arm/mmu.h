@@ -222,6 +222,35 @@ typedef unsigned	pte_t;
 #define	ARM_MMU_TTBR_RGN(x)	(((x) & 3) << 3)	/* outer cacheable type */
 
 /*
+ * ARMv7 TTBR + PTE attributes backported verbatim from the QNX 6.6 arm/mmu.h
+ * (services/system/public/arm/mmu.h @6.6.0). These are architectural ARMv7-A
+ * register-bit definitions - identical silicon on 6.5 - so they are safe to add:
+ * 6.6 renamed ARM_MMU_TTBR_* to ARM_TTBR_* and added IRGN/NOS plus the RGN/IRGN
+ * convenience values and ARM_PTE_V6_WA. Needed to build 6.6-vintage startup
+ * (e.g. armv_chip_a15.c) against this 6.5 SDP; nothing in 6.5 uses these names,
+ * so the addition is purely additive.
+ */
+#define ARM_PTE_V6_WA		(ARM_PTE_V6_SP_TEX(1) | ARM_PTE_CB)
+
+#define ARM_TTBR_ATTR_MASK	0x7f
+#define	ARM_TTBR_C			(1 << 0)			/* inner cacheable */
+#define	ARM_TTBR_S			(1 << 1)			/* shared memory */
+#define	ARM_TTBR_P			(1 << 2)			/* ECC enabled */
+#define	ARM_TTBR_RGN(x)		(((x) & 3) << 3)	/* outer cacheable type */
+#define ARM_TTBR_IRGN(x)	((((x) & 1) << 6) | (((x) & 2) >> 1))
+#define ARM_TTBR_NOS		(1 << 5)
+
+#define ARM_TTBR_RGN_NC		ARM_TTBR_RGN(0)
+#define ARM_TTBR_RGN_WA		ARM_TTBR_RGN(1)
+#define ARM_TTBR_RGN_WT		ARM_TTBR_RGN(2)
+#define ARM_TTBR_RGN_WB		ARM_TTBR_RGN(3)
+
+#define ARM_TTBR_IRGN_NC	ARM_TTBR_IRGN(0)
+#define ARM_TTBR_IRGN_WA	ARM_TTBR_IRGN(1)
+#define ARM_TTBR_IRGN_WT	ARM_TTBR_IRGN(2)
+#define ARM_TTBR_IRGN_WB	ARM_TTBR_IRGN(3)
+
+/*
  * Address translation support.
  *
  * The virtual address space contains the following reserved regions:
