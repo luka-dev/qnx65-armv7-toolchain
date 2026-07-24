@@ -17,6 +17,10 @@
 #                    -> use g++ (so C++ links libstdc++), else gcc.
 #   -Y<variant>      older spelling of the profile selector -> same handling.
 #   -bootstrap       link with no standard startup/libs -> gcc -nostdlib.
+#   -nostartup       no crt startup files -> gcc -nostartfiles.
+#   -nopipe          use temp files not pipes (gcc's default) -> dropped.
+#   -nostdlib++      no C++ stdlib -> link via the C driver (gcc 4.9 has no
+#                    -nostdlib++; the C driver compiles C++ but omits libstdc++).
 #   -EL / -EB        endianness -> -mlittle-endian / -mbig-endian.
 #   -Wc,a,b          options for the compiler proper -> pass a b straight to gcc.
 #   -lang-c++/-c/-asm  source language override -> -x c++ / c / assembler.
@@ -58,6 +62,12 @@ translate() {
             -V*)       variant_lang "${a#-V}" ;;                  # -Vspec
             -Y*)       variant_lang "${a#-Y}" ;;
             -bootstrap) args+=(-nostdlib) ;;
+            -nostartup) args+=(-nostartfiles) ;;         # qcc: no crt startup -> gcc -nostartfiles
+            -nopipe)   ;;                                # qcc: use temp files, not pipes - gcc's default; drop
+            -nostdlib++) force_cdriver=1 ;;              # qcc: no C++ stdlib. GCC 4.9 lacks -nostdlib++
+                                                         # (added in gcc 9), so link via the C driver: it
+                                                         # still compiles C++ (cc1plus) but never auto-adds
+                                                         # libstdc++ - the -nostdlib++ intent.
             -EL)       args+=(-mlittle-endian) ;;
             -EB)       args+=(-mbig-endian) ;;
             -lang-c++) want_cxx=1; args+=(-x c++) ;;
@@ -76,7 +86,7 @@ translate() {
 
 translate "$@"
 
-drv="$CC"; [ "$want_cxx" = 1 ] && drv="$CXX"
+drv="$CC"; { [ "$want_cxx" = 1 ] && [ "${force_cdriver:-0}" = 0 ]; } && drv="$CXX"
 
 if [ -n "${QCC_DEBUG:-}" ]; then
     printf 'qcc-shim: %s' "$drv" >&2
