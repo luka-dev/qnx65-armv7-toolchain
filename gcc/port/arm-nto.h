@@ -116,17 +116,30 @@
 #undef  TARGET_UNIFIED_ASM
 #define TARGET_UNIFIED_ASM 1
 
-/* Default -g to DWARF 3, not GCC 4.9's DWARF 4: the SDP's binutils 2.19
-   readelf/objdump/addr2line (and any gdb built on that BFD) only understand
-   DWARF <= 3 - DWARF 4 makes them warn "unsupported version 4" and drop
-   file:line - so -g output stays symbolizable with the in-image tools. DWARF 3
-   (not 2) keeps the richer debug info that 2.19 still reads. This only changes
-   the *version*; -g is not forced, an explicit -gdwarf-N still wins, and it has
-   zero effect on the emitted code (debug lives in non-loadable .debug_* sections
-   the target never maps). arm.c's arm_option_override() invokes this hook. */
+/* Target-default option fixups, run from arm.c's arm_option_override() (which
+   invokes SUBTARGET_OVERRIDE_OPTIONS at line ~2285, before its own -march-based
+   resolution of unaligned_access at ~2723). Each only sets a default when the
+   user did NOT pass the option, so an explicit flag always wins.
+
+   1. -g -> DWARF 3, not GCC 4.9's DWARF 4: the SDP's binutils 2.19
+      readelf/objdump/addr2line (and any gdb on that BFD) only read DWARF <= 3 -
+      DWARF 4 makes them warn "unsupported version 4" and drop file:line. DWARF 3
+      (not 2) keeps the richer info 2.19 still reads. Only the *version* changes;
+      -g isn't forced, and it never touches the emitted code (debug lives in
+      non-loadable .debug_* sections the target never maps).
+
+   2. -mno-unaligned-access by default (strict alignment): GCC 4.9 defaults ARMv7
+      to -munaligned-access and will emit single misaligned ldr/str (and set
+      __ARM_FEATURE_UNALIGNED). QNX 6.5 runs with SCTLR.A=1, where a misaligned
+      access faults - so that codegen crashes on device. Force strict alignment
+      (the compiler splits unaligned accesses into byte ops), matching what the
+      Rust target already does with +strict-align. Setting it to 0 here (before
+      the == 2 auto-resolution) makes that path a no-op, so 0 sticks. */
 #undef  SUBTARGET_OVERRIDE_OPTIONS
 #define SUBTARGET_OVERRIDE_OPTIONS			\
   do {							\
     if (!global_options_set.x_dwarf_version)		\
       global_options.x_dwarf_version = 3;		\
+    if (!global_options_set.x_unaligned_access)		\
+      global_options.x_unaligned_access = 0;		\
   } while (0)
