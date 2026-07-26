@@ -468,8 +468,19 @@ QNX is an upstream target for neither. Go adds a `GOOS=qnx GOARCH=arm` libc-call
 runtime + a hand-written ARM asm bridge (`go/`). Rust adds a custom
 `armv7-nto-qnx650` target + an `nto65` libc fork + std source patches, built via
 `-Z build-std` (`rust/`). Both are **softfp** to match the 6.5 ABI (`Tag_VFP_arch:
-VFPv3-D16`); Rust's target also carries `+strict-align` for QNX's `SCTLR.A=1`.
+VFPv3-D16`); Rust's target carries `+strict-align` for QNX's `SCTLR.A=1`, and the
+GCC port defaults C/C++ to `-mno-unaligned-access` for the same reason (see below).
 Full details in `go/README.md` and `rust/README.md`.
+
+### Strict alignment (`-mno-unaligned-access`) default
+QNX 6.5 runs with `SCTLR.A=1`, so a misaligned load/store **faults** on-device.
+GCC 4.9 otherwise defaults ARMv7 to `-munaligned-access` and would emit single
+misaligned `ldr`/`str` (e.g. an unaligned `memcpy`, packed-struct fields), which
+crash there. The port (`gcc/port/arm-nto.h`) defaults C/C++ to
+`-mno-unaligned-access` - the compiler splits unaligned accesses into byte ops
+instead - matching Rust's `+strict-align`. An explicit `-munaligned-access` still
+overrides it; aligned accesses are unaffected (only genuinely-unaligned ones cost
+a little).
 
 ---
 
