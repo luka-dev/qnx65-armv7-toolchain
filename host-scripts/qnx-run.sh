@@ -14,8 +14,9 @@
 #
 # Compiler: arm-unknown-nto-qnx6.5.0eabi-{gcc,g++} (GCC 4.9.4), default
 # -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=softfp; output ELF EABI5 v7 softfp,
-# interp /usr/lib/ldqnx.so.2. Note: QNX Dinkum headers don't pull <stddef.h>
-# transitively - add -include stddef.h for code that assumes it.
+# interp /usr/lib/ldqnx.so.2. Note: common headers (unistd.h, sys/types.h,
+# stdio.h, ...) provide size_t; gnulib-style code that ships its own <stddef.h>
+# may still need -include stddef.h (baked into cross/config.site for autotools).
 
 IMG=qnx65-armv7-toolchain
 CTX="$(cd "$(dirname "$0")/.." && pwd)"   # repo root (Dockerfile / build context)
