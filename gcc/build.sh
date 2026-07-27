@@ -43,6 +43,19 @@ if [ -f "$F" ] && ! grep -q wchar-fix "$F"; then
   sed -i 's|#if defined(__WCHAR_T)|#undef _GCC_WCHAR_T /* wchar-fix: <malloc.h> pre-set the guard w/o the typedef; force it */\n#if defined(__WCHAR_T)|' "$F"
 fi
 
+# size_t fix: fixincludes' "gnu_types" fix rewrites QNX's
+#   #if defined(__SIZE_T) typedef __SIZE_T size_t; #undef __SIZE_T #endif
+# into a form guarded by _GCC_SIZE_T - the same guard GCC's own <stddef.h> uses -
+# so when unistd.h/sys/types.h are included WITHOUT <stddef.h> first, the guard
+# is already set, the typedef is skipped, and size_t is left undefined (breaks
+# e.g. any TU that includes <unistd.h> then uses size_t). The SDP originals are
+# correct and that rewrite is fixincludes' ONLY change to these two headers, so
+# drop the broken copies: the compiler falls back to the good SDP headers and
+# size_t resolves transitively again (no -include stddef.h needed). rpc/svc.h is
+# left alone - fixincludes also applies a real C++ prototype fix there.
+rm -f "$WORK/obj/gcc/include-fixed/unistd.h" \
+      "$WORK/obj/gcc/include-fixed/sys/types.h"
+
 make -j"$J" all-target-libgcc
 make -j"$J" all-target-libstdc++-v3
 make install-gcc install-target-libgcc install-target-libstdc++-v3

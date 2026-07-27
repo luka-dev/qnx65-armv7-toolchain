@@ -558,9 +558,14 @@ runtime `-v host:/opt/tools` mount. See `tools/README.md`.
 
 - **C/C++ (GCC 4.9.4)** - the port lives in `gcc/port` (the `arm-nto-qnx`
   `config.gcc` stanza, `arm/nto.h`, `arm.md` gas-2.19 fixups, the libstdc++
-  os_defines/ctype_base/valarray patches for QNX Dinkum headers, the wchar_t
-  fix). `gcc/build.sh` applies it to vanilla gcc-4.9.4 and builds. To change the
-  compiler, edit `gcc/port/*` and rebuild - no external project needed.
+  os_defines/ctype_base/valarray patches for QNX Dinkum headers). `gcc/build.sh`
+  applies it to vanilla gcc-4.9.4 and builds, plus two post-fixincludes header
+  fixups: the **wchar_t** fix (re-`#undef _GCC_WCHAR_T` in `stdlib.h`) and the
+  **size_t** fix - fixincludes' `gnu_types` rewrite of `unistd.h`/`sys/types.h`
+  guards the QNX `size_t` typedef with `_GCC_SIZE_T` (GCC's own `<stddef.h>`
+  guard), leaving `size_t` undefined when those are included without `<stddef.h>`
+  first; `build.sh` drops those two broken fixincludes copies so the correct SDP
+  originals are used. To change the compiler, edit `gcc/port/*` and rebuild.
 - **Go** - bump the patched tree in `go/src`; `make.bash` rebuilds at
   `docker build`. Only `src/` + `lib/` are vendored; `bin/` and `pkg/` regenerate.
 - **Rust** - edit `rust/armv7-unknown-nto-qnx650.json` or bump the pinned nightly
