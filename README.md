@@ -473,14 +473,18 @@ GCC port defaults C/C++ to `-mno-unaligned-access` for the same reason (see belo
 Full details in `go/README.md` and `rust/README.md`.
 
 ### Strict alignment (`-mno-unaligned-access`) default
-QNX 6.5 runs with `SCTLR.A=1`, so a misaligned load/store **faults** on-device.
-GCC 4.9 otherwise defaults ARMv7 to `-munaligned-access` and would emit single
-misaligned `ldr`/`str` (e.g. an unaligned `memcpy`, packed-struct fields), which
-crash there. The port (`gcc/port/arm-nto.h`) defaults C/C++ to
-`-mno-unaligned-access` - the compiler splits unaligned accesses into byte ops
-instead - matching Rust's `+strict-align`. An explicit `-munaligned-access` still
-overrides it; aligned accesses are unaffected (only genuinely-unaligned ones cost
-a little).
+QNX 6.5 procnto boots `SCTLR.A=1`, so a misaligned load/store **faults**
+on-device - measured, not theoretical: Rust `println!("{}", n)` deterministically
+SIGBUSed (its `fmt` LUT read) until strict alignment was turned on. GCC 4.9
+otherwise defaults ARMv7 to `-munaligned-access` and emits single misaligned
+`ldr`/`str`, so the port (`gcc/port/arm-nto.h`) defaults C/C++ to
+`-mno-unaligned-access` - matching Rust's `+strict-align`. It splits the accesses
+the compiler **knows** may be unaligned (packed-struct fields, some `memcpy`
+expansions) into byte ops. **Caveat:** it does *not* cover a raw
+`*(uint32_t*)(p+1)` cast - the pointer type promises alignment, so GCC may still
+emit an `ldr`; emulator-style hot paths that do this must also run their target
+with `SCTLR.A=0` (see `gcc/README.md`). An explicit `-munaligned-access` overrides
+the default; aligned accesses are unaffected.
 
 ---
 

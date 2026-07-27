@@ -138,16 +138,19 @@ __builtin___clear_cache(code, (char*)code + len);   /* REQUIRED on ARM */
 Only the *stack* is non-executable - irrelevant to a heap code-cache; if you ever
 need an executable stack, link `-Wl,-z,execstack`.
 
-**2. Unaligned access faults in the strict-alignment config (`SCTLR.A=1`).** The
-armv7 default `-munaligned-access` emits single unaligned `ldr`/`str`, which
-SIGBUS here. Do **not** blanket `-mno-unaligned-access` as a default - it turns
-every `*(uint32_t*)(mem+addr)` (an emulator's hottest path - guest-memory read)
-into 4 byte-ops. Prefer, in order: (a) run the target with `SCTLR.A=0` - Cortex-
-A15 handles unaligned to normal memory in hardware, keeping the fast `ldr`; (b)
-rely on the emulator's own aligned access helpers (gpSP/PCSX were written for
-strict-alignment ARM handhelds); (c) `-mno-unaligned-access` only per-file where
-correctness > speed. If a "never-SIGBUS" build is wanted regardless of perf, add
-it as a separate qcc-style profile, not the compiler default.
+**2. Unaligned access faults in the strict-alignment config (`SCTLR.A=1`).** QNX
+6.5 procnto boots `SCTLR.A=1`, so a single unaligned `ldr`/`str` SIGBUSes (this
+is measured, not theoretical - Rust `println!("{}", n)` deterministically faulted
+until strict alignment was on). The compiler therefore now **defaults** to
+`-mno-unaligned-access` (see the root README), which splits *compiler-known*
+unaligned accesses - packed members, some `memcpy` expansions - into byte ops.
+**Caveat:** it does NOT save a raw `*(uint32_t*)(mem+addr)` cast - that pointer
+promises alignment, so GCC may still emit an `ldr` that SIGBUSes on A=1. So for
+an emulator's hot guest-memory path the flag alone is not enough; prefer, in
+order: (a) run that target with `SCTLR.A=0` - Cortex-A15 handles unaligned to
+normal memory in hardware, keeping the fast `ldr`; (b) the emulator's own
+aligned-access helpers (gpSP/PCSX were written for strict-align handhelds);
+(c) `-munaligned-access` per-file where you control the A-bit and want speed.
 
 Recurring root cause: **binutils 2.19 (2008) predates gcc 4.9 (2016) output**
 (#2, #6) and **QNX Dinkumware C headers vs GNU libstdc++** (#8, #9 - the same

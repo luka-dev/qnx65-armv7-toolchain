@@ -6,18 +6,18 @@ QNX 6.5 procnto boots with **`SCTLR.A=1`** (strict alignment). Any unaligned
 reads its 2-digit LUT unaligned, so `println!("{}", n)` deterministically faulted
 until `+strict-align` was added to `armv7-unknown-nto-qnx650.json` features.
 
-`+strict-align` is deliberately scoped to the **Rust std target only**:
-- A deployed std binary runs on the stock HU whose A-bit is fixed by the factory
-  startup (not ours) - strict-align is correct for A=1 *or* A=0, so it's the safe,
-  portable choice. std is also not an emulator hot path, so the byte-op penalty is
-  marginal here.
-- Do **NOT** make `-mno-unaligned-access` / `+strict-align` a blanket compiler
-  default for the emulator work (gpSP / PCSX / mib2q dynarec). There the hottest
-  path is `*(u32*)(guest_mem+addr)`; strict-align turns each into 4 byte-ops.
-  Preferred there, in order: (a) run that target with `SCTLR.A=0` (Cortex-A15
-  handles unaligned to normal memory in HW, keeps the fast `ldr`); (b) lean on the
-  emulator's own aligned-access helpers; (c) `-mno-unaligned-access` per-file only.
-  Keep such a "never-SIGBUS" build as a separate qcc profile, not the default.
+`+strict-align` is set on the Rust std target, and the C/C++ compiler now
+**defaults** to `-mno-unaligned-access` too (see the root README) - both because
+QNX 6.5 procnto boots `SCTLR.A=1`, where an unaligned access SIGBUSes. std is not
+an emulator hot path, so the byte-op penalty there is marginal.
+- **Emulator hot paths** (gpSP / PCSX / mib2q dynarec) still need care. The inner
+  loop is `*(u32*)(guest_mem+addr)`, and `-mno-unaligned-access` does NOT protect
+  that raw cast - the pointer promises alignment, so GCC still emits an `ldr` that
+  SIGBUSes on A=1. So the compiler default is not enough there; in order: (a) run
+  that target with `SCTLR.A=0` (Cortex-A15 handles unaligned to normal memory in
+  HW, keeps the fast `ldr`); (b) lean on the emulator's own aligned-access
+  helpers; (c) override with `-munaligned-access` per-file for speed once the
+  A-bit is under your control.
 
 ## JIT / dynarec (not used by std, kept for a future Rust dynarec)
 W^X is not enforced: `mmap(PROT_READ|WRITE|EXEC, MAP_ANON)` returns RWX pages with
