@@ -27,10 +27,7 @@ RUN dpkg --add-architecture i386 && apt-get update && \
         ca-certificates curl xz-utils && \
     rm -rf /var/lib/apt/lists/*
 
-# The QNX 6.5 SDP tree: binutils 2.19 + armle-v7 sysroot. (The QNX licensing
-# artifacts - the license key, libqnxlic/libqnxidesup, showlicense - were removed:
-# nothing in the compile/link/image-build path reads them; they served only the
-# Java installer / Momentics IDE.)
+# The QNX 6.5 SDP tree: binutils 2.19 + armle-v7 sysroot.
 # GCC is NOT here - it's built from source in the gcc-build stage and merged in
 # the final stage.
 COPY sdp/ /opt/qnx650/
