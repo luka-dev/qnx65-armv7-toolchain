@@ -389,7 +389,6 @@ entrypoint.sh       prepends every /opt/tools/*/bin to PATH at container start
 sdp/                the QNX 6.5 SDP base - the foundation all languages link against:
   - host/             binutils 2.19 (as/ld) + QNX host tools (no gcc - built from source)
   - target/           armle-v7 sysroot - headers, CRT, libc/libm/libstdc++ (the 6.5 runtime)
-  - etc/              QNX config + license key
 gcc/                GCC 4.9.4 port + build recipe (port/ patches, build.sh, README):
                     the arm-nto-qnx port applied to vanilla upstream at build time
 go/                 patched Go 1.26.4 source - src/ + lib/ only (~152 MB);
