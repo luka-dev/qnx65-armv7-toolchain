@@ -111,8 +111,11 @@ uses the `qnx-gl-passthrough` QEMU (cortex-a15, real procnto + libc.so.3).
         * **libc**: forked `libc-0.2.185` (`vendor/libc/`), added `src/unix/nto/arm.rs` (32-bit ARM nto
           arch module: `time_t=u32` per 6.5 `__TIME_T=_Uint32t`, arm_cpu/fpu registers, mcontext, stack_t),
           wired `target_arch="arm"`, and stopped linking `-lregex` on `nto65` (6.5 folds regex into libc).
-        * **std source**: 32-bit-time_t casts in `sys/pal/unix/time.rs` (TIMESPEC_MAX_CAPPED `as _`) and
-          `sys/fs/unix.rs` (`st_*tim.tv_sec as i64`) - std's unix pal assumed 64-bit time_t.
+        * **std source**: 32-bit-time_t cast in `sys/pal/unix/time.rs` (TIMESPEC_MAX_CAPPED `as _`), and
+          in `sys/fs/unix.rs` the file-time reads are redirected from `st_*tim.tv_sec`/`.tv_nsec` to the
+          real `__old_st_*time` fields - QNX 6.5's `struct stat` has NO `st_*tim` timespec (only the
+          32-bit `st_*time`), so the binding's `st_*tim` sits past the struct's end and reading it gives
+          zero/garbage mtimes; `__old_st_*time` is what `fstat` actually fills (nsec = 0, no sub-second).
         * **backtrace off**: QNX 6.5 has no `dl_iterate_phdr` and only an inline EHABI `_Unwind_GetIP`;
           `-Z build-std-features=` drops gimli, and `shim/libqnxunwind.a` (a 12-line C shim over
           `_Unwind_VRS_Get`) provides the `_Unwind_GetIP`/`GetIPInfo` symbols std still references.
