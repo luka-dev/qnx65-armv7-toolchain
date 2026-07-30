@@ -32,10 +32,19 @@ perl -0pi -e 's/(tv_sec: \(u64::MAX \/ NSEC_PER_SEC\) as )i64/$1_/;
               s/(tv_nsec: \(u64::MAX % NSEC_PER_SEC\) as )i64/$1_/' \
   "$STD/pal/unix/time.rs"
 
-# fs/unix.rs: nto/qnx block passes 32-bit st_*tim.tv_sec to SystemTime::new(i64)
-perl -0pi -e 's/SystemTime::new\(self\.stat\.st_mtim\.tv_sec,/SystemTime::new(self.stat.st_mtim.tv_sec as i64,/;
-              s/SystemTime::new\(self\.stat\.st_atim\.tv_sec,/SystemTime::new(self.stat.st_atim.tv_sec as i64,/;
-              s/SystemTime::new\(self\.stat\.st_ctim\.tv_sec,/SystemTime::new(self.stat.st_ctim.tv_sec as i64,/' \
+# fs/unix.rs: QNX 6.5's struct stat has NO st_*tim timespec - only the 32-bit
+# st_*time fields, which our libc binding exposes as __old_st_*time (those are
+# the real, libc-filled fields; the binding's st_*tim timespec sits PAST the end
+# of the 6.5 struct, so fstat never writes it and reading st_*tim.tv_sec yields
+# zero/garbage - wrong file timestamps). The upstream nto block reads
+# st_*tim.tv_sec/.tv_nsec, so redirect those reads to the real __old_st_*time
+# fields (nsec = 0; 6.5 file times have no sub-second precision).
+perl -0pi -e 's/self\.stat\.st_mtim\.tv_sec/self.stat.__old_st_mtime as i64/g;
+              s/self\.stat\.st_atim\.tv_sec/self.stat.__old_st_atime as i64/g;
+              s/self\.stat\.st_ctim\.tv_sec/self.stat.__old_st_ctime as i64/g;
+              s/self\.stat\.st_mtim\.tv_nsec/0/g;
+              s/self\.stat\.st_atim\.tv_nsec/0/g;
+              s/self\.stat\.st_ctim\.tv_nsec/0/g' \
   "$STD/fs/unix.rs"
 
 # random: QNX /dev/random EAGAINs before its pool is primed + no /dev/urandom;
