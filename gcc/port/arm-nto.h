@@ -60,7 +60,15 @@
 #define ENDFILE_SPEC \
   "%{shared|symbolic|pie:crtendS.o%s;:crtend.o%s} %R/armle-v7/lib/crtn.o"
 
-/* -m armnto is the only emulation; keep it explicit. QNX ld wants -Qy note. */
+/* -m armnto is the only emulation; keep it explicit. QNX ld wants -Qy note.
+
+   --target2=rel: R_ARM_TARGET2 (typeinfo references in .ARM.extab) is
+   platform-defined and the linker must agree with libgcc's EHABI unwinder,
+   which decodes them as RELATIVE on non-linux targets. The stock QNX 4.4.2
+   toolchain encoded rel too (verified: the device libstdc++.so.6.0.13 has
+   ZERO dynamic relocs in .ARM.extab - impossible under abs32); this vanilla
+   port's hand-written spec lost that, ld 2.19's armnto default differs, and
+   every C++ throw died in SIGSEGV at unwind (QEMU-verified, fixed by rel). */
 #undef  LINK_SPEC
 #define LINK_SPEC \
   "%{h*} %{v:-V} \
@@ -69,7 +77,7 @@
    %{symbolic:-Bsymbolic} \
    %{G:-G} \
    %{Qy:} %{!Qn:-Qy} \
-   -m armnto \
+   -m armnto --target2=rel \
    -L%R/armle-v7/lib -L%R/armle-v7/usr/lib \
    %{!shared: --dynamic-linker /usr/lib/ldqnx.so.2}"
 
