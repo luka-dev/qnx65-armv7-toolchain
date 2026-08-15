@@ -6,6 +6,12 @@
 # "[Rn:align]" instead. It also predates the ARM-mode `.inst` directive even
 # though `.word` has identical semantics for an encoded 32-bit instruction.
 #
+# GCC 8.5 also spells the Cortex-A9 assembler architecture as
+# `armv7-a+mp+sec` and emits matching `.arch_extension mp/sec` metadata. QNX
+# gas 2.19 understands the underlying ARMv7-A instructions but predates that
+# feature-suffix/directive syntax, so normalize the flag and remove only those
+# two metadata directives.
+#
 # Rewrite only those exact forms. In particular, do not touch Thumb `.inst.n`
 # or `.inst.w`: they require separate width/endianness handling and validation.
 set -euo pipefail
@@ -20,7 +26,8 @@ fi
 rewrite() {
     sed -E \
         -e 's/\[([a-z0-9]+):([0-9]+)\]/[\1, :\2]/g' \
-        -e 's/^([[:space:]]*)\.inst([[:space:]]+)/\1.word\2/'
+        -e 's/^([[:space:]]*)\.inst([[:space:]]+)/\1.word\2/' \
+        -e '/^[[:space:]]*\.arch_extension[[:space:]]+(mp|sec)[[:space:]]*$/d'
 }
 
 args=()
@@ -32,6 +39,8 @@ skipnext=0
 for a in "$@"; do
     if [ "$skipnext" = 1 ]; then args+=("$a"); skipnext=0; continue; fi
     case "$a" in
+        -march=armv7-a+*)                       # gas 2.19 predates +feature syntax
+            args+=("-march=armv7-a") ;;
         -o|-I|-mcpu|-mfpu|-march|--defsym)      # option that takes a value
             args+=("$a"); skipnext=1 ;;
         -*)                                     # any other flag
