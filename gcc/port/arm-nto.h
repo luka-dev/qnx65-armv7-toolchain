@@ -1,13 +1,19 @@
 /* Definitions for ARM running QNX Neutrino 6.5 (armle-v7, EABI/softfp).
-   Ported for GCC 4.9 from gcc/config/i386/nto.h plus ground-truth harvested
-   from the QNX 6.5 SDP's own 4.4.2 toolchain:
+   Forward-port of gcc/port/arm-nto.h (GCC 4.9.4) to GCC 8.5, same ground
+   truth from the QNX 6.5 SDP's own 4.4.2 toolchain:
      - target triplet arm-unknown-nto-qnx6.5.0eabi
      - dynamic linker /usr/lib/ldqnx.so.2
      - ld emulation 'armnto' (the only one this binutils 2.19 ld supports)
      - default -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=softfp (set via
        configure --with-arch/--with-fpu/--with-float, not here)
    This header is included last in tm_file so it overrides the LINK/STARTFILE/
-   OS-builtin bits that arm/bpabi.h and arm/arm.h set.  */
+   OS-builtin bits that arm/bpabi.h and arm/arm.h set.
+
+   Differences from the 4.9 version:
+     - TARGET_UNIFIED_ASM dropped: GCC 6+ always emits unified syntax.
+     - SUBTARGET_OVERRIDE_OPTIONS also marks unaligned_access as user-set:
+       GCC 8's resolution is opts_set-based, not the 4.9 '== 2' sentinel,
+       so a bare preset would be recomputed back to 1.  */
 
 #undef  TARGET_OS_CPP_BUILTINS
 #define TARGET_OS_CPP_BUILTINS()			\
@@ -62,13 +68,15 @@
 
 /* -m armnto is the only emulation; keep it explicit. QNX ld wants -Qy note.
 
-   --target2=rel: R_ARM_TARGET2 (typeinfo references in .ARM.extab) is
-   platform-defined and the linker must agree with libgcc's EHABI unwinder,
-   which decodes them as RELATIVE on non-linux targets. The stock QNX 4.4.2
-   toolchain encoded rel too (verified: the device libstdc++.so.6.0.13 has
-   ZERO dynamic relocs in .ARM.extab - impossible under abs32); this vanilla
-   port's hand-written spec lost that, ld 2.19's armnto default differs, and
-   every C++ throw died in SIGSEGV at unwind (QEMU-verified, fixed by rel). */
+   --target2=rel: R_ARM_TARGET2 (the typeinfo references inside .ARM.extab)
+   is platform-defined; libgcc's EHABI unwinder for non-linux/non-bsd targets
+   decodes those entries as RELATIVE, while this ld's armnto default does not
+   match - the personality routine then chases garbage and every throw dies
+   in a SIGSEGV (jump into the typeinfo object; QEMU-verified, and 'rel' is
+   the only one of abs/rel/got-rel that unwinds correctly on-device). Known
+   ceiling: catching by a typeinfo IMPORTED from another .so may not match
+   (rel can't indirect through the GOT) - the -static-libstdc++ default and
+   same-module catches are unaffected. */
 #undef  LINK_SPEC
 #define LINK_SPEC \
   "%{h*} %{v:-V} \
@@ -101,53 +109,58 @@
 #undef  WCHAR_TYPE_SIZE
 #define WCHAR_TYPE_SIZE 32
 
+/* intptr_t/uintptr_t, matching QNX's <stdint.h> (_Intptrt/_Uintptrt are
+   int/unsigned int in pointer mode - 32-bit here). Without these the
+   __INTPTR_TYPE__/__UINTPTR_TYPE__ builtin macros stay undefined (no
+   *-stdint.h in tm_file - QNX has its own stdint.h), and libstdc++ 8's
+   std::greater<T*> total-order path uses __UINTPTR_TYPE__ directly. */
+#undef  INTPTR_TYPE
+#define INTPTR_TYPE "int"
+#undef  UINTPTR_TYPE
+#define UINTPTR_TYPE "unsigned int"
+
 /* QNX uses __cxa_atexit; configured with --enable-__cxa_atexit too. */
 #undef  TARGET_DEFAULT_CXA_ATEXIT
 #define TARGET_DEFAULT_CXA_ATEXIT 1
 
 /* QNX's system libraries are built with int-sized enums (Tag_ABI_enum_size:
    int), like the Linux ARM ABI. bpabi.h defaults to plain AAPCS, whose enum
-   default is short/packed (arm.c: arm_default_short_enums() returns true unless
-   arm_abi == AAPCS_LINUX) - that mismatches QNX's libs and the linker warns.
+   default is short/packed - that mismatches QNX's libs and the linker warns.
    Default to AAPCS_LINUX: still AAPCS-based/BPABI/EABI, but int enums, and it
-   also enables 8-byte __sync_* atomics. */
+   also enables 8-byte __sync_* atomics. (Same override as arm/linux-eabi.h
+   and arm/freebsd.h.) */
 #undef  ARM_DEFAULT_ABI
 #define ARM_DEFAULT_ABI ARM_ABI_AAPCS_LINUX
 
-/* binutils 2.19's gas only accepts UAL VFP/NEON mnemonics (vmov/vcvt/...) when
-   '.syntax unified' is active, which stock GCC 4.9 emits in Thumb-2 only
-   (arm.h: TARGET_UNIFIED_ASM == TARGET_THUMB2). In ARM state it emits UAL
-   mnemonics with no such header, so this old gas rejects them ("bad
-   instruction"). Force fully-unified output - header + mnemonics stay
-   consistent and gas 2.19 accepts the lot. This is exactly what GCC 5+ later
-   made the default (-masm-syntax-unified). */
-#undef  TARGET_UNIFIED_ASM
-#define TARGET_UNIFIED_ASM 1
-
 /* Target-default option fixups, run from arm.c's arm_option_override() (which
-   invokes SUBTARGET_OVERRIDE_OPTIONS at line ~2285, before its own -march-based
-   resolution of unaligned_access at ~2723). Each only sets a default when the
-   user did NOT pass the option, so an explicit flag always wins.
+   invokes SUBTARGET_OVERRIDE_OPTIONS before calling
+   arm_option_override_internal, where unaligned_access is resolved). Each only
+   sets a default when the user did NOT pass the option, so an explicit flag
+   always wins.
 
-   1. -g -> DWARF 3, not GCC 4.9's DWARF 4: the SDP's binutils 2.19
+   1. -g -> DWARF 3, not GCC 8's DWARF 4: the SDP's binutils 2.19
       readelf/objdump/addr2line (and any gdb on that BFD) only read DWARF <= 3 -
       DWARF 4 makes them warn "unsupported version 4" and drop file:line. DWARF 3
       (not 2) keeps the richer info 2.19 still reads. Only the *version* changes;
       -g isn't forced, and it never touches the emitted code (debug lives in
       non-loadable .debug_* sections the target never maps).
 
-   2. -mno-unaligned-access by default (strict alignment): GCC 4.9 defaults ARMv7
+   2. -mno-unaligned-access by default (strict alignment): GCC 8 defaults ARMv7
       to -munaligned-access and will emit single misaligned ldr/str (and set
       __ARM_FEATURE_UNALIGNED). QNX 6.5 runs with SCTLR.A=1, where a misaligned
-      access faults - so that codegen crashes on device. Force strict alignment
-      (the compiler splits unaligned accesses into byte ops), matching what the
-      Rust target already does with +strict-align. Setting it to 0 here (before
-      the == 2 auto-resolution) makes that path a no-op, so 0 sticks. */
+      access faults - so that codegen crashes on device (measured: Rust fmt LUT
+      SIGBUS before +strict-align). Unlike 4.9's '== 2' sentinel, GCC 8's
+      arm_option_override_internal recomputes the default whenever
+      opts_set->x_unaligned_access is false - so ALSO mark it set, making the
+      forced 0 stick exactly as if the user passed -mno-unaligned-access. */
 #undef  SUBTARGET_OVERRIDE_OPTIONS
 #define SUBTARGET_OVERRIDE_OPTIONS			\
   do {							\
     if (!global_options_set.x_dwarf_version)		\
       global_options.x_dwarf_version = 3;		\
     if (!global_options_set.x_unaligned_access)		\
-      global_options.x_unaligned_access = 0;		\
+      {							\
+	global_options.x_unaligned_access = 0;		\
+	global_options_set.x_unaligned_access = 1;	\
+      }							\
   } while (0)
