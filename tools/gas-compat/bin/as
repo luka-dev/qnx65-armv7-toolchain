@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Compatibility shim between modern GCC output and the stock QNX gas 2.19.
+#
+# gas 2.19 supports the ARM NEON element-alignment hint only in the UAL comma
+# spelling "[Rn, :align]". Modern GCC and hand-written NEON commonly emit
+# "[Rn:align]" instead. It also predates the ARM-mode `.inst` directive even
+# though `.word` has identical semantics for an encoded 32-bit instruction.
+#
+# Rewrite only those exact forms. In particular, do not touch Thumb `.inst.n`
+# or `.inst.w`: they require separate width/endianness handling and validation.
+set -euo pipefail
+
+REAL=/opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-as-2.19
+[ -x "$REAL" ] || REAL=$(command -v arm-unknown-nto-qnx6.5.0eabi-as-2.19 || true)
+if [ -z "${REAL:-}" ] || [ ! -x "$REAL" ]; then
+    echo "gas-compat shim: real assembler (…-as-2.19) not found" >&2
+    exit 127
+fi
+
+rewrite() {
+    sed -E \
+        -e 's/\[([a-z0-9]+):([0-9]+)\]/[\1, :\2]/g' \
+        -e 's/^([[:space:]]*)\.inst([[:space:]]+)/\1.word\2/'
+}
+
+args=()
+tmpfiles=()
+cleanup() { [ "${#tmpfiles[@]}" -gt 0 ] && rm -f "${tmpfiles[@]}"; }
+trap cleanup EXIT
+
+skipnext=0
+for a in "$@"; do
+    if [ "$skipnext" = 1 ]; then args+=("$a"); skipnext=0; continue; fi
+    case "$a" in
+        -o|-I|-mcpu|-mfpu|-march|--defsym)      # option that takes a value
+            args+=("$a"); skipnext=1 ;;
+        -*)                                     # any other flag
+            args+=("$a") ;;
+        *.s|*.S|*.asm|*.sx)                     # a source file -> rewrite it
+            if [ -f "$a" ]; then
+                t=$(mktemp --suffix=.s); tmpfiles+=("$t")
+                rewrite < "$a" > "$t"; args+=("$t")
+            else
+                args+=("$a")
+            fi ;;
+        *)  args+=("$a") ;;
+    esac
+done
+
+# GCC normally passes a temporary .s file. If assembly instead arrives on
+# stdin (-pipe), filter that stream when no source-file argument was rewritten.
+if [ "${#tmpfiles[@]}" -eq 0 ] && [ ! -t 0 ]; then
+    exec "$REAL" "${args[@]}" < <(rewrite)
+fi
+exec "$REAL" "${args[@]}"

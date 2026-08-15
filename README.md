@@ -71,7 +71,8 @@ exists*.
   strings addr2line c++filt gprof`.
 - **`qcc`** - qcc-to-gcc shim for `mkifs` / qcc Makefiles (`tools/qcc`; full flag
   table in `tools/README.md`).
-- **`neon-as`** - gas-2.19 NEON alignment-hint shim, via `-B/opt/tools/neon-as/bin`.
+- **`gas-compat`** - compatibility shim for modern GCC output and gas 2.19,
+  via `-B/opt/tools/gas-compat/bin`.
 
 ### Languages
 - **Go 1.26.4** - `go` / `gofmt`, `GOOS=qnx GOARCH=arm` port.

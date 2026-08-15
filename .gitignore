@@ -7,10 +7,12 @@ go/pkg/
 
 # User-dropped toolchains in tools/ are large third-party binaries - keep the
 # repo for the recipe, not the blobs (tools/README documents the mechanism).
-# EXCEPTION: tools/qcc/ is a bundled shim script (not a blob) - track it.
+# EXCEPTIONS: qcc and gas-compat are bundled shim scripts (not blobs).
 tools/*/
 !tools/qcc/
 !tools/qcc/**
+!tools/gas-compat/
+!tools/gas-compat/**
 
 # NOTE: do NOT add target/ or *.so/*.a here - the QNX sysroot (sdp/target/qnx6/...)
 # and its libraries live in this repo and must stay tracked.
