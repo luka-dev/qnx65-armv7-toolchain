@@ -162,10 +162,21 @@ __extension__ typedef unsigned long long	_ULonglong;
 /*
  * This is to override the gcc local include files to use
  * our definition of the following types
+ *
+ * Toolchain fix: DISABLED. These pre-set GCC's <stddef.h> one-shot guards
+ * (_GCC_PTRDIFF_T/_GCC_SIZE_T/_GCC_WCHAR_T) so that GCC skips its
+ * ptrdiff_t/size_t/wchar_t typedefs, on the assumption that QNX's own
+ * <stddef.h> supplies them instead - but with a vanilla GCC the compiler's
+ * stddef.h always shadows QNX's, so "our definition" never happens and the
+ * types are simply lost (e.g. <stdlib.h> then <stddef.h> left ptrdiff_t
+ * undefined, which breaks Go's cgo among others). GCC's own typedefs use
+ * __PTRDIFF_TYPE__/__SIZE_TYPE__/__WCHAR_TYPE__ - identical underlying
+ * types - so letting them through is both correct and required.
+ *
+ * #define _GCC_PTRDIFF_T
+ * #define _GCC_SIZE_T
+ * #define _GCC_WCHAR_T
  */
-#define _GCC_PTRDIFF_T
-#define _GCC_SIZE_T
-#define _GCC_WCHAR_T
 
 /*
  * -ansi			defines __STRICT_ANSI__

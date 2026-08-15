@@ -247,8 +247,19 @@
 #undef __INTPTR_T
 #define __INTPTR_T		_Intptrt
 
+/* Toolchain fix: __PTRDIFF_T is a QNX type-carrier macro consumed (and
+   #undef'd) only by QNX's <stddef.h> and <mem.h> - but GCC's own
+   <stddef.h> always shadows QNX's, and it treats a pre-defined
+   __PTRDIFF_T as "ptrdiff_t already typedef'd" and SKIPS the typedef.
+   Net effect: any C TU that includes <stdlib.h> (-> this header) before
+   <stddef.h> loses ptrdiff_t entirely (Go's cgo export prolog does
+   exactly that). GCC's stddef.h typedefs from __PTRDIFF_TYPE__ (same
+   underlying int), so for GCC the carrier is pure poison - keep it for
+   other compilers only. */
+#ifndef __GNUC__
 #undef __PTRDIFF_T
 #define __PTRDIFF_T		_Intptrt
+#endif
 
 typedef _UINT32			_Sizet;
 #undef __SIZE_T
