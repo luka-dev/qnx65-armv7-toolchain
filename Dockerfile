@@ -58,6 +58,25 @@ RUN curl -fsSL "https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.bz
     bash /opt/gcc-src/build.sh /tmp/gcc.tar.bz2 /gcc-out && \
     rm -rf /tmp/gcc.tar.bz2 /tmp/gccbuild
 
+# --------------------------- gcc8-build: GCC 8.5.0 (C++17) - EXPERIMENTAL ------
+# Parallel bring-up of a C++17-capable GCC 8.5.0 from gcc8/port, built the same
+# way as gcc-build. NOT merged into the final image yet - build this stage
+# directly to validate against the 4.9 baseline:
+#   docker build --platform=linux/amd64 --target gcc8-build -t qnx65-gcc8:dev .
+FROM qnx-sdp AS gcc8-build
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential libgmp-dev libmpfr-dev libmpc-dev flex bison texinfo file && \
+    rm -rf /var/lib/apt/lists/*
+COPY gcc8/ /opt/gcc8-src/
+ARG GCC8_VER=8.5.0
+ARG GCC8_SHA256=d308841a511bb830a6100397b0042db24ce11f642dab6ea6ee44842e5325ed50
+RUN curl -fsSL "https://ftp.gnu.org/gnu/gcc/gcc-${GCC8_VER}/gcc-${GCC8_VER}.tar.xz" -o /tmp/gcc.tar.xz && \
+    echo "${GCC8_SHA256}  /tmp/gcc.tar.xz" | sha256sum -c - && \
+    bash /opt/gcc8-src/build.sh /tmp/gcc.tar.xz /gcc8-out && \
+    rm -rf /tmp/gcc.tar.xz /tmp/gccbuild
+# expose the new gcc on PATH for interactive validation in this stage
+ENV PATH=/gcc8-out/bin:$PATH
+
 # --------------------------- go-build: GOOS=qnx port from source ---------------
 FROM qnx-sdp AS go-build
 ARG GO_BOOTSTRAP=go1.26.4
