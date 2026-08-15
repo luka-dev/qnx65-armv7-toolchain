@@ -4,7 +4,7 @@
 6.5.0 `armle-v7` - no QNX VM, no external SDP install.**
 
 Everything is assembled from source in one multi-stage `docker build`: the QNX
-6.5 SDP tree with a modern **GCC 4.9.4** (full C++11, partial C++14) in place of the stock
+6.5 SDP tree with a modern **GCC 8.5.0** (full C++17) in place of the stock
 4.4.2, a from-scratch **`GOOS=qnx` Go 1.26 port**, and a **nightly Rust**
 `build-std` target - all three linking through the same QNX toolchain.
 
@@ -41,7 +41,7 @@ docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 
 | Language | Compiler | Standard | Invocation | Output |
 |----------|----------|----------|------------|--------|
-| C / C++  | **GCC 4.9.4** (custom-built, replaces SDP 4.4.2) | C99 / **C++11** + partial C++14 | `arm-unknown-nto-qnx6.5.0eabi-{gcc,g++}` | ELF 32-bit ARM QNX exe/`.so` |
+| C / C++  | **GCC 8.5.0** (custom-built, replaces SDP 4.4.2) | C11 / **C++17** | `arm-unknown-nto-qnx6.5.0eabi-{gcc,g++}` | ELF 32-bit ARM QNX exe/`.so` |
 | Go       | **Go 1.26.4**, `GOOS=qnx GOARCH=arm` port | full `gc` toolchain | `GOOS=qnx GOARCH=arm GOARM=7 go build` | ELF 32-bit ARM QNX exe |
 | Rust     | **nightly** rustc + `build-std` | **full `std`** (threads/fs/net/Command) | `build-std <crate>` | ELF 32-bit ARM QNX exe, linked by the QNX gcc |
 
@@ -65,7 +65,7 @@ drive the container. Other sections show *how* to use these - this is *what
 exists*.
 
 ### Toolchain (on `PATH`, prefix `arm-unknown-nto-qnx6.5.0eabi-`)
-- **GCC 4.9.4** - `gcc` / `g++` / `cpp`. C99, C++11, partial C++14. Ships a static
+- **GCC 8.5.0** - `gcc` / `g++` / `cpp`. C11, full C++17. Ships a static
   `libstdc++.a` (so `-static-libstdc++` works) beside the shared one.
 - **Binutils 2.19** - `as ld ar nm ranlib strip objcopy objdump readelf size
   strings addr2line c++filt gprof`.
@@ -129,12 +129,27 @@ Ground truth, verified against the QNX 6.5 SDP and the on-device libraries:
 | Linker emulation | `armnto` (binutils 2.19) |
 | Sysroot | `$QNX_TARGET = /opt/qnx650/target/qnx6`, libs under `armle-v7/lib` |
 | CRT | `crt1.o crti.o crtbegin.o crtend.o crtn.o mcrt1.o` |
-| On-device C++ runtime | `libstdc++.so.6.0.13` (GCC 4.4.x ABI - GCC 4.9 keeps the pre-C++11 ABI) |
+| On-device C++ runtime | `libstdc++.so.6.0.13` (GCC 4.4.x ABI) - **NOT compatible with GCC 8 C++ output**; link `-static-libstdc++` (default advice) or ship the toolchain's `libstdc++.so.6` |
 
 **Runtime compatibility matters:** binaries built here run on a QNX **6.5**
-device. QNX 6.6+ has a different libc/ABI - do not mix. GCC 4.9 was chosen
-partly because it keeps the pre-C++11 libstdc++ string ABI (`_GLIBCXX_USE_CXX11_ABI`
-arrived in GCC 5.1), so its C++ objects stay link-compatible with the 6.5 libs.
+device. QNX 6.6+ has a different libc/ABI - do not mix. **C output is
+unaffected** (same `libc.so.3`). **C++ output does not link against the
+device's ancient `libstdc++.so.6.0.13`**: GCC 8's libstdc++ uses the C++11
+dual ABI (`_GLIBCXX_USE_CXX11_ABI`, since GCC 5.1) and newer `GLIBCXX_3.4.*`
+symbol versions. Two deployment modes:
+
+- **Ship the toolchain's `libstdc++.so.6`** (v6.0.25, at
+  `host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/lib/`) in the device
+  image - the size-conscious default when you build the IFS anyway. It is a
+  drop-in **superset** of the device's 6.0.13 (same soname, all old
+  `GLIBCXX_3.4.x` symbol versions retained), so existing stock C++ binaries
+  keep working; it can simply replace the old one. `arm-...-strip` it first
+  (~10 MB -> ~2 MB). Then link with no special flags at all.
+- **`-static-libstdc++ -static-libgcc`** - self-contained binaries for
+  dropping onto a live device without touching its image. For linking against
+*foreign* C++ `.so`s built by the stock 4.4-era toolchain,
+`-D_GLIBCXX_USE_CXX11_ABI=0` restores the old string/list ABI (symbol-version
+drift can still bite - prefer C APIs at such boundaries).
 
 ---
 
@@ -144,9 +159,10 @@ arrived in GCC 5.1), so its C++ objects stay link-compatible with the 6.5 libs.
 # 1. Build the image (needs network; ~few minutes; ~1.4 GB image)
 docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 
-# 2. C++14
+# 2. C++17 (add -static-libstdc++ -static-libgcc if the target image won't
+#    carry the toolchain's libstdc++.so.6 - see "The target" in the README)
 docker run --rm -v "$PWD":/src qnx65-armv7-toolchain \
-    arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++14 -O2 hello.cpp -o hello
+    arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++17 -O2 hello.cpp -o hello
 
 # 3. Go
 docker run --rm -v "$PWD":/src qnx65-armv7-toolchain \
@@ -185,21 +201,26 @@ translates qcc-style invocations to gcc/g++ for anything that still calls it
 # C
 arm-unknown-nto-qnx6.5.0eabi-gcc -O2 app.c -o app
 
-# C++14 (lambdas, auto, move, <thread>, <chrono>, smart pointers ...)
-arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++14 -O2 app.cpp -o app
+# C++17 (structured bindings, if constexpr, <optional>, <variant>, <string_view>,
+# <thread>, <chrono>, smart pointers ...)
+arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++17 -O2 app.cpp -o app
+
+# std::filesystem needs the extra archive in GCC 8
+arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++17 -O2 app.cpp -o app -lstdc++fs
 
 # raise the FPU (default is vfpv3-d16, softfp calling convention)
-arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++14 -O2 -mfpu=neon app.cpp -o app
+arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++17 -O2 -mfpu=neon app.cpp -o app
 
 # a Makefile project
 make CC=arm-unknown-nto-qnx6.5.0eabi-gcc CXX=arm-unknown-nto-qnx6.5.0eabi-g++
 ```
 
-**Self-contained C++ binaries** (carry their own libstdc++ so they don't depend
-on the device's older one):
+**Self-contained C++ binaries** (when you don't want to ship the
+toolchain's `libstdc++.so.6` in the device image - see
+[The target](#the-target) for the two deployment modes):
 
 ```sh
-arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++14 -static-libstdc++ -static-libgcc app.cpp -o app
+arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++17 -static-libstdc++ -static-libgcc app.cpp -o app
 ```
 
 **C++ shared objects / mkifs grafts / preloads.** Linking a `.so` with `g++` puts
@@ -218,8 +239,9 @@ arm-unknown-nto-qnx6.5.0eabi-g++ -c -fPIC -fno-exceptions -fno-rtti mod.cpp -o m
 arm-unknown-nto-qnx6.5.0eabi-gcc -shared mod.o -o mod.so
 arm-unknown-nto-qnx6.5.0eabi-nm -D -u mod.so   # must show NO _Znwj/_ZdlPv/_ZNSt* (new/delete/std::)
 
-# or: actually ship libstdc++.so.6 in the image (it's in the SDP sysroot at
-# target/qnx6/armle-v7/lib/libstdc++.so.6.0.13 + the .so.6 symlink).
+# or: ship the TOOLCHAIN's libstdc++.so.6 in the image (the GCC 8 one, at
+# host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/lib/libstdc++.so.6 -
+# NOT the sysroot's .so.6.0.13, which is ABI-incompatible with GCC 8 output).
 ```
 
 `gcc -shared` alone won't error on the missing symbols - shared objects allow
@@ -343,7 +365,7 @@ One multi-stage `Dockerfile`:
 +-- base: qnx-sdp -----------------------------------------------+
 | debian:bullseye-slim@sha256 (amd64 + i386 multilib)           |
 |   + libc6/libstdc++6/zlib1g:i386  (QNX binutils are 32-bit x86)|
-|   + libgmp10 libmpfr6 libmpc3     (GCC 4.9 host libs)          |
+|   + libgmp10 libmpfr6 libmpc3     (GCC host libs)              |
 |   + gcc libc6-dev                 (host cc for Cargo scripts)  |
 |   + make curl ca-certificates xz-utils                         |
 | COPY sdp/  ->  /opt/qnx650                                     |
@@ -353,7 +375,7 @@ One multi-stage `Dockerfile`:
    v FROM qnx-sdp       v FROM qnx-sdp           v FROM qnx-sdp
 +-- gcc-build ------+ +-- go-build -------+ +-- rust-build --------+
 | COPY gcc/ (port)  | | COPY go/ (src)    | | rustup nightly + src |
-| curl gcc-4.9.4    | | curl Go bootstrap | | COPY rust/ (std port)|
+| curl gcc-8.5.0    | | curl Go bootstrap | | COPY rust/ (std port)|
 | apply port,       | | make.bash:        | | bake std: libc fork  |
 |  configure, make  | |  host go +        | |  + std patches       |
 |  -> /gcc-out      | |  qnx/arm stdlib   | |  (apply_std_port)    |
@@ -371,7 +393,7 @@ One multi-stage `Dockerfile`:
 +-----------------------------------------------------+
 ```
 
-The base carries **binutils + the sysroot but no compiler**; GCC 4.9.4 is compiled
+The base carries **binutils + the sysroot but no compiler**; GCC 8.5.0 is compiled
 from source in `gcc-build` (~20-40 min, see `gcc/`) and merged into the host tree
 in the final stage. Go and Rust stages are `FROM qnx-sdp` and **link through that
 GCC** - Go's external linker and Rust's `.a -> .so` step both call
@@ -389,7 +411,7 @@ entrypoint.sh       prepends every /opt/tools/*/bin to PATH at container start
 sdp/                the QNX 6.5 SDP base - the foundation all languages link against:
   - host/             binutils 2.19 (as/ld) + QNX host tools (no gcc - built from source)
   - target/           armle-v7 sysroot - headers, CRT, libc/libm/libstdc++ (the 6.5 runtime)
-gcc/                GCC 4.9.4 port + build recipe (port/ patches, build.sh, README):
+gcc/                GCC 8.5.0 port + build recipe (port/ patches, build.sh, README):
                     the arm-nto-qnx port applied to vanilla upstream at build time
 go/                 patched Go 1.26.4 source - src/ + lib/ only (~152 MB);
                     make.bash regenerates bin/ + pkg/ at build time
@@ -411,22 +433,26 @@ The top-level inputs map 1:1 to the Docker stages: `sdp/` -> `base`, `gcc/` ->
 
 ## Design decisions
 
-### GCC 4.4.2 -> 4.9.4, in place
-The stock SDP compiler was **fully replaced** by a custom GCC 4.9.4 built from
+### GCC 4.4.2 -> 8.5.0, in place
+The stock SDP compiler was **fully replaced** by a custom GCC 8.5.0 built from
 source (recipe in `gcc/`) for the same `arm-unknown-nto-qnx6.5.0eabi` target. It
 reuses the SDP's binutils 2.19 and the 6.5 sysroot, and lives exactly where 4.4.2
-did (`usr/bin` drivers, `usr/lib/gcc/.../4.9.4`, `usr/libexec/gcc/.../4.9.4`).
-Gains: full **C++11** and most of **C++14** (generic lambdas, return-type
-deduction, `make_unique`, `<thread>`/`<chrono>`/atomics), better ARM/NEON codegen -
-while keeping the pre-C++11 libstdc++ ABI so output stays link-compatible with the
-6.5 device libraries. C++14 is GCC 4.9's experimental level (`__cplusplus =
-201300L`; **no variable templates** - those need GCC 5 - and **no C++17**). For a
-newer standard, rebuild a newer GCC against this sysroot the same way.
+did (`usr/bin` drivers, `usr/lib/gcc/.../8.5.0`, `usr/libexec/gcc/.../8.5.0`).
+Gains: **full C++17** (structured bindings, `if constexpr`, fold expressions,
+`<optional>`/`<variant>`/`<string_view>`, `<filesystem>` via `-lstdc++fs`), C11,
+markedly better ARM/NEON codegen. The trade-off vs the interim 4.9 port (git
+history): GCC 8's libstdc++ abandons the pre-C++11 ABI, so C++ output no longer
+links against the device's `libstdc++.so.6.0.13` - link `-static-libstdc++`
+(recommended) or ship the toolchain's `libstdc++.so.6.0.25`. The port also fixes
+C++ **exceptions on-device** (`--target2=rel` in the driver's LINK_SPEC - the
+EHABI typeinfo relocation the stock toolchain used; without it every `throw`
+SIGSEGVs). Full port/defect log in `gcc/README.md`. For a newer standard,
+rebuild a newer GCC against this sysroot the same way.
 
 ### <a name="the-qcc-shim"></a>The `qcc` shim
 The stock SDP `qcc` was removed: it exists only to select among **multiple**
 {arch x compiler version x C++ library} combos via `-V`, and this image has
-exactly one of each (armv7 x GCC 4.9 x GNU libstdc++). The direct driver already
+exactly one of each (armv7 x GCC 8.5 x GNU libstdc++). The direct driver already
 sets every QNX define, sysroot, CRT and specs and links correctly.
 
 But `mkifs` build files (and some Makefiles) literally invoke `qcc`, so
@@ -460,7 +486,7 @@ A few 6.6 host tools and headers are vendored where 6.5 lacked them, always kept
 Only silicon-/ISA-defined, purely additive bits are taken - never changed struct
 layouts, macro values, or anything that needs the 6.6 runtime. The 6.6 cross
 toolchain (gcc 4.7.3 / binutils 2.24) is **not** used: it targets qnx6.6 and its
-gcc is older than the 4.9.4 built here.
+gcc is older than the 8.5.0 built here.
 
 ### Go and Rust are real ports, not cross-compiles
 QNX is an upstream target for neither. Go adds a `GOOS=qnx GOARCH=arm` libc-call
@@ -474,7 +500,7 @@ Full details in `go/README.md` and `rust/README.md`.
 ### Strict alignment (`-mno-unaligned-access`) default
 QNX 6.5 procnto boots `SCTLR.A=1`, so a misaligned load/store **faults**
 on-device - measured, not theoretical: Rust `println!("{}", n)` deterministically
-SIGBUSed (its `fmt` LUT read) until strict alignment was turned on. GCC 4.9
+SIGBUSed (its `fmt` LUT read) until strict alignment was turned on. GCC
 otherwise defaults ARMv7 to `-munaligned-access` and emits single misaligned
 `ldr`/`str`, so the port (`gcc/port/arm-nto.h`) defaults C/C++ to
 `-mno-unaligned-access` - matching Rust's `+strict-align`. It splits the accesses
@@ -510,9 +536,9 @@ docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 - **Go bootstrap** pinned by version (`GO_BOOTSTRAP`) **and sha256** (`GO_BOOTSTRAP_SHA256`).
 - **Rust nightly** pinned by **date** - `RUST_NIGHTLY` at install + the same date
   in `rust/rust-toolchain.toml`; rustup verifies component checksums.
-- GCC 4.9.4 is **built from source** in `gcc-build` from vanilla upstream + the
+- GCC 8.5.0 is **built from source** in `gcc-build` from vanilla upstream + the
   vendored port (`gcc/port`); `sdp/host` carries only binutils. The
-  `gcc-4.9.4.tar.bz2` is fetched from ftp.gnu.org (byte-identical to the canonical
+  `gcc-8.5.0.tar.xz` is fetched from ftp.gnu.org (byte-identical to the canonical
   release, checksum-checked); vendor it under `gcc/` for a fully offline build.
 - Still floats: **`apt` package versions** (from the Debian mirror). The digest-
   pinned base fixes the pre-installed set, but `apt-get install` pulls current
@@ -524,7 +550,7 @@ build stage, not a ready polyglot image):
 
 ```sh
 docker build --platform=linux/amd64 --target qnx-sdp    -t _sdp .   # base: binutils + sysroot
-docker build --platform=linux/amd64 --target gcc-build  -t _gcc .   # + build GCC 4.9.4
+docker build --platform=linux/amd64 --target gcc-build  -t _gcc .   # + build GCC 8.5.0
 docker build --platform=linux/amd64 --target go-build   -t _go .    # + build the Go port
 docker build --platform=linux/amd64 --target rust-build -t _rust .  # + rust toolchain + std port
 ```
@@ -559,10 +585,12 @@ runtime `-v host:/opt/tools` mount. See `tools/README.md`.
 
 ## Updating / regenerating components
 
-- **C/C++ (GCC 4.9.4)** - the port lives in `gcc/port` (the `arm-nto-qnx`
-  `config.gcc` stanza, `arm/nto.h`, `arm.md` gas-2.19 fixups, the libstdc++
-  os_defines/ctype_base/valarray patches for QNX Dinkum headers). `gcc/build.sh`
-  applies it to vanilla gcc-4.9.4 and builds, plus two post-fixincludes header
+- **C/C++ (GCC 8.5.0)** - the port lives in `gcc/port` (the `arm-nto-qnx`
+  `config.gcc` stanza, `arm/nto.h` with `--target2=rel` and the strict-align
+  default, gas-2.19 fixups (`.inst`, `dmb ish`, `vmrs`, libgcc `.cfi_*`), and
+  the libstdc++-vs-Dinkum arbitration in `qnx-os_defines.h` - see
+  `gcc/README.md` for the full defect log). `gcc/build.sh`
+  applies it to vanilla gcc-8.5.0 and builds, plus two post-fixincludes header
   fixups: the **wchar_t** fix (re-`#undef _GCC_WCHAR_T` in `stdlib.h`) and the
   **size_t** fix - fixincludes' `gnu_types` rewrite of `unistd.h`/`sys/types.h`
   guards the QNX `size_t` typedef with `_GCC_SIZE_T` (GCC's own `<stddef.h>`
@@ -597,11 +625,11 @@ why that swap is format-safe. The full tool list is in the [Inventory](#inventor
 ## Troubleshooting
 
 - **`Unknown EABI object attribute 34`** during link - cosmetic. Binutils 2.19
-  doesn't recognize a newer EABI attribute tag emitted by GCC 4.9 / LLVM; the
+  doesn't recognize a newer EABI attribute tag emitted by GCC 8 / LLVM; the
   linker skips it and the binary is correct.
 - **Debug symbols / `addr2line` / `objdump -S`** - `-g` defaults to **DWARF 3**
   (set in `gcc/port/arm-nto.h`), because the SDP's binutils 2.19 read DWARF <= 3
-  and GCC 4.9's own default (DWARF 4) makes them warn `unsupported version 4` and
+  and GCC 8's own default (DWARF 4) makes them warn `unsupported version 4` and
   drop file:line. So the in-image `addr2line`/`objdump`/`readelf` symbolize `-g`
   output out of the box. This only sets the *version*; `-g` isn't forced, an
   explicit `-gdwarf-N` still wins, and it never touches the code (debug lives in
@@ -628,9 +656,11 @@ why that swap is format-safe. The full tool list is in the [Inventory](#inventor
 
 ## Status & limitations
 
-- **C/C++** - C99 + full C++11 + partial C++14 (GCC 4.9, `__cplusplus=201300L`;
-  no variable templates, no C++17). Runtime-validated on real QNX 6.5 ARM
-  (thread/atomic/chrono/shared_ptr all run on QEMU cortex-a15 - see gcc/README.md).
+- **C/C++** - C11 + full **C++17** (GCC 8.5, `__cplusplus=201703L`).
+  Runtime-validated on real QNX 6.5 ARM (QEMU cortex-a15): threads/atomics,
+  exceptions, virtual dispatch, `<optional>`/`<variant>`/`map::merge`,
+  strict-align - see gcc/README.md. C++ links `-static-libstdc++` by
+  convention (device libstdc++ is 4.4-era; see [The target](#the-target)).
 - **Go** - the `GOOS=qnx GOARCH=arm` port builds the full stdlib and links
   internally (`DT_NEEDED libc.so.3`); binaries **run on real QNX 6.5 hardware** -
   TCP end-to-end validated on the MHI2q head unit (see `go/README.md`). cgo uses

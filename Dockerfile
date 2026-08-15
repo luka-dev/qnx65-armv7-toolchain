@@ -3,21 +3,21 @@
 # compiles all three for QNX Neutrino 6.5.0 armle-v7, no VM, no external QNX.
 #
 #   base  qnx-sdp     : QNX 6.5 SDP tree (binutils 2.19 + armle-v7 sysroot), no gcc
-#   stage gcc-build   : builds GCC 4.9.4 for the target from source (gcc/port)
+#   stage gcc-build   : builds GCC 8.5.0 (C++17) for the target from source (gcc/port)
 #   stage go-build    : builds the GOOS=qnx GOARCH=arm port from source (make.bash)
 #   stage rust-build  : rustup nightly + rust-src (custom armv7-nto-qnx650 target)
 #   final qnx65-armv7-toolchain: base + the built GCC, Go and Rust toolchains
 #
 # Build:  docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 # Use:    docker run --rm -v "$PWD":/src qnx65-armv7-toolchain \
-#             arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++14 -O2 a.cpp -o a
+#             arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++17 -O2 a.cpp -o a
 #         docker run --rm -v "$PWD":/src qnx65-armv7-toolchain \
 #             sh -c 'cd proj && GOOS=qnx GOARCH=arm GOARM=7 go build ./...'
 
 # -------------------- base: QNX 6.5 SDP (binutils + sysroot, no gcc) ------------
 # Pinned by digest for reproducible builds (bullseye-slim as of 2026-07).
 FROM --platform=linux/amd64 debian:bullseye-slim@sha256:cba95a21c96c1f5fc2470081829363eed57706634f7dc26e8c6712934303d57a AS qnx-sdp
-# i386: QNX binutils (as/ld) are 32-bit x86. gmp/mpfr/mpc: GCC 4.9 host binaries
+# i386: QNX binutils (as/ld) are 32-bit x86. gmp/mpfr/mpc: GCC host binaries
 # link them. gcc: host C compiler for Cargo build scripts/proc-macros (NOT the
 # QNX cross-gcc). curl/ca-certificates/xz: fetch Go bootstrap + rustup.
 RUN dpkg --add-architecture i386 && apt-get update && \
@@ -42,40 +42,22 @@ ENV QNX_HOST=/opt/qnx650/host/linux/x86 \
     PATH=/opt/qnx650/host/linux/x86/usr/bin:/usr/bin:/bin \
     LD_LIBRARY_PATH=/opt/qnx650/host/linux/x86/usr/lib
 
-# --------------------------- gcc-build: GCC 4.9.4 from source ------------------
-# Rebuilds the arm-nto-qnx6.5.0eabi GCC 4.9.4 from vanilla upstream + gcc/port,
-# against the SDP sysroot. Installs to /gcc-out (merged into the SDP host tree in
-# the final stage). ~20-40 min. See gcc/README.md for the port + defect log.
+# --------------------------- gcc-build: GCC 8.5.0 from source ------------------
+# Rebuilds the arm-nto-qnx6.5.0eabi GCC 8.5.0 (full C++17) from vanilla upstream
+# + gcc/port, against the SDP sysroot. Installs to /gcc-out (merged into the SDP
+# host tree in the final stage). ~20-40 min. See gcc/README.md for the port +
+# defect log.
 FROM qnx-sdp AS gcc-build
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential libgmp-dev libmpfr-dev libmpc-dev flex bison texinfo file && \
     rm -rf /var/lib/apt/lists/*
 COPY gcc/ /opt/gcc-src/
-ARG GCC_VER=4.9.4
-ARG GCC_SHA256=6c11d292cd01b294f9f84c9a59c230d80e9e4a47e5c6355f046bb36d4f358092
-RUN curl -fsSL "https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.bz2" -o /tmp/gcc.tar.bz2 && \
-    echo "${GCC_SHA256}  /tmp/gcc.tar.bz2" | sha256sum -c - && \
-    bash /opt/gcc-src/build.sh /tmp/gcc.tar.bz2 /gcc-out && \
-    rm -rf /tmp/gcc.tar.bz2 /tmp/gccbuild
-
-# --------------------------- gcc8-build: GCC 8.5.0 (C++17) - EXPERIMENTAL ------
-# Parallel bring-up of a C++17-capable GCC 8.5.0 from gcc8/port, built the same
-# way as gcc-build. NOT merged into the final image yet - build this stage
-# directly to validate against the 4.9 baseline:
-#   docker build --platform=linux/amd64 --target gcc8-build -t qnx65-gcc8:dev .
-FROM qnx-sdp AS gcc8-build
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential libgmp-dev libmpfr-dev libmpc-dev flex bison texinfo file && \
-    rm -rf /var/lib/apt/lists/*
-COPY gcc8/ /opt/gcc8-src/
-ARG GCC8_VER=8.5.0
-ARG GCC8_SHA256=d308841a511bb830a6100397b0042db24ce11f642dab6ea6ee44842e5325ed50
-RUN curl -fsSL "https://ftp.gnu.org/gnu/gcc/gcc-${GCC8_VER}/gcc-${GCC8_VER}.tar.xz" -o /tmp/gcc.tar.xz && \
-    echo "${GCC8_SHA256}  /tmp/gcc.tar.xz" | sha256sum -c - && \
-    bash /opt/gcc8-src/build.sh /tmp/gcc.tar.xz /gcc8-out && \
+ARG GCC_VER=8.5.0
+ARG GCC_SHA256=d308841a511bb830a6100397b0042db24ce11f642dab6ea6ee44842e5325ed50
+RUN curl -fsSL "https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz" -o /tmp/gcc.tar.xz && \
+    echo "${GCC_SHA256}  /tmp/gcc.tar.xz" | sha256sum -c - && \
+    bash /opt/gcc-src/build.sh /tmp/gcc.tar.xz /gcc-out && \
     rm -rf /tmp/gcc.tar.xz /tmp/gccbuild
-# expose the new gcc on PATH for interactive validation in this stage
-ENV PATH=/gcc8-out/bin:$PATH
 
 # --------------------------- go-build: GOOS=qnx port from source ---------------
 FROM qnx-sdp AS go-build
@@ -118,7 +100,7 @@ RUN cd /opt/rust/tests/stdhello && \
 
 # --------------------------- final: qnx65-armv7-toolchain -----------------------------
 FROM qnx-sdp AS full
-# GCC 4.9.4 built from source, merged into the SDP host tree (drivers, cc1/cc1plus,
+# GCC 8.5.0 built from source, merged into the SDP host tree (drivers, cc1/cc1plus,
 # libgcc, libstdc++ headers; binutils symlinks resolve to the SDP's binutils).
 COPY --from=gcc-build  /gcc-out   /opt/qnx650/host/linux/x86/usr
 COPY --from=go-build   /opt/go     /opt/go

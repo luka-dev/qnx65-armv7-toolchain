@@ -1,29 +1,27 @@
-# gcc8 - GCC 8.5.0 (C++17) cross-compiler for QNX 6.5 / armle-v7 - EXPERIMENTAL
+# gcc - GCC 8.5.0 (C++17) cross-compiler for QNX 6.5 / armle-v7
 
-Forward-port of `gcc/` (the 4.9.4 port) to **GCC 8.5.0**: full **C++17**
-(structured bindings, `if constexpr`, fold expressions, `<optional>`,
-`<variant>`, `<string_view>`, `<filesystem>` via `-lstdc++fs`) against the
-same QNX 6.5 SDP: binutils **2.19**, the 6.5 `armle-v7` sysroot, triplet
-`arm-unknown-nto-qnx6.5.0eabi`. Same layout as `gcc/`: `build.sh` applies
-`port/` onto vanilla upstream and builds in the `gcc8-build` Docker stage.
+The image's C/C++ compiler: **GCC 8.5.0** with full **C++17** (structured
+bindings, `if constexpr`, fold expressions, `<optional>`, `<variant>`,
+`<string_view>`, `<filesystem>` via `-lstdc++fs`) and C11, targeting the QNX
+6.5 SDP as-is: binutils **2.19**, the 6.5 `armle-v7` sysroot, triplet
+`arm-unknown-nto-qnx6.5.0eabi`. `build.sh` applies `port/` onto vanilla
+upstream gcc-8.5.0 and builds in the `gcc-build` Docker stage; the result is
+merged into the SDP host tree in the final image, exactly where the stock
+4.4.2 lived.
 
-Lives beside `gcc/` (4.9 stays the shipped default) so the two can be
-validated against each other:
-
-```sh
-docker build --platform=linux/amd64 --target gcc8-build -t qnx65-gcc8:dev .
-docker run --rm -v "$PWD":/src qnx65-gcc8:dev \
-    /gcc8-out/bin/arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++17 -O2 a.cpp -o a
-```
+This is a forward-port of the earlier GCC 4.9.4 port (in git history), which
+in turn replaced the stock 4.4.2. The 4.9-era design notes below are kept as
+the defect log - each "vs 4.9" delta documents a real Dinkum/binutils trap
+and why the fix looks the way it does.
 
 ## ABI: static libstdc++ by default
 
 GCC 8's libstdc++ is dual-ABI (`_GLIBCXX_USE_CXX11_ABI=1` default) and NOT
 link-compatible with the device's `libstdc++.so.6.0.13` (GCC 4.4 era). Link
 C++ with **`-static-libstdc++ -static-libgcc`** (the `libstdc++.a` is
-assembled by `build.sh`, same trick as 4.9), or ship the new
-`libstdc++.so.6.0.25` + `libstdc++fs.a`-free binaries into the image. C
-output is unaffected (same libc.so.3).
+assembled by `build.sh`, same trick as the 4.9 port), or ship the new
+`libstdc++.so.6` (v6.0.25) into the device image. C output is unaffected (same
+libc.so.3).
 
 ## binutils 2.19 stays (probe-verified)
 
@@ -36,7 +34,7 @@ version) is auto-suppressed because configure probes the real 2.19. libgcc's
 hand-written ARM asm carries unconditional `.cfi_*` - stripped by apply.sh
 (debug-only, matches what the 4.9 libgcc shipped).
 
-## Port delta vs gcc/ (the 4.9 port)
+## Port delta vs the 4.9 port (git history)
 
 - **`port/arm-nto.h`**
   - `TARGET_UNIFIED_ASM` dropped (GCC 6+ always emits unified syntax).

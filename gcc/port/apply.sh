@@ -3,7 +3,7 @@
 # Forward-port of gcc/port/apply.sh (GCC 4.9.4). Run from inside the extracted
 # gcc-8.5.0/ dir. Idempotent.
 set -eu
-SRC=$(cd "$(dirname "$0")" && pwd)   # gcc8/port
+SRC=$(cd "$(dirname "$0")" && pwd)   # gcc/port
 GCCDIR=${1:-$PWD}
 cd "$GCCDIR"
 [ -f gcc/config.gcc ] || { echo "not a gcc source tree: $GCCDIR" >&2; exit 1; }

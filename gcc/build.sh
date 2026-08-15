@@ -2,7 +2,7 @@
 # Build the GCC 8.5.0 arm-unknown-nto-qnx6.5.0eabi cross-compiler (C++17) from
 # vanilla upstream source + the port in ./port, against the QNX 6.5 sysroot.
 # Forward-port of gcc/build.sh (GCC 4.9.4). Installs to $PREFIX. Runs inside
-# the gcc8-build Docker stage (QNX SDP + host build tools present,
+# the gcc-build Docker stage (QNX SDP + host build tools present,
 # QNX_HOST/QNX_TARGET set).
 #
 #   build.sh <gcc-8.5.0.tar.xz> <install-prefix>
@@ -38,6 +38,18 @@ cd "$WORK/obj"
 QNX_DINKUM_GATES='-D_HAS_C9X=1 -D_NO_CPP_INLINES=1'
 export CFLAGS_FOR_TARGET="-g -O2 $QNX_DINKUM_GATES"
 export CXXFLAGS_FOR_TARGET="-g -O2 $QNX_DINKUM_GATES"
+
+# -Bsymbolic for the target shared libs (i.e. libstdc++.so - libgcc is
+# static-only here): under --target2=rel, .ARM.extab references to the
+# library's own EXPORTED typeinfos are preemptible and ld emits R_ARM_REL32
+# dynamic relocations - a type QNX 6.5's ldqnx.so.2 does not know ("unknown
+# relocation type", library refuses to load). -Bsymbolic binds them locally
+# so they resolve at link time (QEMU-verified: the REL32s disappear). The
+# stock 4.4 libstdc++.so.6.0.13 shipped with zero dynamic relocs in extab -
+# same convention. Ceiling: a global operator new/delete replacement in the
+# program is not seen by allocations made INSIDE libstdc++.so; use
+# -static-libstdc++ if you need that.
+export LDFLAGS_FOR_TARGET='-Wl,-Bsymbolic'
 
 # Same flag set as the 4.9 build. configure probes the REAL gas/ld 2.19, so
 # feature macros (HAVE_GAS_DISCRIMINATOR, HAVE_GAS_CFI_SECTIONS_DIRECTIVE, ...)
