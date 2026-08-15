@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# qcc shim -> this image's cross GCC 4.9. A faithful QNX-qcc-to-gcc translator so
+# qcc shim -> this image's cross GCC. A faithful QNX-qcc-to-gcc translator so
 # anything that invokes `qcc` works against our GCC (mkifs [linker=] specs,
 # qcc-based Makefiles, hand invocations). This image replaced the stock SDP qcc
 # with GCC directly; without this shim, `mkifs` fails "qcc: not found" when it
@@ -19,7 +19,7 @@
 #   -bootstrap       link with no standard startup/libs -> gcc -nostdlib.
 #   -nostartup       no crt startup files -> gcc -nostartfiles.
 #   -nopipe          use temp files not pipes (gcc's default) -> dropped.
-#   -nostdlib++      no C++ stdlib -> link via the C driver (gcc 4.9 has no
+#   -nostdlib++      no C++ stdlib -> link via the C driver (this gcc has no
 #                    -nostdlib++; the C driver compiles C++ but omits libstdc++).
 #   -a <archive>     librarian mode (QNX's qcc-driver make builds static libs
 #                    with `qcc -a`) -> run `<target>-ar rc <archive> <objs>`.
@@ -70,7 +70,7 @@ translate() {
             -bootstrap) args+=(-nostdlib) ;;
             -nostartup) args+=(-nostartfiles) ;;         # qcc: no crt startup -> gcc -nostartfiles
             -nopipe)   ;;                                # qcc: use temp files, not pipes - gcc's default; drop
-            -nostdlib++) force_cdriver=1 ;;              # qcc: no C++ stdlib. GCC 4.9 lacks -nostdlib++
+            -nostdlib++) force_cdriver=1 ;;              # qcc: no C++ stdlib. GCC 8 lacks -nostdlib++
                                                          # (added in gcc 9), so link via the C driver: it
                                                          # still compiles C++ (cc1plus) but never auto-adds
                                                          # libstdc++ - the -nostdlib++ intent.

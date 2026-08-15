@@ -298,6 +298,16 @@ using _CSTD qsort; using _CSTD rand; using _CSTD strtof;
 using _CSTD srand; using _CSTD strtod; using _CSTD strtol;
 using _CSTD strtoul; using _CSTD system;
 using _CSTD wcstombs; using _CSTD wctomb;
+/* Toolchain fix: strtold and lldiv_t are declared inside namespace std
+   (via _C_STD_BEGIN, like strtof/div_t) but the stock header omits them
+   from this export list - strtof/div_t made it, these two did not. The
+   omission is the only reason ::strtold/::lldiv_t are invisible in C++,
+   which fails libstdc++'s C99-stdlib probe and with it the whole
+   std::stoi/std::stod family. (The other C99 names - strtoll, _Exit,
+   llabs, lldiv, atoll - are declared at global scope in the POSIX
+   extension section below and need no export.) Declarations only, no ABI
+   impact. */
+using _CSTD strtold; using _CSTD lldiv_t;
 #endif /* _STD_USING */
 
 #endif

@@ -28,7 +28,7 @@ Remove one: delete its folder. No archive to rebuild.
 `tools/qcc/bin/qcc` is a small shim that ships with the repo (tracked, not a
 user drop-in). It puts a `qcc` on the container `PATH` because `mkifs` build
 files carry a `[linker=...]` spec that literally invokes `qcc` - and this image
-replaced the stock SDP `qcc` with GCC 4.9 directly. Without it, building an IFS
+replaced the stock SDP `qcc` with GCC directly. Without it, building an IFS
 image fails with `qcc: not found` when it links a relocatable startup.
 
 It's a full qcc-to-gcc translator, not just a passthrough - qcc-based Makefiles
@@ -41,7 +41,7 @@ execs the real cross driver (`arm-unknown-nto-qnx6.5.0eabi-{gcc,g++}`):
 - `-bootstrap`      -> `-nostdlib`
 - `-nostartup`      -> `-nostartfiles` (no crt startup files)
 - `-nopipe`         -> dropped (gcc uses temp files by default anyway)
-- `-nostdlib++`     -> link via the C driver (gcc 4.9 predates gcc 9's
+- `-nostdlib++`     -> link via the C driver (gcc 8 predates gcc 9's
   `-nostdlib++`; the C driver still compiles C++ but never auto-links libstdc++)
 - `-a <archive>`    -> librarian mode: `<target>-ar rc <archive> <objs>`. QNX's
   qcc-driver make rules build static libs with `qcc -V... -a` (`AR_..._gcc_qcc`
@@ -73,7 +73,7 @@ Binaries must be `linux/amd64` (the image runs under amd64, emulated on Apple Si
 ## neon-as/bin/as — NEON alignment-hint shim
 
 `gas` 2.19 (stock QNX SDP) supports the ARM NEON element-alignment hint but only
-in the UAL comma spelling `[Rn, :align]`. GCC 4.9 and hand-written core NEON emit
+in the UAL comma spelling `[Rn, :align]`. GCC and hand-written core NEON emit
 the no-comma spelling `[Rn:align]`, which 2.19 rejects with "']' expected". The
 shim rewrites the former to the latter and calls the real `…-as-2.19`; it touches
 only operands of the exact shape `[<reg>:<num>]`.
