@@ -41,6 +41,20 @@
 #define _QNX_SOURCE 1
 #endif
 
+// (0) QNX's C99 gate. Dinkum headers gate their C99 declarations (isblank,
+//     strtoll, snprintf, ...) on _HAS_C9X, which yvals.h derives from _C99 /
+//     __EXT_ANSIC_199901. Neither route works for C++: platform.h #undefs any
+//     user __EXT_ANSIC_199901 and re-derives it from __STDC_VERSION__ (a
+//     C-only macro g++ never defines), and the __GNUC__ fallback dies under
+//     strict -std=c++NN (__STRICT_ANSI__). So set the terminal Dinkum gate
+//     directly, BEFORE any header can read yvals.h (yvals honors a pre-set
+//     _HAS_C9X). Declarations only, ABI-safe - same philosophy as
+//     _QNX_SOURCE. The library build passes the same define via
+//     *FLAGS_FOR_TARGET (build.sh) so configure's C99 probes agree.
+#ifndef _HAS_C9X
+#define _HAS_C9X 1
+#endif
+
 // (1) Ordering: QNX's C headers declare ptrdiff_t/size_t inside namespace std
 //     and export them to the global namespace via per-header `using` gated on
 //     _STD_USING. If a QNX C header (e.g. <stdlib.h>, pulled by <cstdlib>) is
@@ -54,6 +68,20 @@
 //     gated on _NO_CPP_INLINES. Disable them so the GNU <cmath> supplies the
 //     complete, authoritative set without redefinition clashes.
 #define _NO_CPP_INLINES 1
+//     ... and with _HAS_C9X on (see (0)), Dinkum's math.h adds the C++
+//     overload set for the C99 classification interface (inline fpclassify/
+//     signbit for float/double/long double + isnan/isinf/isgreater/...
+//     templates, all in std, reachable from global scope through
+//     '#define isnan(x) (_CSTD isnan(x))' wrapper macros that <cmath>
+//     #undefs). That set IS the C++11-conformant one, so tell <cmath> to use
+//     it instead of defining its own constexpr versions on top (redefinition
+//     errors otherwise) - the same knob mechanism as the string/wchar protos
+//     above, C++11-math flavor. Ceiling: integer-argument classification
+//     (std::isnan(5)) resolves through Dinkum's unconstrained template into
+//     fpclassify(int), which is ambiguous across the three FP overloads -
+//     classify FP values, not ints.
+#define __CORRECT_ISO_CPP11_MATH_H_PROTO_FP 1
+#define __CORRECT_ISO_CPP11_MATH_H_PROTO_INT 1
 
 // (3) QNX's <string.h> and <wchar.h> unconditionally provide the ISO C++
 //     overloads of memchr/strchr/... and wcschr/... (no _NO_CPP_INLINES gate),
@@ -81,6 +109,26 @@
 #undef _XA
 #undef _XS
 #undef _XB
+// ... and the function-like is*/to* macros whose bodies reference the mask
+// macros just removed (under _NO_CPP_INLINES <ctype.h> defines BOTH extern
+// declarations and these macros). libstdc++ 8's generic ctype_inline.h calls
+// isblank()/isupper()/... directly, which would expand to the now-broken
+// bodies. The extern declarations stay, so these become real libc calls
+// (all present in libc.so.3 - verified, including the C99 isblank).
+#undef isalnum
+#undef isalpha
+#undef iscntrl
+#undef isdigit
+#undef isgraph
+#undef islower
+#undef isprint
+#undef ispunct
+#undef isspace
+#undef isupper
+#undef isxdigit
+#undef isblank
+#undef tolower
+#undef toupper
 
 // (5) libstdc++'s cross-configure did not detect QNX's timing primitives (the
 //     link probe ran while the target libc/crt were only half-built). QNX 6.5
@@ -88,5 +136,14 @@
 //     emulator timing depends on real nanosleep.
 #define _GLIBCXX_USE_NANOSLEEP 1
 #define _GLIBCXX_USE_SCHED_YIELD 1
+
+// (6) QNX's <ctype.h> defines isblank as a function-like macro (under
+//     _NO_CPP_INLINES, see (2)), which detonates on libstdc++'s two-argument
+//     std::isblank(_CharT, const locale&) declarations. <cctype> has the
+//     canonical fix - '#undef isblank; using ::isblank;' - but only under
+//     _GLIBCXX_USE_C99_CTYPE_TR1, which the qnx crossconfig never sets. QNX
+//     6.5 does have ::isblank (declared whenever _HAS_C9X, guaranteed by (0)),
+//     so turn the fix on.
+#define _GLIBCXX_USE_C99_CTYPE_TR1 1
 
 #endif
