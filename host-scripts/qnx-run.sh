@@ -1,10 +1,10 @@
 #!/bin/sh
-# Run the QNX 6.5 / armle-v7 polyglot cross-toolchain (C/C++ GCC 4.9.4 +
+# Run the QNX 6.5 / armle-v7 polyglot cross-toolchain (C/C++ GCC 8.5.0 +
 # Go GOOS=qnx + Rust armv7-nto-qnx650) on the current directory: mounts the cwd
 # as /src inside the qnx65-armv7-toolchain image and runs the command there.
 #
 #   ./qnx-run.sh                                                  # interactive shell
-#   ./qnx-run.sh arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++14 -O2 a.cpp -o a
+#   ./qnx-run.sh arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++17 -O2 a.cpp -o a
 #   ./qnx-run.sh arm-unknown-nto-qnx6.5.0eabi-gcc -O2 -mfpu=neon a.c -o a
 #   ./qnx-run.sh sh -c 'GOOS=qnx GOARCH=arm GOARM=7 go build ./...'
 #   ./qnx-run.sh build-std path/to/crate                         # Rust full-std
@@ -12,7 +12,7 @@
 #
 # Run it from the project dir you want mounted (cwd -> /src).
 #
-# Compiler: arm-unknown-nto-qnx6.5.0eabi-{gcc,g++} (GCC 4.9.4), default
+# Compiler: arm-unknown-nto-qnx6.5.0eabi-{gcc,g++} (GCC 8.5.0), default
 # -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=softfp; output ELF EABI5 v7 softfp,
 # interp /usr/lib/ldqnx.so.2. Note: common headers (unistd.h, sys/types.h,
 # stdio.h, ...) provide size_t; gnulib-style code that ships its own <stddef.h>
