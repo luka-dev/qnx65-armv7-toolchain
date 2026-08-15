@@ -260,11 +260,11 @@ like the `aix`/`solaris` ports) rather than issuing SVC instructions.
 # internal-link binary (pure Go, no cgo)
 GOOS=qnx GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o app ./cmd/app
 
-# external link / cgo: NOT functional yet. The C side is ready (the gcc
-# driver accepts -pthread, cgo's generated C compiles), but the Go port's
-# cmd/link lacks R_ADDR-relocation support for SDYNIMPORT (libc) symbols in
-# external mode - the link fails with "unhandled relocation". Use
-# CGO_ENABLED=0 internal linking (above) until the port grows that support.
+# external link / cgo: C code callable from Go, linked through the QNX gcc.
+# The binary additionally needs libsocket.so.3 on the device (the runtime's
+# net support links it).
+CGO_ENABLED=1 CC=arm-unknown-nto-qnx6.5.0eabi-gcc GOOS=qnx GOARCH=arm GOARM=7 \
+  go build -ldflags '-linkmode=external -extld=arm-unknown-nto-qnx6.5.0eabi-gcc' -o app ./cmd/app
 
 # whole standard library builds for the target
 GOOS=qnx GOARCH=arm GOARM=7 CGO_ENABLED=0 go build std
@@ -644,9 +644,9 @@ why that swap is format-safe. The full tool list is in the [Inventory](#inventor
   `-Z json-target-spec` (already in the examples).
 - **Go tries to download a toolchain** - ensure `GOTOOLCHAIN=local` (set in the
   image).
-- **Go external linking / cgo fails with `unhandled relocation ...
-  SDYNIMPORT`** - known port gap in Go's `cmd/link` (see the Go usage
-  section); build with `CGO_ENABLED=0` internal linking.
+- **A cgo / externally linked Go binary dies with `Could not load library
+  libsocket.so.3`** - ship `libsocket.so.3` (from the sysroot) in the device
+  image; the Go runtime's net support links it.
 - **A C++ preload / mkifs graft is silently ignored** (loads nothing, no output) -
   its `.so` was linked with `g++`, which adds `libstdc++.so.6` to `DT_NEEDED`, and
   that library isn't in the target image, so the loader drops the whole object
@@ -667,8 +667,9 @@ why that swap is format-safe. The full tool list is in the [Inventory](#inventor
 - **Go** - the `GOOS=qnx GOARCH=arm` port builds the full stdlib and links
   internally (`DT_NEEDED libc.so.3`); binaries **run on real QNX 6.5 hardware** -
   TCP end-to-end validated on the MHI2q head unit (see `go/README.md`).
-  cgo/external linking is NOT functional yet (`cmd/link` lacks SDYNIMPORT
-  R_ADDR support in external mode - the C/gcc side is ready).
+  cgo/external linking works (QEMU-validated: C functions called from
+  goroutines): `CGO_ENABLED=1 CC=arm-unknown-nto-qnx6.5.0eabi-gcc` +
+  `-linkmode=external`; the binary needs `libsocket.so.3` on the device.
 - **Rust** - **full `std`** via `build-std=std,panic_abort` (threads, fs, net,
   Command, collections), runtime-validated on real QNX 6.5 QEMU. `panic=abort`,
   no unwind/backtrace. Port baked into the image (`build-std <crate>`).

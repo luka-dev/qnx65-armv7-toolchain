@@ -83,6 +83,7 @@
    %{static:-Bstatic} \
    %{shared:-shared} \
    %{symbolic:-Bsymbolic} \
+   %{rdynamic:-export-dynamic} \
    %{G:-G} \
    %{Qy:} %{!Qn:-Qy} \
    -m armnto --target2=rel \

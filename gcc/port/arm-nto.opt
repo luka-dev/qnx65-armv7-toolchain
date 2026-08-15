@@ -14,4 +14,10 @@ Driver Joined
 pthread
 Driver
 
+; Synonym for -Wl,--export-dynamic (mapped in nto.h LINK_SPEC, like
+; gnu-user targets). Go's external linker and plugin-style software pass
+; it unconditionally.
+rdynamic
+Driver
+
 ; This comment is to ensure we retain the blank line above.
