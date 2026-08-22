@@ -7,7 +7,7 @@
 #   3. the shared sdp/ headers still build C++ with the STOCK 4.4.2 compiler.
 #      sdp/ is one tree for every gcc, so a header tweak made for 8.5 can
 #      silently break 4.4.2 (the __PTRDIFF_T carrier in sys/platform.h did).
-#      Skipped when the :4.4.2 baseline image is not built.
+# Skipped when a variant image is not built.
 # Usage: ./qnx-selftest.sh   (needs the qnx65-armv7-toolchain image)
 set -e
 IMG=qnx65-armv7-toolchain
@@ -39,7 +39,7 @@ echo "ok: libstdc++.a leaves float math to libm"
 #   carrier set where GCC's <stddef.h> wins      -> C loses ptrdiff_t entirely
 #                                                   (this is Go's cgo prolog)
 # So test both shapes against each variant that is actually built.
-for tag in 4.4.2 4.9 8.5; do
+for tag in 4.4 4.9 8.5; do
     docker image inspect "$IMG:$tag" >/dev/null 2>&1 || { echo "skip: $IMG:$tag not built"; continue; }
     docker run --rm --platform=linux/amd64 "$IMG:$tag" sh -c '
 set -e

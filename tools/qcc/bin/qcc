@@ -35,6 +35,16 @@
 # Env: QCC_TARGET (triplet, default arm-unknown-nto-qnx6.5.0eabi), QCC_CC/QCC_CXX
 #      to override the drivers, QCC_DEBUG=1 to echo the rewritten command.
 set -u
+
+# The stock SDP qcc, when this image actually ships one (the :4.4 variant does;
+# the ports do not). entrypoint puts /opt/tools/*/bin ahead of the SDP bin dir,
+# so without this the shim would shadow the real driver in the one image whose
+# entire point is the stock toolchain. Defer to it; QCC_NO_STOCK=1 forces the
+# shim for an A/B comparison.
+STOCK_QCC=/opt/qnx650/host/linux/x86/usr/bin/qcc
+if [ -x "$STOCK_QCC" ] && [ "${QCC_NO_STOCK:-0}" != 1 ]; then
+    exec "$STOCK_QCC" "$@"
+fi
 : "${QCC_TARGET:=arm-unknown-nto-qnx6.5.0eabi}"
 CC="${QCC_CC:-${QCC_TARGET}-gcc}"
 CXX="${QCC_CXX:-${QCC_TARGET}-g++}"
