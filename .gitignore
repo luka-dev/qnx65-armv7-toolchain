@@ -25,3 +25,4 @@ rust/shim/*.a
 # The built sysroot/ libraries stay tracked, like the rest of the QNX sysroot.
 ports/**/*.tar.*
 ports/**/build.log
+tests/.cache/
