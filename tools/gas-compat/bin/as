@@ -16,10 +16,18 @@
 # or `.inst.w`: they require separate width/endianness handling and validation.
 set -euo pipefail
 
-REAL=/opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-as-2.19
-[ -x "$REAL" ] || REAL=$(command -v arm-unknown-nto-qnx6.5.0eabi-as-2.19 || true)
+# VESTIGIAL as of 2026-08-22. The image now ships gas 2.38 as the default
+# assembler (see binutils/build.sh), which understands every form this shim was
+# written to rewrite - and, unlike 2.19, encodes the VFP multiply-accumulate
+# family correctly. Nothing in-tree passes -B at this shim any more.
+#
+# It deliberately forwards to the DEFAULT assembler, not to -as-2.19: pointing
+# it back at 2.19 would silently reintroduce the mis-encoding for anyone who
+# still passes -B here. Kept only so such a caller keeps working.
+REAL=/opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-as
+[ -x "$REAL" ] || REAL=$(command -v arm-unknown-nto-qnx6.5.0eabi-as || true)
 if [ -z "${REAL:-}" ] || [ ! -x "$REAL" ]; then
-    echo "gas-compat shim: real assembler (…-as-2.19) not found" >&2
+    echo "gas-compat shim: real assembler (…eabi-as) not found" >&2
     exit 127
 fi
 

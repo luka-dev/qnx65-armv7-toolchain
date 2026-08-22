@@ -4,6 +4,7 @@
 #
 #   base  qnx-sdp     : QNX 6.5 SDP tree (binutils 2.19 + armle-v7 sysroot), no gcc
 #   stage gcc-build   : builds GCC 8.5.0 (C++17) for the target from source (gcc/port)
+#   stage binutils-build : builds a gas that encodes ARM VFP correctly (2.19 does not)
 #   stage go-build    : builds the GOOS=qnx GOARCH=arm port from source (make.bash)
 #   stage rust-build  : rustup nightly + rust-src (custom armv7-nto-qnx650 target)
 #   final qnx65-armv7-toolchain: base + the built GCC, Go and Rust toolchains
@@ -59,6 +60,23 @@ RUN curl -fsSL "https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz
     bash /opt/gcc-src/build.sh /tmp/gcc.tar.xz /gcc-out && \
     rm -rf /tmp/gcc.tar.xz /tmp/gccbuild
 
+# ------------------ binutils-build: a gas that encodes ARM correctly -----------
+# The SDP ships gas 2.19.1 (2007), which mis-encodes three of the four VFP
+# multiply-accumulate mnemonics - every a*b+-c silently gets a sign flipped.
+# Upstream fixed it in 2.20 (2009-10-29). Only `as` is rebuilt here; ld and the
+# rest stay at 2.19. See binutils/build.sh for the full write-up. ~10-20 min.
+FROM qnx-sdp AS binutils-build
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential flex bison file && \
+    rm -rf /var/lib/apt/lists/*
+COPY binutils/ /opt/binutils-src/
+ARG BINUTILS_VER=2.38
+ARG BINUTILS_SHA256=e316477a914f567eccc34d5d29785b8b0f5a10208d36bbacedcc39048ecfe024
+RUN curl -fsSL "https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz" -o /tmp/binutils.tar.xz && \
+    echo "${BINUTILS_SHA256}  /tmp/binutils.tar.xz" | sha256sum -c - && \
+    bash /opt/binutils-src/build.sh /tmp/binutils.tar.xz /binutils-out && \
+    rm -rf /tmp/binutils.tar.xz /tmp/binutilsbuild
+
 # --------------------------- go-build: GOOS=qnx port from source ---------------
 FROM qnx-sdp AS go-build
 ARG GO_BOOTSTRAP=go1.26.4
@@ -103,6 +121,14 @@ FROM qnx-sdp AS full
 # GCC 8.5.0 built from source, merged into the SDP host tree (drivers, cc1/cc1plus,
 # libgcc, libstdc++ headers; binutils symlinks resolve to the SDP's binutils).
 COPY --from=gcc-build  /gcc-out   /opt/qnx650/host/linux/x86/usr
+# Modern gas installed beside the SDP's, then made the default by repointing the
+# symlinks. 2.19 stays reachable as ...-as-2.19 for A/B comparison.
+COPY --from=binutils-build /binutils-out/bin/arm-unknown-nto-qnx6.5.0eabi-as \
+     /opt/qnx650/host/linux/x86/usr/bin/arm-unknown-nto-qnx6.5.0eabi-as-2.38
+RUN cd /opt/qnx650/host/linux/x86/usr/bin && \
+    ln -sf arm-unknown-nto-qnx6.5.0eabi-as-2.38 arm-unknown-nto-qnx6.5.0eabi-as && \
+    ln -sf arm-unknown-nto-qnx6.5.0eabi-as-2.38 ntoarmv7-as && \
+    ./arm-unknown-nto-qnx6.5.0eabi-as --version | head -1
 COPY --from=go-build   /opt/go     /opt/go
 COPY --from=rust-build /opt/rustup /opt/rustup
 COPY --from=rust-build /opt/cargo  /opt/cargo
