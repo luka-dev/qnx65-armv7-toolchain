@@ -220,6 +220,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         cmake meson ninja-build pkg-config file && \
     rm -rf /var/lib/apt/lists/*
 COPY tools/ /opt/tools/
+# mkifs and the BSP makefiles invoke qcc by ABSOLUTE path ($QNX_HOST/usr/bin/qcc),
+# not through PATH, so the shim being on PATH is not enough - without this,
+# building a QNX BSP or an IFS fails with "qcc: Command not found". The stock
+# variant already has the real driver there and is left alone.
+RUN [ -x /opt/qnx650/host/linux/x86/usr/bin/qcc ] || \
+    ln -sf /opt/tools/qcc/bin/qcc /opt/qnx650/host/linux/x86/usr/bin/qcc
 COPY cross/ /opt/qnx-cross/
 COPY entrypoint.sh /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint

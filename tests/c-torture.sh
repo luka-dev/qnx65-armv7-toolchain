@@ -8,11 +8,21 @@
 # answers "does it build".
 #
 #   tests/c-torture.sh [variant ...]      default: 4.4 4.9 8.5
+#   tests/c-torture.sh --update [...]     rewrite the baselines
+#
+# Chasing zero failures here would mean either reimplementing DejaGnu (which
+# tests the harness, not the toolchain) or deleting the inconvenient tests. What
+# matters instead is that the set does not CHANGE: a test that starts failing
+# after a port edit is a regression. So the expected failures are recorded in
+# tests/baseline/<variant>.fails and compared by name, not by count.
 #
 # The suite is taken from the GCC 8.5.0 tarball (cached under tests/.cache) so
 # every variant is measured against the same set of tests.
 set -eu
+UPDATE=0
+[ "${1:-}" = --update ] && { UPDATE=1; shift; }
 HERE=$(cd "$(dirname "$0")" && pwd)
+BASE="$HERE/baseline"; mkdir -p "$BASE"
 IMG=qnx65-armv7-toolchain
 GCC_VER=8.5.0
 CACHE="$HERE/.cache"
@@ -64,7 +74,7 @@ grep "^F " results.txt | cut -d" " -f2 | sort
 done
 
 set -- $built
-[ $# -ge 2 ] || exit 0
+[ $# -ge 1 ] || exit 0
 
 echo
 echo "=== what the failures mean ==============================="
@@ -74,9 +84,31 @@ for v in "$@"; do comm -12 "$common" "$RES/$v.list" > "$common.tmp"; mv "$common
 echo "fail on EVERY variant (not a compiler difference): $(wc -l < "$common" | tr -d ' ')"
 tr '\n' ' ' < "$common"; echo
 for v in "$@"; do
-    only=$(comm -23 "$RES/$v.list" "$common" | tr '\n' ' ')
     n=$(comm -23 "$RES/$v.list" "$common" | wc -l | tr -d ' ')
     echo
     echo "extra failures on $v: $n"
-    [ "$n" -gt 0 ] && echo "  $only"
+    [ "$n" -gt 0 ] && comm -23 "$RES/$v.list" "$common" | tr '\n' ' ' | sed 's/^/  /'
+    echo
 done
+
+# --- baseline comparison -----------------------------------------------------
+echo "=== vs baseline =========================================="
+rc=0
+for v in "$@"; do
+    b="$BASE/$v.fails"
+    if [ "$UPDATE" = 1 ]; then
+        cp "$RES/$v.list" "$b"; echo "$v: baseline updated ($(wc -l < "$b" | tr -d ' ') expected failures)"
+        continue
+    fi
+    if [ ! -f "$b" ]; then
+        echo "$v: no baseline yet - run: $0 --update $v"; continue
+    fi
+    new=$(comm -13 "$b" "$RES/$v.list")      # failing now, not in baseline
+    fixed=$(comm -23 "$b" "$RES/$v.list")    # in baseline, passing now
+    if [ -n "$new" ]; then
+        echo "$v: REGRESSION - newly failing: $(echo $new)"; rc=1
+    fi
+    [ -n "$fixed" ] && echo "$v: improved (now passing): $(echo $fixed) - rerun with --update"
+    [ -z "$new" ] && [ -z "$fixed" ] && echo "$v: matches baseline ($(wc -l < "$b" | tr -d ' ') expected failures)"
+done
+exit $rc
