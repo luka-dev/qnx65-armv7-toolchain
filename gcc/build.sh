@@ -115,6 +115,32 @@ if [ ! -f "$DEST" ]; then
   fi
 fi
 
+# QNX's Dinkum <math.h> already supplies the float/long-double entry points
+# from libm.  libstdc++'s compatibility math_stubs objects are not valid on
+# this target: their powf/sqrtf/etc. wrappers resolve back to themselves and
+# recurse forever.  They can appear twice because the fallback archive above
+# combines convenience archives with src/.libs compatibility objects, and the
+# SDP ar removes only one same-named member per invocation.  Remove every copy
+# so static-libstdc++ users resolve these functions from the real libm.so.2.
+if [ -f "$DEST" ]; then
+  for member in math_stubs_float.o math_stubs_long_double.o; do
+    while "$AR" t "$DEST" | grep -qx "$member"; do
+      "$AR" d "$DEST" "$member"
+    done
+  done
+  "$RANLIB" "$DEST"
+  if "$AR" t "$DEST" | grep -Eq '^math_stubs_(float|long_double)\.o$'; then
+    echo ">> ERROR: invalid libstdc++ math stubs remain in $DEST" >&2
+    exit 1
+  fi
+  if "$QNX_HOST/usr/bin/$TGT-nm" -A --defined-only "$DEST" 2>/dev/null \
+       | grep -Eq ' [TW] (ceilf|expf|floorf|powf|sqrtf)$'; then
+    echo ">> ERROR: libstdc++.a still defines QNX libm float functions" >&2
+    exit 1
+  fi
+  echo ">> static libstdc++.a math stubs removed; float math resolves to libm"
+fi
+
 # C++17 <filesystem> lives in libstdc++fs.a in GCC 8 (moved into libstdc++.so
 # only in GCC 9) - users link -lstdc++fs. Verify it was installed.
 if ls "$PREFIX/$TGT/lib"/libstdc++fs.a >/dev/null 2>&1; then
