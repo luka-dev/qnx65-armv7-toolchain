@@ -5,9 +5,14 @@
 # multiply-accumulate mnemonics - it emits vnmls for vmls, vmls for vnmla and
 # vnmla for vnmls. Each silently flips a sign, so any a*b+-c expression computes
 # the wrong value instead of failing to build. Upstream fixed this in
-# gas/config/tc-arm.c on 2009-10-29 (binutils 2.20); 2.19 predates it. GCC 4.9
-# rarely formed those patterns so the bug lay dormant, but GCC 8.5 forms them
-# freely and it corrupted the RetroArch menu renderer end to end.
+# gas/config/tc-arm.c on 2009-10-29 (binutils 2.20); 2.19 predates it.
+#
+# Only the UAL spelling is mis-encoded. Verified on all three compilers we
+# build: stock 4.4.2 and GCC 4.9.4 emit the pre-UAL names (fnmacs/fmscs) for
+# these patterns and assemble correctly, so both older generations were never
+# affected. GCC 8.5's arm.md emits vmla/vmls/vnmla/vnmls instead - and those
+# are exactly the four gas 2.19 shuffles. It corrupted the RetroArch menu
+# renderer end to end.
 #
 # Only `as` is replaced. ld/ar/objcopy stay at the SDP's 2.19: linking was never
 # implicated, and keeping the link step byte-identical limits the blast radius.
