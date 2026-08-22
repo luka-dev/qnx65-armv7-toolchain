@@ -255,8 +255,23 @@
    <stddef.h> loses ptrdiff_t entirely (Go's cgo export prolog does
    exactly that). GCC's stddef.h typedefs from __PTRDIFF_TYPE__ (same
    underlying int), so for GCC the carrier is pure poison - keep it for
-   other compilers only. */
-#ifndef __GNUC__
+   other compilers only.
+
+   Which header wins is decided by whose libstdc++ is in play, not by the
+   GCC version as such:
+
+     stock 4.4.2  -> the SDP's own libstdc++ (target/qnx6/usr/include/c++),
+                     whose <cstddef> pulls QNX's <stddef.h>.  That one only
+                     declares std::ptrdiff_t if the carrier is set, so
+                     without it every C++ TU dies on <cstddef>.
+     our ports    -> their own libstdc++ (host/.../$TGT/include/c++), whose
+       (4.9, 8.5)    <cstddef> pulls GCC's <stddef.h> - the shadowing case
+                     above, where the carrier is poison.
+
+   Verified with -H on all three.  Version numbers are only a proxy for
+   "does this compiler bring its own libstdc++"; 4.9 is our port, so it
+   belongs with 8.5 despite being GCC 4.x. */
+#if !defined(__GNUC__) || __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9)
 #undef __PTRDIFF_T
 #define __PTRDIFF_T		_Intptrt
 #endif
