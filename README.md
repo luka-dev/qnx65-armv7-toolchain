@@ -1,15 +1,34 @@
 # qnx65-armv7-toolchain
 
-**A single Docker image that cross-compiles C/C++, Go, and Rust for QNX Neutrino
-6.5.0 `armle-v7` - no QNX VM, no external SDP install.**
+**Docker images that cross-compile C/C++, Go, and Rust for QNX Neutrino 6.5.0
+`armle-v7` - no QNX VM, no external SDP install.**
 
 Everything is assembled from source in one multi-stage `docker build`: the QNX
 6.5 SDP tree with a modern **GCC 8.5.0** (full C++17) in place of the stock
 4.4.2, a from-scratch **`GOOS=qnx` Go 1.26 port**, and a **nightly Rust**
 `build-std` target - all three linking through the same QNX toolchain.
 
+Three compilers are available, because different jobs need different ones -
+hooks that must stay ABI-compatible with shipped firmware want the old
+toolchain, modern C++ wants 8.5:
+
+| tag | compiler | assembler | C | C++ | Go | Rust |
+|---|---|---|---|---|---|---|
+| `:4.4` | the SDP's own GCC 4.4.2 + qcc | gas 2.19 | ✅ | ✅ | - | - |
+| `:4.9` | GCC 4.9.4 (`gcc/4.9`) | gas 2.19 | ✅ | C++11 | ✅ | untested |
+| `:8.5` | GCC 8.5.0 (`gcc/port`) | **gas 2.38** | ✅ | C++17 | ✅ | ✅ |
+
+Add a language runtime with a suffix: `:8.5-go`, `:8.5-rust`, `:8.5-full`
+(`:8.5-full` is also `:latest`). Go and Rust are offered on 4.9 and 8.5 only -
+the stock 4.4.2 driver warns on the options cgo passes, and Go treats a
+compiler that writes to stderr as broken.
+
+Every ✅ above means *executed on QNX under QEMU*, not merely compiled - see
+[Testing](#testing).
+
 ```sh
-docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
+./host-scripts/qnx-run.sh build            # :8.5-full + :latest
+./host-scripts/qnx-run.sh build 4.9        # a specific variant
 ```
 
 ---
@@ -17,6 +36,7 @@ docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
 ## Table of contents
 
 - [What you get](#what-you-get)
+- [Testing](#testing)
 - [Inventory](#inventory)
 - [The target](#the-target)
 - [Quick start](#quick-start)
@@ -111,6 +131,11 @@ What output links against and the runtime it targets:
 
 ### Host-scripts (`host-scripts/`, run on your machine)
 - `qnx-run.sh` - run any toolchain command on the cwd (or an interactive shell).
+  `build [<variant>]` builds an image; `-V<variant>` picks which compiler runs
+  the command (`QNX_VARIANT` does the same for scripts).
+- `qnx-selftest.sh` - 7 checks for the failures that miscompile silently rather
+  than erroring: VFP encoding, libstdc++ math stubs, `ptrdiff_t` in both
+  directions on every variant, and the driver options cgo needs.
 - `qnx-mkifs.sh` / `qnx-mkqnx6fs.sh` - build an IFS / qnx6 fs image.
 - `qnx-configure` / `qnx-cmake` / `qnx-meson` - cross-configure autotools/CMake/Meson.
 - `qnx-check-so` - flag a `.so` the QNX loader would silently drop.
@@ -157,8 +182,11 @@ drift can still bite - prefer C APIs at such boundaries).
 ## Quick start
 
 ```sh
-# 1. Build the image (needs network; ~few minutes; ~1.4 GB image)
-docker build --platform=linux/amd64 -t qnx65-armv7-toolchain .
+# 1. Build the image (needs network; the GCC stage is ~30 min; ~1.7 GB image)
+./host-scripts/qnx-run.sh build
+
+# ...or one compiler only, no Go/Rust - 610 MB instead of 1.7 GB
+./host-scripts/qnx-run.sh build 8.5
 
 # 2. C++17 (add -static-libstdc++ -static-libgcc if the target image won't
 #    carry the toolchain's libstdc++.so.6 - see "The target" in the README)
@@ -174,6 +202,10 @@ docker run --rm -v "$PWD":/src qnx65-armv7-toolchain build-std path/to/crate
 
 # interactive shell
 docker run --rm -it -v "$PWD":/src qnx65-armv7-toolchain bash
+
+# run a command in a specific compiler (QNX_VARIANT=4.9 works too)
+./host-scripts/qnx-run.sh -V4.9   arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++11 a.cpp -o a
+./host-scripts/qnx-run.sh -V4.4   qcc -Vgcc_ntoarmv7le_gpp -O2 a.cpp -o a
 ```
 
 Verify any output binary:
@@ -304,6 +336,54 @@ not just for reproducibility. **Stable can't build this**: `-Z build-std` and
 
 ---
 
+## Testing
+
+Four levels, each catching what the others cannot. Everything runs from the repo
+root and needs the images built.
+
+```sh
+host-scripts/qnx-selftest.sh    # 7 fast checks, seconds
+tests/asm-ab.sh                 # gas 2.19 vs 2.38 over binutils' own ARM suite
+tests/c-torture.sh              # 1507 C tests x each compiler, vs baseline
+tests/libstdcxx.sh              # 7198 libstdc++ tests x each compiler
+tests/qemu-run.sh <binary>      # run an armle-v7 binary on real QNX under QEMU
+tests/vfp-runtime.sh            # prove the VFP fix by executing it
+```
+
+**Why the runtime one matters.** The bug that motivated replacing the assembler
+produces no diagnostic at all: gas 2.19 encodes `vmls`/`vnmls` with a flipped
+sign, so the build succeeds, the program runs, and it silently returns the wrong
+number. Same code, same compiler, two assemblers:
+
+| | `c-a*b` | `a*b-c` | `-(c+a*b)` |
+|---|---|---|---|
+| gas 2.38 | 88.0 ✅ | -88.0 ✅ | -112.0 ✅ |
+| gas 2.19 | **-88.0** ❌ | **-112.0** ❌ | -112.0 ✅ |
+
+Only executing it catches that, which is why compile-only checks cannot replace
+`tests/qemu-run.sh`. It builds an IFS around your binary with `mkifs`, boots it
+on QEMU's cortex-a15 virt board through u-boot, and returns what the program
+printed. See `tests/qemu/README.md` for the boot pieces - including a **timer
+bug in the QNX BSP itself** (wrong interrupt number) that left `clock_gettime()`
+returning zero forever and made Go abort at startup.
+
+**Current numbers** (baselines in `tests/baseline/`, compared by test name so a
+NEW failure stands out):
+
+| suite | 4.4 | 4.9 | 8.5 |
+|---|---|---|---|
+| gcc.c-torture (compile+link) | 1458/1507 | 1475/1507 | 1493/1507 |
+| libstdc++ (compile) | - | 5621/7198 | 7006/7198 |
+| binutils ARM suite | - | - | 0 regressions vs 2.19 |
+
+Do not read these as pass/fail gates. Older compilers are *supposed* to lose
+tests, and part of what remains is the DejaGnu harness we deliberately do not
+reproduce, not the compiler - each script documents its own residue. The value
+is the baseline: it is how the `__PTRDIFF_T` boundary and the missing
+`-pthread`/`-rdynamic` were caught.
+
+---
+
 ## Cross-building real software (CMake / Autotools / Meson)
 
 The direct compilers cross-build a single file fine; real projects also need
@@ -376,7 +456,7 @@ One multi-stage `Dockerfile`:
 +---------------------------------------------------------------+
    |                    |                        |
    v FROM qnx-sdp       v FROM qnx-sdp           v FROM qnx-sdp
-+-- gcc-build ------+ +-- go-build -------+ +-- rust-build --------+
++-- gcc-8.5-build --+ +-- go-build -------+ +-- rust-build --------+
 | COPY gcc/ (port)  | | COPY go/ (src)    | | rustup nightly + src |
 | curl gcc-8.5.0    | | curl Go bootstrap | | COPY rust/ (std port)|
 | apply port,       | | make.bash:        | | bake std: libc fork  |
@@ -414,8 +494,11 @@ entrypoint.sh       prepends every /opt/tools/*/bin to PATH at container start
 sdp/                the QNX 6.5 SDP base - the foundation all languages link against:
   - host/             binutils 2.19 (as/ld) + QNX host tools (no gcc - built from source)
   - target/           armle-v7 sysroot - headers, CRT, libc/libm/libstdc++ (the 6.5 runtime)
-gcc/                GCC 8.5.0 port + build recipe (port/ patches, build.sh, README):
-                    the arm-nto-qnx port applied to vanilla upstream at build time
+gcc/                the C/C++ compilers:
+  - build.sh, port/   GCC 8.5.0 - the arm-nto-qnx port applied to vanilla upstream
+  - 4.9/              GCC 4.9.4 - its own build.sh + port/, taken from the release tag
+  - stock-4.4.2/      the SDP's own compiler + qcc, restored from the 6.5 tarball
+binutils/           builds a gas that encodes ARM VFP correctly (2.19 does not)
 go/                 patched Go 1.26.4 source - src/ + lib/ only (~152 MB);
                     make.bash regenerates bin/ + pkg/ at build time
 rust/               full-std QNX port: target spec + rust-toolchain.toml + port/
@@ -424,13 +507,20 @@ tools/              in-container PATH additions - the bundled qcc/ shim (for mki
                     plus any user drop-in compilers; see tools/README.md
 cross/              cross-build files baked to /opt/qnx-cross: config.site (autotools),
                     qnx-armv7.cmake (CMake toolchain), qnx-armv7.ini (Meson cross file)
-host-scripts/       host-side runners (qnx-run.sh, qnx-mkifs.sh, qnx-mkqnx6fs.sh,
-                    qnx-configure/qnx-cmake/qnx-meson, qnx-check-so) - see the Inventory
+host-scripts/       host-side runners (qnx-run.sh, qnx-selftest.sh, qnx-mkifs.sh,
+                    qnx-mkqnx6fs.sh, qnx-configure/qnx-cmake/qnx-meson,
+                    qnx-check-so) - see the Inventory
+tests/              the suites and the QEMU runner - see Testing:
+  - qemu/             boot pieces (startup, u-boot) + the BSP timer patch
+  - baseline/         expected failures, compared by test name
 ```
 
-The top-level inputs map 1:1 to the Docker stages: `sdp/` -> `base`, `gcc/` ->
-`gcc-build`, `go/` -> `go-build`, `rust/` -> `rust-build`. `~310 MB` in git
-(`sdp/` ~ 161 MB, `go/` ~ 152 MB). Final image ~ **1.4 GB**.
+The top-level inputs map to the Docker stages: `sdp/` -> `qnx-sdp`, `gcc/` ->
+`gcc-8.5-build`, `gcc/4.9/` -> `gcc-4.9-build`, `binutils/` -> `binutils-build`,
+`go/` -> `go-build`, `rust/` -> `rust-build`; `gcc/stock-4.4.2/` is copied
+straight into `base-4.4`. `~335 MB` in git (`sdp/` ~ 161 MB, `go/` ~ 152 MB,
+`gcc/stock-4.4.2/` ~ 20 MB). Images: `:4.4` 602 MB, `:8.5` 771 MB,
+`:8.5-full` **1.7 GB**.
 
 ---
 
@@ -610,8 +700,11 @@ runtime `-v host:/opt/tools` mount. See `tools/README.md`.
 ## Testing on real hardware
 
 The compilers are `linux/amd64` and cannot execute ARM QNX output directly.
-Run and validate on `qemu-system-arm -M virt -cpu cortex-a15` (boots real
-`procnto` + `libc.so.3`) or a physical QNX 6.5 board. Package binaries into a
+`tests/qemu-run.sh <binary>` does the whole round trip for you - IFS via
+`mkifs`, boot on `qemu-system-arm -M virt -cpu cortex-a15` through u-boot, and
+back with whatever the program printed; see [Testing](#testing). For anything
+beyond a single binary, or for a physical QNX 6.5 board, build the image
+yourself as below. Package binaries into a
 bootable image with the QNX `mkifs`/`mkefs` tools (in the image);
 `host-scripts/qnx-mkifs.sh <build-file> <out.bin>` wraps that, and `dumpifs`
 (also in the image) extracts an existing image to rebuild it with a file added.
@@ -674,4 +767,14 @@ why that swap is format-safe. The full tool list is in the [Inventory](#inventor
 - **Rust** - **full `std`** via `build-std=std,panic_abort` (threads, fs, net,
   Command, collections), runtime-validated on real QNX 6.5 QEMU. `panic=abort`,
   no unwind/backtrace. Port baked into the image (`build-std <crate>`).
+- **Three compilers** - 8.5 is the default; `:4.9` and `:4.4` exist for work
+  that must stay close to what the device shipped with. All three share one
+  `sdp/` sysroot, so a header tweak for one can break another - that is what
+  `qnx-selftest.sh` guards (it has caught exactly that twice).
+- **Known rough edges** - Rust on `:4.9` is untested; Go and Rust are not
+  offered on `:4.4` (the stock driver warns on the options cgo passes, and Go
+  treats stderr output as failure, though pure `CGO_ENABLED=0` Go does build
+  there). QNX's `<xtgmath.h>` collides with GNU `<complex>` when a program
+  defines its own `arg`/`conj`/`pow` for its own types and does
+  `using namespace std`; ordinary `<complex>` is fine.
 - **One arch** - `armle-v7` only (other SDP arches trimmed from the tree).
