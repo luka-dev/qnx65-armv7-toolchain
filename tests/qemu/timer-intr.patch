@@ -1,0 +1,16 @@
+Fix the timer interrupt number in the QEMU virt BSP.
+
+The BSP declares the system tick on IRQ 1 with a comment copied from an
+unrelated board. IRQ 1 is a software-generated interrupt; the real source is
+the ARM generic virtual timer, GIC PPI 11 = IRQ 27 - which is what the timer
+callouts actually program (mrrc/mcrr p15, 3, ..., c14 = CNTV_CVAL).
+
+Without this the tick never fires: clock_gettime() returns zero forever,
+sleep() never returns, and Go aborts with "nanotime returning zero", while
+ClockCycles() keeps counting and hides the problem.
+
+--- a/src/hardware/startup/boards/virt/init_qtime_virt.c
++++ b/src/hardware/startup/boards/virt/init_qtime_virt.c
+@@
+-	qtime->intr = 1;	/* GPT1 irq */
++	qtime->intr = 27;	/* GIC PPI 11 = ARM generic VIRTUAL timer on QEMU virt */
