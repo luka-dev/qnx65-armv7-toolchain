@@ -24,9 +24,14 @@
 #   -a <archive>     librarian mode (QNX's qcc-driver make builds static libs
 #                    with `qcc -a`) -> run `<target>-ar rc <archive> <objs>`.
 #   -EL / -EB        endianness -> -mlittle-endian / -mbig-endian.
-# (Bare -M is NOT special-cased: qcc-gcc treats it as gcc does - emit make
-# dependencies - so it passes through. Only the Watcom driver used -M for a link
-# map, which this gcc toolchain never invokes.)
+#   -M               ambiguous, and the earlier claim that it never mattered was
+#                    wrong: QNX BSP makefiles link startup with `qcc -r ... -M
+#                    -o startup-virt *.o`, where -M asks for a LINK MAP. Passed
+#                    to gcc verbatim it means "emit make dependencies", so gcc
+#                    stops before linking and the build silently produces no
+#                    binary ("linker input file unused because linking not
+#                    done"). So: -M while compiling stays as-is; -M while
+#                    linking becomes -Wl,-Map,<output>.map.
 #   -Wc,a,b          options for the compiler proper -> pass a b straight to gcc.
 #   -lang-c++/-c/-asm  source language override -> -x c++ / c / assembler.
 #   @file            response file -> expanded and re-translated.
@@ -41,9 +46,15 @@ set -u
 # so without this the shim would shadow the real driver in the one image whose
 # entire point is the stock toolchain. Defer to it; QCC_NO_STOCK=1 forces the
 # shim for an A/B comparison.
+# NOTE the self-check: images without a real qcc symlink THIS SHIM to that very
+# path, because mkifs and the BSP makefiles invoke qcc by absolute path. Without
+# comparing canonical paths the shim would exec itself forever.
 STOCK_QCC=/opt/qnx650/host/linux/x86/usr/bin/qcc
 if [ -x "$STOCK_QCC" ] && [ "${QCC_NO_STOCK:-0}" != 1 ]; then
-    exec "$STOCK_QCC" "$@"
+    _self=$(readlink -f "$0" 2>/dev/null || echo "$0")
+    _stock=$(readlink -f "$STOCK_QCC" 2>/dev/null || echo "$STOCK_QCC")
+    [ "$_stock" != "$_self" ] && exec "$STOCK_QCC" "$@"
+    unset _self _stock
 fi
 : "${QCC_TARGET:=arm-unknown-nto-qnx6.5.0eabi}"
 CC="${QCC_CC:-${QCC_TARGET}-gcc}"
@@ -52,6 +63,9 @@ CXX="${QCC_CXX:-${QCC_TARGET}-g++}"
 want_cxx=0
 args=()
 ar_target=""      # set by qcc's -a (librarian mode); handled after translate()
+saw_bare_M=0      # `-M` seen; what it means depends on whether we end up linking
+compile_only=0    # -c/-S/-E: no link step, so -M keeps its gcc meaning
+out_file=""       # -o target, needed to name the link map
 
 # qcc picks C vs C++ by the driver name too (CC / c++ -> C++). Match that.
 case "$(basename -- "$0")" in CC|c++|*-c++|g++|*-g++) want_cxx=1 ;; esac
@@ -85,6 +99,10 @@ translate() {
                                                          # still compiles C++ (cc1plus) but never auto-adds
                                                          # libstdc++ - the -nostdlib++ intent.
             -a)        ar_target="${1:-}"; shift || true ;;  # qcc librarian: qcc -a <archive> <objs> -> ar (after translate)
+            -M)        saw_bare_M=1 ;;                  # decided after the loop
+            -c|-S|-E)  compile_only=1; args+=("$a") ;;
+            -o)        out_file="${1:-}"; args+=("$a" "${1:-}"); shift || true ;;
+            -o?*)      out_file="${a#-o}"; args+=("$a") ;;
             -EL)       args+=(-mlittle-endian) ;;
             -EB)       args+=(-mbig-endian) ;;
             -lang-c++) want_cxx=1; args+=(-x c++) ;;
@@ -102,6 +120,15 @@ translate() {
 }
 
 translate "$@"
+
+# Resolve the deferred -M now that we know whether this is a link.
+if [ "$saw_bare_M" = 1 ]; then
+    if [ "$compile_only" = 1 ]; then
+        args+=(-M)                                  # gcc's meaning: make deps
+    elif [ -n "$out_file" ]; then
+        args+=("-Wl,-Map,${out_file}.map")          # qcc's meaning: link map
+    fi                                              # no -o: drop it, a map has nowhere to go
+fi
 
 # qcc -a <archive> <objs>: build a static library. QNX's qcc-driver make rules
 # use `qcc -V... -a` as the librarian (AR_nto_arm_gcc_qcc in qconf-*.mk), so a
