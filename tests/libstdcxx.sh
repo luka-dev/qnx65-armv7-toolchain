@@ -12,6 +12,20 @@
 # Tests carrying dg-error are NEGATIVE: the source is invalid on purpose and
 # rejecting it is the pass condition. Scoring them like the rest would count a
 # compiler that accepts broken C++ as better, which is backwards.
+#
+# What the residue means (checked, not assumed):
+#   performance_* (65), experimental_filesystem (26)  need the DejaGnu harness
+#       we deliberately do not reproduce - they measure the harness, not us.
+#   26_numerics (24)  REAL, but narrow: QNX's <xtgmath.h> collides with GNU
+#       <complex> when a program defines its own arg/conj/imag/pow for its own
+#       types and does `using namespace std` (26_numerics/complex/51083.cc).
+#       Plain <complex>, including with <cmath>, compiles fine on 4.9 and 8.5 -
+#       verified separately - so this does not affect ordinary code.
+#   5 negative tests on 8.5 are still unexplained; that is the one place left
+#       where the compiler might be accepting something it should reject.
+#
+# Chasing the count to zero is not the goal - most of what is left is not about
+# the compiler at all. The baseline is, so a NEW failure stands out.
 set -eu
 UPDATE=0
 [ "${1:-}" = --update ] && { UPDATE=1; shift; }
