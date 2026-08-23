@@ -68,8 +68,15 @@ for tag in 4.9 8.5; do
 set -e
 cd /tmp; echo "int main(void){return 0;}" > o.c
 for opt in -pthread -rdynamic; do
-    arm-unknown-nto-qnx6.5.0eabi-gcc $opt o.c -o o 2>&1 | head -2
+    # Checking only that a binary appeared is not enough: stock 4.4.2 prints
+    # "unrecognized option" to stderr, ignores the flag and still exits 0 - and
+    # that stderr noise is exactly what makes Go reject the compiler. So the
+    # option counts as supported only if the driver is silent about it.
+    msg=$(arm-unknown-nto-qnx6.5.0eabi-gcc $opt o.c -o o 2>&1)
     test -f o || { echo "FAIL: driver rejects $opt (cgo needs it)" >&2; exit 1; }
+    case "$msg" in
+        *unrecognized*) echo "FAIL: driver warns on $opt - Go treats that as an error" >&2; exit 1 ;;
+    esac
     rm -f o
 done
 ' || exit 1

@@ -36,7 +36,7 @@ cat > "$WORK/test.build" <<EOF
 [image=0x40200000]
 [virtual=armle-v7,raw] .bootstrap = {
     startup-virt -v -S
-    PATH=:/proc/boot LD_LIBRARY_PATH=:/proc/boot procnto-smp
+    PATH=:/proc/boot LD_LIBRARY_PATH=:/proc/boot procnto-smp -vvv
 }
 [+script] .script = {
     procmgr_symlink ../../proc/boot/libc.so.3 /usr/lib/ldqnx.so.2
@@ -82,9 +82,28 @@ fi
 awk '
   /@@QNXRUN-START@@/ { sub(/.*@@QNXRUN-START@@/, ""); inside = 1 }
   /@@QNXRUN-END@@/   { sub(/@@QNXRUN-END@@.*/, ""); if (length($0)) print; exit }
+  /@@QNXRUN-EXIT=/     { next }
   inside && length($0) { print }
 ' "$LOG"
-status=$(grep -o 'exited status=[0-9]*' "$LOG" | tail -1)
-[ -n "$status" ] && echo "($status)"
 [ -n "${QEMU_KEEP_LOG:-}" ] && cp "$LOG" "$QEMU_KEEP_LOG"
+
+# Exit with the program's own status so this is usable as a test, not just as a
+# viewer. QNX prints "Process N (name) exited status=X" when a process ends;
+# no such line means it never finished (crash, hang, or the boot stalled).
+# mkifs's .script parser is not a shell - `sh -c "prog; echo $?"` does not work
+# there, and procnto does not announce process exits in this configuration, so
+# there is no exit CODE to report. What we can tell is whether the script got
+# past the program: reaching the end marker means it returned instead of
+# hanging or taking the system down. Correctness itself is judged by the
+# program's own output (see vfp-runtime.sh).
+if ! grep -q '@@QNXRUN-END@@' "$LOG"; then
+    echo "warning: program did not return - hung, or crashed hard" >&2
+    exit 1
+fi
+# procnto -vvv announces abnormal termination; without that verbosity it says
+# nothing at all and a segfaulting program looks like a clean run.
+if grep -qE 'terminated SIG' "$LOG"; then
+    grep -oE 'Process [0-9]+ \([^)]*\) terminated SIG[A-Z]+[^ ]*( [a-z]+=[0-9a-fx]+)*' "$LOG" | tail -1 >&2
+    exit 1
+fi
 exit 0
