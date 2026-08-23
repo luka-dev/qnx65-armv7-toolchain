@@ -40,8 +40,6 @@ cat > "$WORK/test.build" <<EOF
 }
 [+script] .script = {
     procmgr_symlink ../../proc/boot/libc.so.3 /usr/lib/ldqnx.so.2
-    slogger
-    pipe
     devc-serdebug -e -F -S
     waitfor /dev/ser1 4
     reopen /dev/ser1
@@ -53,22 +51,30 @@ cat > "$WORK/test.build" <<EOF
 [perms=+r,+x]
 libc.so.3
 libm.so.2
+libsocket.so.3
 procnto-smp
 devc-serdebug
-slogger
-pipe
 $NAME
 EOF
 
 docker run --rm --platform=linux/amd64 -v "$WORK":/w -w /w "$IMG" sh -c '
 T=/opt/qnx650/target/qnx6/armle-v7
 cp $T/lib/libc.so.3 $T/lib/libm.so.2 $T/boot/sys/procnto-smp /w/ 2>/dev/null || true
-cp $T/sbin/slogger $T/bin/pipe /w/ 2>/dev/null || true
-# a dynamically linked C++ binary also needs libstdc++; ship it when present
+# Rust std and the Go runtime both pull in libsocket.
+# NOTE: no apostrophes anywhere in this block - it is inside a single-quoted
+# sh -c, so one apostrophe ends the command and silently drops the rest.
+cp $T/lib/libsocket.so.3 /w/ 2>/dev/null || cp $T/usr/lib/libsocket.so.3 /w/ 2>/dev/null || true
+# a dynamically linked C++ binary also needs libstdc++, ship it when present
 if [ -f /w/NEEDS_CXX ]; then cp $T/usr/lib/libstdc++.so.6 /w/ 2>/dev/null || true; fi
 export MKIFS_PATH=/w:$T/boot/sys:$T/bin:$T/lib:$T/usr/lib
-mkifs test.build ifs.bin' >/dev/null 2>&1 || { echo "mkifs failed" >&2; exit 1; }
+mkifs test.build ifs.bin' >"$WORK/mkifs.log" 2>&1 || {
+    echo "mkifs failed:" >&2; tail -6 "$WORK/mkifs.log" >&2; exit 1; }
 
+[ -n "${QEMU_DEBUG:-}" ] && { echo "--- WORK=$WORK ---" >&2; ls -l "$WORK" >&2; }
+[ -f "$WORK/ifs.bin" ] || {
+    echo "mkifs produced no image:" >&2; tail -8 "$WORK/mkifs.log" >&2
+    cp "$WORK/test.build" /tmp/failed.build 2>/dev/null
+    echo "(build file saved to /tmp/failed.build)" >&2; exit 1; }
 mkdir -p "$WORK/fat"; mv "$WORK/ifs.bin" "$WORK/fat/"
 LOG="$WORK/qemu.log"
 # u-boot eats the first keystrokes for its autoboot prompt, hence the leading
