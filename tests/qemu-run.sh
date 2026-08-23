@@ -40,6 +40,8 @@ cat > "$WORK/test.build" <<EOF
 }
 [+script] .script = {
     procmgr_symlink ../../proc/boot/libc.so.3 /usr/lib/ldqnx.so.2
+    slogger
+    pipe
     devc-serdebug -e -F -S
     waitfor /dev/ser1 4
     reopen /dev/ser1
@@ -50,14 +52,20 @@ cat > "$WORK/test.build" <<EOF
 [type=link] /usr/lib/ldqnx.so.2=/proc/boot/libc.so.3
 [perms=+r,+x]
 libc.so.3
+libm.so.2
 procnto-smp
 devc-serdebug
+slogger
+pipe
 $NAME
 EOF
 
 docker run --rm --platform=linux/amd64 -v "$WORK":/w -w /w "$IMG" sh -c '
 T=/opt/qnx650/target/qnx6/armle-v7
-cp $T/lib/libc.so.3 $T/boot/sys/procnto-smp /w/ 2>/dev/null || true
+cp $T/lib/libc.so.3 $T/lib/libm.so.2 $T/boot/sys/procnto-smp /w/ 2>/dev/null || true
+cp $T/sbin/slogger $T/bin/pipe /w/ 2>/dev/null || true
+# a dynamically linked C++ binary also needs libstdc++; ship it when present
+if [ -f /w/NEEDS_CXX ]; then cp $T/usr/lib/libstdc++.so.6 /w/ 2>/dev/null || true; fi
 export MKIFS_PATH=/w:$T/boot/sys:$T/bin:$T/lib:$T/usr/lib
 mkifs test.build ifs.bin' >/dev/null 2>&1 || { echo "mkifs failed" >&2; exit 1; }
 
@@ -100,8 +108,15 @@ if ! grep -q '@@QNXRUN-END@@' "$LOG"; then
     echo "warning: program did not return - hung, or crashed hard" >&2
     exit 1
 fi
+# With procnto -vvv the kernel does report process exits, so a real exit code
+# is available after all - use it when present.
+code=$(grep -oE "Process [0-9]+ \($NAME\) exited status=[0-9]+" "$LOG" | tail -1 | grep -oE '[0-9]+$')
 # procnto -vvv announces abnormal termination; without that verbosity it says
 # nothing at all and a segfaulting program looks like a clean run.
+if [ -n "${code:-}" ] && [ "$code" != 0 ]; then
+    echo "(exit status $code)" >&2
+    exit "$code"
+fi
 if grep -qE 'terminated SIG' "$LOG"; then
     grep -oE 'Process [0-9]+ \([^)]*\) terminated SIG[A-Z]+[^ ]*( [a-z]+=[0-9a-fx]+)*' "$LOG" | tail -1 >&2
     exit 1
