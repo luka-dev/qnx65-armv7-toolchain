@@ -344,9 +344,10 @@ root and needs the images built.
 ```sh
 host-scripts/qnx-selftest.sh    # 7 fast checks, seconds
 tests/asm-ab.sh                 # gas 2.19 vs 2.38 over binutils' own ARM suite
-tests/c-torture.sh              # 1507 C tests x each compiler, vs baseline
-tests/libstdcxx.sh              # 7198 libstdc++ tests x each compiler
-tests/qemu-run.sh <binary>      # run an armle-v7 binary on real QNX under QEMU
+tests/c-torture.sh              # 1507 C tests x each compiler, compile-only, vs baseline
+tests/libstdcxx.sh              # 7198 libstdc++ tests x each compiler, compile-only
+tests/runtime.sh [variant]      # every c-torture test EXECUTED on QNX under QEMU
+tests/qemu-run.sh <binary>      # run one armle-v7 binary on real QNX under QEMU
 tests/vfp-runtime.sh            # prove the VFP fix by executing it
 ```
 
@@ -373,6 +374,7 @@ NEW failure stands out):
 | suite | 4.4 | 4.9 | 8.5 |
 |---|---|---|---|
 | gcc.c-torture (compile+link) | 1458/1507 | 1475/1507 | 1493/1507 |
+| gcc.c-torture (**executed** on QNX) | not run | 1447 ok, **5 wrong**, 23 crash | 1476 ok, **0 wrong**, 17 crash |
 | libstdc++ (compile) | - | 5621/7198 | 7006/7198 |
 | binutils ARM suite | - | - | 0 regressions vs 2.19 |
 
@@ -381,6 +383,38 @@ tests, and part of what remains is the DejaGnu harness we deliberately do not
 reproduce, not the compiler - each script documents its own residue. The value
 is the baseline: it is how the `__PTRDIFF_T` boundary and the missing
 `-pthread`/`-rdynamic` were caught.
+
+**The executed row is the one that matters most** - it is the only check in
+this repo that runs a large test suite and verifies the *answer*, not just
+that the build succeeded. "Crash" means the process reached `terminated
+SIG...` (mostly nested-function trampolines on QNX's non-executable stack, and
+`eeprof-1` needing a profiling runtime `:4.9`/`:8.5` do not have - both known
+platform limits, not codegen bugs). "Wrong" means it ran to completion and
+returned a nonzero status.
+
+8.5 is clean: 0 wrong answers. 4.9's 5 were investigated by hand
+(`tests/baseline/runtime-notes.md`). One (`pr90949`) is not a compiler bug at
+all: its `main()` relies on the C99+ implicit `return 0`, which is undefined
+behaviour under GCC 4.9's *default* dialect (`-std=gnu90`) - proven by getting
+two different garbage exit codes from the same binary on separate runs, and a
+clean 0 under `-std=gnu99`.
+
+The other 4 (`pr68648`, `pr94591`, `pr97421-2`, `pr97421-3`) are real,
+reproducible miscompilations at plain `-O2` - but **not** the upstream bugs
+their filenames suggest. c-torture reuses each regression test's PR number as
+its filename regardless of target, and checking the actual PR content against
+what we reproduce ruled two of them out directly: `pr94591` is titled as an
+AArch64 NEON `REV64` encoding bug, but our build has no NEON (`.fpu
+vfpv3-d16`) and `__builtin_shuffle` compiles to plain `ldr`/`str` - a
+completely different code path. `pr97421-2` requires `-fmodulo-sched
+-fno-dce -fno-strict-aliasing` via `dg-additional-options`, which our harness
+does not apply; compiled *with* those exact flags it passes cleanly
+(`exit=0`), so whatever fails at bare `-O2` is not the modulo-scheduler bug
+that PR was about. So the "found and fixed upstream" story in an earlier
+version of this section was wrong - these are unidentified GCC 4.9.4 codegen
+bugs, not open-and-shut upstream ones. Root-causing them would mean bisecting
+GCC's own optimization passes, not cherry-picking a patch; documented as a
+known limitation of `:4.9` rather than pursued.
 
 ---
 
