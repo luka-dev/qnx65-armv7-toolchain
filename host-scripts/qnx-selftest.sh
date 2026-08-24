@@ -4,9 +4,7 @@
 #      it emitted vnmls for vmls, vmls for vnmla, vnmla for vnmls).
 #   2. static libstdc++.a does not define QNX's libm float entry points - the
 #      libstdc++ math_stubs recurse forever on this target.
-#   3. the shared sdp/ headers still build C++ with the STOCK 4.4.2 compiler.
-#      sdp/ is one tree for every gcc, so a header tweak made for 8.5 can
-#      silently break 4.4.2 (the __PTRDIFF_T carrier in sys/platform.h did).
+#   3. the shared sdp/ headers still build C and C++ with both supported GCCs.
 # Skipped when a variant image is not built.
 # Usage: ./qnx-selftest.sh   (needs the qnx65-armv7-toolchain image)
 set -e
@@ -39,7 +37,7 @@ echo "ok: libstdc++.a leaves float math to libm"
 #   carrier set where GCC's <stddef.h> wins      -> C loses ptrdiff_t entirely
 #                                                   (this is Go's cgo prolog)
 # So test both shapes against each variant that is actually built.
-for tag in 4.4 4.9 8.5; do
+for tag in 4.9 8.5; do
     docker image inspect "$IMG:$tag" >/dev/null 2>&1 || { echo "skip: $IMG:$tag not built"; continue; }
     docker run --rm --platform=linux/amd64 "$IMG:$tag" sh -c '
 set -e
@@ -61,17 +59,16 @@ done
 # -pthread and -rdynamic are no-ops / spec mappings on QNX, but a port that
 # does not DECLARE them makes the driver reject them outright, which is how
 # cgo fails on this target.  Cheap to check, and it caught two real gaps in
-# the 4.9 port.  Skipped for stock 4.4.2, which predates both.
+# the 4.9 port.
 for tag in 4.9 8.5; do
     docker image inspect "$IMG:$tag" >/dev/null 2>&1 || { echo "skip: $IMG:$tag not built"; continue; }
     docker run --rm --platform=linux/amd64 "$IMG:$tag" sh -c '
 set -e
 cd /tmp; echo "int main(void){return 0;}" > o.c
 for opt in -pthread -rdynamic; do
-    # Checking only that a binary appeared is not enough: stock 4.4.2 prints
-    # "unrecognized option" to stderr, ignores the flag and still exits 0 - and
-    # that stderr noise is exactly what makes Go reject the compiler. So the
-    # option counts as supported only if the driver is silent about it.
+    # Checking only that a binary appeared is not enough: a driver can print
+    # "unrecognized option" to stderr, ignore the flag and still exit 0. Go
+    # rejects that stderr output, so the option counts only if it is silent.
     msg=$(arm-unknown-nto-qnx6.5.0eabi-gcc $opt o.c -o o 2>&1)
     test -f o || { echo "FAIL: driver rejects $opt (cgo needs it)" >&2; exit 1; }
     case "$msg" in

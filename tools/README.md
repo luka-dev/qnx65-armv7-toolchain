@@ -27,13 +27,17 @@ Remove one: delete its folder. No archive to rebuild.
 
 `tools/qcc/bin/qcc` is a small shim that ships with the repo (tracked, not a
 user drop-in). It puts a `qcc` on the container `PATH` because `mkifs` build
-files carry a `[linker=...]` spec that literally invokes `qcc` - and this image
-replaced the stock SDP `qcc` with GCC directly. Without it, building an IFS
+files carry a `[linker=...]` spec that literally invokes `qcc`. The image uses
+GCC directly and supplies this shim for that interface. Without it, building an IFS
 image fails with `qcc: not found` when it links a relocatable startup.
 
 It's a full qcc-to-gcc translator, not just a passthrough - qcc-based Makefiles
 and hand invocations work too, not only mkifs. It maps the qcc-only options and
 execs the real cross driver (`arm-unknown-nto-qnx6.5.0eabi-{gcc,g++}`):
+
+The proprietary stock QNX driver is not distributed. Its fingerprints and the
+comparison data validating this translation are recorded in
+`tests/reference/stock-gcc-4.4.2.md`.
 
 - `-V[ver,]variant` / `-Y` -> dropped (single target), but its language is
   honoured: a C++ profile (`*cpp/*gpp/*acpp/*ecpp/*c++`) selects **g++** so C++
@@ -70,21 +74,24 @@ Or mount at runtime (no rebuild - add/remove folders and just re-run):
 Binaries must be `linux/amd64` (the image runs under amd64, emulated on Apple Silicon).
 
 
-## gas-compat/bin/as — GCC-to-gas 2.19 compatibility shim
+## gas-compat/bin/as — optional GCC-to-gas compatibility shim
 
 `gas` 2.19 (stock QNX SDP) supports the ARM NEON element-alignment hint but only
 in the UAL comma spelling `[Rn, :align]`. GCC and hand-written core NEON emit
 the no-comma spelling `[Rn:align]`, which 2.19 rejects with "']' expected". The
-shim rewrites the former to the latter and calls the real `…-as-2.19`; it touches
-only operands of the exact shape `[<reg>:<num>]`.
+shim rewrites the former to the latter and calls the variant's default
+assembler; it touches only operands of the exact shape `[<reg>:<num>]`. That
+default is gas 2.19 in `:4.9` and gas 2.38 in `:8.5`, where the rewrites are
+harmless but unnecessary.
 
 GCC 8 can also emit the ARM-mode directive `.inst 0x…`, which gas 2.19 predates.
 The shim translates that exact directive to the equivalent `.word 0x…`. It does
 not rewrite Thumb `.inst.n` or `.inst.w` forms.
 
 This was long recorded as a "binutils 2.19 ceiling" that forced NEON off. It is
-not a ceiling — the assembler accepts the hint, just spelled with a comma. No
-binutils upgrade needed.
+not a ceiling — the old assembler accepts the hint, just spelled with a comma.
+The main `:8.5` toolchain nevertheless uses gas 2.38 because 2.19 silently
+mis-encodes the VFP multiply-accumulate family.
 
 GCC resolves `as` by ABSOLUTE path, not PATH, so unlike the qcc shim this cannot
 work via PATH. It is picked up with:  `gcc -B/opt/tools/gas-compat/bin`  (GCC looks

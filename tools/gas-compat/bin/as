@@ -16,10 +16,9 @@
 # or `.inst.w`: they require separate width/endianness handling and validation.
 set -euo pipefail
 
-# VESTIGIAL as of 2026-08-22. The image now ships gas 2.38 as the default
-# assembler (see binutils/build.sh), which understands every form this shim was
-# written to rewrite - and, unlike 2.19, encodes the VFP multiply-accumulate
-# family correctly. Nothing in-tree passes -B at this shim any more.
+# Nothing in-tree passes -B at this shim any more. It remains useful only for
+# external callers using the :4.9 variant's gas 2.19; :8.5 defaults to gas 2.38,
+# which understands every form this shim was written to rewrite.
 #
 # It deliberately forwards to the DEFAULT assembler, not to -as-2.19: pointing
 # it back at 2.19 would silently reintroduce the mis-encoding for anyone who

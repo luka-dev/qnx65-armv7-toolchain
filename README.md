@@ -3,25 +3,23 @@
 **Docker images that cross-compile C/C++, Go, and Rust for QNX Neutrino 6.5.0
 `armle-v7` - no QNX VM, no external SDP install.**
 
-Everything is assembled from source in one multi-stage `docker build`: the QNX
-6.5 SDP tree with a modern **GCC 8.5.0** (full C++17) in place of the stock
-4.4.2, a from-scratch **`GOOS=qnx` Go 1.26 port**, and a **nightly Rust**
+Everything is assembled in one multi-stage `docker build`: the QNX 6.5 SDP
+sysroot with **GCC 8.5.0** (full C++17), a from-scratch **`GOOS=qnx` Go 1.26
+port**, and a **nightly Rust**
 `build-std` target - all three linking through the same QNX toolchain.
 
-Three compilers are available, because different jobs need different ones -
-hooks that must stay ABI-compatible with shipped firmware want the old
-toolchain, modern C++ wants 8.5:
+Two compilers are available: 4.9 is the legacy baseline, while modern C++ wants
+8.5:
 
 | tag | compiler | assembler | C | C++ | Go | Rust |
 |---|---|---|---|---|---|---|
-| `:4.4` | the SDP's own GCC 4.4.2 + qcc | gas 2.19 | ✅ | ✅ | - | - |
 | `:4.9` | GCC 4.9.4 (`gcc/4.9`) | gas 2.19 | ✅ | C++11 | ✅ | untested |
 | `:8.5` | GCC 8.5.0 (`gcc/port`) | **gas 2.38** | ✅ | C++17 | ✅ | ✅ |
 
 Add a language runtime with a suffix: `:8.5-go`, `:8.5-rust`, `:8.5-full`
-(`:8.5-full` is also `:latest`). Go and Rust are offered on 4.9 and 8.5 only -
-the stock 4.4.2 driver warns on the options cgo passes, and Go treats a
-compiler that writes to stderr as broken.
+(`:8.5-full` is also `:latest`). Stock GCC 4.4.2/qcc is reference-only: no
+image or binaries are distributed, and its recorded comparison is under
+`tests/reference/`.
 
 Every ✅ above means *executed on QNX under QEMU*, not merely compiled - see
 [Testing](#testing).
@@ -61,7 +59,7 @@ Every ✅ above means *executed on QNX under QEMU*, not merely compiled - see
 
 | Language | Compiler | Standard | Invocation | Output |
 |----------|----------|----------|------------|--------|
-| C / C++  | **GCC 8.5.0** (custom-built, replaces SDP 4.4.2) | C11 / **C++17** | `arm-unknown-nto-qnx6.5.0eabi-{gcc,g++}` | ELF 32-bit ARM QNX exe/`.so` |
+| C / C++  | **GCC 8.5.0** (custom-built) | C11 / **C++17** | `arm-unknown-nto-qnx6.5.0eabi-{gcc,g++}` | ELF 32-bit ARM QNX exe/`.so` |
 | Go       | **Go 1.26.4**, `GOOS=qnx GOARCH=arm` port | full `gc` toolchain | `GOOS=qnx GOARCH=arm GOARM=7 go build` | ELF 32-bit ARM QNX exe |
 | Rust     | **nightly** rustc + `build-std` | **full `std`** (threads/fs/net/Command) | `build-std <crate>` | ELF 32-bit ARM QNX exe, linked by the QNX gcc |
 
@@ -87,12 +85,13 @@ exists*.
 ### Toolchain (on `PATH`, prefix `arm-unknown-nto-qnx6.5.0eabi-`)
 - **GCC 8.5.0** - `gcc` / `g++` / `cpp`. C11, full C++17. Ships a static
   `libstdc++.a` (so `-static-libstdc++` works) beside the shared one.
-- **Binutils 2.19** - `as ld ar nm ranlib strip objcopy objdump readelf size
-  strings addr2line c++filt gprof`.
+- **gas 2.38** in `:8.5`; **gas 2.19** in `:4.9`. The remaining binutils tools
+  (`ld ar nm ranlib strip objcopy objdump readelf size strings addr2line c++filt
+  gprof`) stay at the SDP's 2.19 generation in both variants.
 - **`qcc`** - qcc-to-gcc shim for `mkifs` / qcc Makefiles (`tools/qcc`; full flag
   table in `tools/README.md`).
-- **`gas-compat`** - compatibility shim for modern GCC output and gas 2.19,
-  via `-B/opt/tools/gas-compat/bin`.
+- **`gas-compat`** - optional compatibility shim for callers that explicitly
+  use gas 2.19, via `-B/opt/tools/gas-compat/bin`; unnecessary with `:8.5`.
 
 ### Languages
 - **Go 1.26.4** - `go` / `gofmt`, `GOOS=qnx GOARCH=arm` port.
@@ -185,7 +184,7 @@ drift can still bite - prefer C APIs at such boundaries).
 # 1. Build the image (needs network; the GCC stage is ~30 min; ~1.7 GB image)
 ./host-scripts/qnx-run.sh build
 
-# ...or one compiler only, no Go/Rust - 610 MB instead of 1.7 GB
+# ...or one compiler only, no Go/Rust - 771 MB instead of 1.7 GB
 ./host-scripts/qnx-run.sh build 8.5
 
 # 2. C++17 (add -static-libstdc++ -static-libgcc if the target image won't
@@ -205,7 +204,6 @@ docker run --rm -it -v "$PWD":/src qnx65-armv7-toolchain bash
 
 # run a command in a specific compiler (QNX_VARIANT=4.9 works too)
 ./host-scripts/qnx-run.sh -V4.9   arm-unknown-nto-qnx6.5.0eabi-g++ -std=c++11 a.cpp -o a
-./host-scripts/qnx-run.sh -V4.4   qcc -Vgcc_ntoarmv7le_gpp -O2 a.cpp -o a
 ```
 
 Verify any output binary:
@@ -226,8 +224,8 @@ the cwd mounted, e.g. `./host-scripts/qnx-run.sh build-std ./mycrate` or
 
 Invoke the compiler **directly** by its target triplet - it sets all QNX defines
 (`__QNXNTO__`, `__QNX__`, `__ELF__`, `__ARM__`), sysroot, CRT and specs itself.
-The stock SDP `qcc` driver was replaced by GCC, but a **`qcc` shim** on `PATH`
-translates qcc-style invocations to gcc/g++ for anything that still calls it
+The image uses GCC directly. A **`qcc` shim** on `PATH` translates qcc-style
+invocations to gcc/g++ for anything that calls that interface
 (`mkifs`, qcc-based Makefiles) - see [The `qcc` shim](#the-qcc-shim).
 
 ```sh
@@ -342,7 +340,7 @@ Four levels, each catching what the others cannot. Everything runs from the repo
 root and needs the images built.
 
 ```sh
-host-scripts/qnx-selftest.sh    # 7 fast checks, seconds
+host-scripts/qnx-selftest.sh    # fast silent-failure checks, seconds
 tests/asm-ab.sh                 # gas 2.19 vs 2.38 over binutils' own ARM suite
 tests/c-torture.sh              # 1507 C tests x each compiler, compile-only, vs baseline
 tests/libstdcxx.sh              # 7198 libstdc++ tests x each compiler, compile-only
@@ -368,15 +366,20 @@ printed. See `tests/qemu/README.md` for the boot pieces - including a **timer
 bug in the QNX BSP itself** (wrong interrupt number) that left `clock_gettime()`
 returning zero forever and made Go abort at startup.
 
-**Current numbers** (baselines in `tests/baseline/`, compared by test name so a
-NEW failure stands out):
+**Current numbers** (active baselines in `tests/baseline/`, compared by test
+name so a NEW failure stands out):
 
-| suite | 4.4 | 4.9 | 8.5 |
-|---|---|---|---|
-| gcc.c-torture (compile+link) | 1458/1507 | 1475/1507 | 1493/1507 |
-| gcc.c-torture (**executed** on QNX) | not run | 1447 ok, **5 wrong**, 23 crash | 1476 ok, **0 wrong**, 17 crash |
-| libstdc++ (compile) | - | 5621/7198 | 7006/7198 |
-| binutils ARM suite | - | - | 0 regressions vs 2.19 |
+| suite | 4.9 | 8.5 |
+|---|---|---|
+| gcc.c-torture (compile+link) | 1475/1507 | 1493/1507 |
+| gcc.c-torture (**executed** on QNX) | 1447 ok, **5 wrong**, 23 crash | 1476 ok, **0 wrong**, 17 crash |
+| libstdc++ (compile) | 5621/7198 | 7006/7198 |
+| binutils ARM suite | - | 0 regressions vs 2.19 |
+
+The stock GCC 4.4.2 reference compiled 1458/1507 C tests. Its fingerprints, 49
+expected failures, and comparison notes are recorded in
+`tests/reference/stock-gcc-4.4.2.md`; they are historical results, not an active
+test target.
 
 Do not read these as pass/fail gates. Older compilers are *supposed* to lose
 tests, and part of what remains is the DejaGnu harness we deliberately do not
@@ -480,63 +483,25 @@ per-project patching (both in `gcc/port/arm-nto.h`):
 One multi-stage `Dockerfile`:
 
 ```
-+-- base: qnx-sdp -----------------------------------------------+
-| debian:bullseye-slim@sha256 (amd64 + i386 multilib)           |
-|   + libc6/libstdc++6/zlib1g:i386  (QNX binutils are 32-bit x86)|
-|   + libgmp10 libmpfr6 libmpc3     (GCC host libs)              |
-|   + gcc libc6-dev                 (host cc for Cargo scripts)  |
-|   + make curl ca-certificates xz-utils                         |
-| COPY sdp/  ->  /opt/qnx650                                     |
-|   = QNX 6.5 SDP: binutils 2.19 + armle-v7 sysroot (NO gcc)     |
-+---------------------------------------------------------------+
-   |               |                |               |            |
-   v FROM qnx-sdp  v FROM qnx-sdp   v FROM qnx-sdp  v FROM qnx-sdp v FROM qnx-sdp
-+-gcc-8.5-build-+ +binutils-build-+ +gcc-4.9-build-+ +-go-build--+ +-rust-build---+
-|COPY gcc/(port)| |a gas that     | |COPY gcc/4.9/ | |COPY go/   | |rustup nightly|
-|curl gcc-8.5.0 | |encodes ARM    | |(own port)    | |(src)      | |+ src         |
-|apply port,    | |VFP correctly -| |curl gcc-4.9.4| |make.bash: | |COPY rust/    |
-| configure,    | |2.19 does not  | |apply, build  | | host go + | |(std port)    |
-| make->/gcc-out| |-> as-2.38     | |->/gcc49-out  | | qnx stdlib| |bake std      |
-+---------------+ +---------------+ +--------------+ +-----------+ +--------------+
-   |                    |                  |
-   v                    v                  v
-+-base-8.5-------+ (as-2.38 swapped   +-base-4.9---------+   +-base-4.4---------+
-|COPY --from=     in as the default)  |COPY --from=       |   |COPY gcc/         |
-| gcc-8.5-build   gas; 2.19 kept as   | gcc-4.9-build      |   | stock-4.4.2/     |
-| /gcc-out        ...-as-2.19)        | /gcc49-out         |   | (restored, not   |
-+-----------------+                   +--------------------+   |  built)          |
-   |                                       |                   +------------------+
-   +--------------------+------------------+                          |
-              v FROM ${BASE} (--build-arg BASE=base-{4.4,4.9,8.5})    |
-   +-- base-env --------------------------------------------+        |
-   | cmake/meson/ninja/pkg-config (cross build systems)      |        |
-   | qcc shim symlinked in where there is no real qcc         |<-------+
-   | COPY tools/ + cross/ + entrypoint                        |
-   +-----------------------------------------------------------+
-      |                                  |
-      v FROM base-env                    v FROM base-env
-   +-- with-go -----------+          +-- with-rust -------------+
-   | COPY --from=go-build  |          | COPY --from=rust-build   |
-   |  /opt/go              |          |  /opt/rustup /opt/cargo  |
-   +-----------------------+          | build the unwind shim;   |
-                                       | install build-std wrapper|
-                                       +---------------------------+
-                                                  |
-                                                  v FROM with-rust
-                                       +-- full: + the Go layer too --+
-                                       | (only the small Go COPY is   |
-                                       |  repeated; the rest is       |
-                                       |  inherited from with-rust)   |
-                                       +-------------------------------+
+qnx-sdp (QNX 6.5 sysroot + binutils 2.19, no compiler)
+  |-- gcc-4.9-build --------------------------> base-4.9
+  |-- gcc-8.5-build + binutils-build ---------> base-8.5 (+ gas 2.38)
+  |-- go-build ----------------------------------------------+
+  `-- rust-build -----------------------------------------+   |
+                                                         |   |
+base-{4.9,8.5} --BASE--> base-env (tools/qcc + cross files)|   |
+                              |                           |   |
+                              |--> with-go <--------------+---+
+                              |--> with-rust <------------+
+                              `--> full (Rust + Go)
 ```
 
-`qnx-sdp` carries **binutils + the sysroot but no compiler**. Each compiler is
-its own pair of stages - a `*-build` stage that compiles it (GCC 8.5.0 and 4.9.4
-from source, ~20-40 min each; `binutils-build` builds only `as`, since the SDP's
-2.19 mis-encodes some ARMv7 VFP instructions) and a `base-<ver>` stage that
-merges the result into a fresh `qnx-sdp` (4.4 skips the first step - it is
-restored, not built). Which compiler ends up in `base-env` - and everything
-above it - is picked by `--build-arg BASE=base-{4.4,4.9,8.5}`, defaulting to
+`qnx-sdp` carries **binutils + the sysroot but no compiler**. Each supported
+compiler has a `*-build` stage that compiles it from source (GCC 8.5.0 and 4.9.4,
+~20-40 min each) and a `base-<ver>` stage that merges it into a fresh `qnx-sdp`.
+`binutils-build` builds only `as`, since the SDP's 2.19 mis-encodes some ARMv7
+VFP instructions. Which compiler ends up in `base-env` - and everything above
+it - is picked by `--build-arg BASE=base-{4.9,8.5}`, defaulting to
 `base-8.5`; `host-scripts/qnx-run.sh build <variant>` sets this for you. Go and
 Rust stages are `FROM qnx-sdp` and **link through whichever GCC `base-env`
 picked** - Go's external linker and Rust's `.a -> .so` step both call
@@ -560,7 +525,6 @@ sdp/                the QNX 6.5 SDP base - the foundation all languages link aga
 gcc/                the C/C++ compilers:
   - build.sh, port/   GCC 8.5.0 - the arm-nto-qnx port applied to vanilla upstream
   - 4.9/              GCC 4.9.4 - its own build.sh + port/, taken from the release tag
-  - stock-4.4.2/      the SDP's own compiler + qcc, restored from the 6.5 tarball
 binutils/           builds a gas that encodes ARM VFP correctly (2.19 does not)
 go/                 patched Go 1.26.4 source - src/ + lib/ only (~152 MB);
                     make.bash regenerates bin/ + pkg/ at build time
@@ -576,24 +540,23 @@ host-scripts/       host-side runners (qnx-run.sh, qnx-selftest.sh, qnx-mkifs.sh
 tests/              the suites and the QEMU runner - see Testing:
   - qemu/             boot pieces (startup, u-boot) + the BSP timer patch
   - baseline/         expected failures, compared by test name
+  - reference/        results and fingerprints for reference-only targets
 ```
 
 The top-level inputs map to the Docker stages: `sdp/` -> `qnx-sdp`, `gcc/` ->
 `gcc-8.5-build`, `gcc/4.9/` -> `gcc-4.9-build`, `binutils/` -> `binutils-build`,
-`go/` -> `go-build`, `rust/` -> `rust-build`; `gcc/stock-4.4.2/` is copied
-straight into `base-4.4`. `~335 MB` in git (`sdp/` ~ 161 MB, `go/` ~ 152 MB,
-`gcc/stock-4.4.2/` ~ 20 MB). Images: `:4.4` 602 MB, `:8.5` 771 MB,
+`go/` -> `go-build`, and `rust/` -> `rust-build`. Images: `:8.5` 771 MB and
 `:8.5-full` **1.7 GB**.
 
 ---
 
 ## Design decisions
 
-### GCC 4.4.2 -> 8.5.0, in place
-The stock SDP compiler was **fully replaced** by a custom GCC 8.5.0 built from
-source (recipe in `gcc/`) for the same `arm-unknown-nto-qnx6.5.0eabi` target. It
-reuses the SDP's binutils 2.19 and the 6.5 sysroot, and lives exactly where 4.4.2
-did (`usr/bin` drivers, `usr/lib/gcc/.../8.5.0`, `usr/libexec/gcc/.../8.5.0`).
+### GCC 8.5.0 toolchain
+GCC 8.5.0 is built from source (recipe in `gcc/`) for the
+`arm-unknown-nto-qnx6.5.0eabi` target. It uses the QNX 6.5 sysroot and installs
+its drivers and libraries under `usr/bin`, `usr/lib/gcc/.../8.5.0`, and
+`usr/libexec/gcc/.../8.5.0`.
 Gains: **full C++17** (structured bindings, `if constexpr`, fold expressions,
 `<optional>`/`<variant>`/`<string_view>`, `<filesystem>` via `-lstdc++fs`), C11,
 markedly better ARM/NEON codegen. The trade-off vs `:4.9` (still offered - see
@@ -608,10 +571,10 @@ port/defect log in `gcc/README.md`. For a newer standard, rebuild a newer GCC
 against this sysroot the same way.
 
 ### <a name="the-qcc-shim"></a>The `qcc` shim
-The stock SDP `qcc` was removed: it exists only to select among **multiple**
-{arch x compiler version x C++ library} combos via `-V`, and this image has
-exactly one of each (armv7 x GCC 8.5 x GNU libstdc++). The direct driver already
-sets every QNX define, sysroot, CRT and specs and links correctly.
+The proprietary stock SDP `qcc` is not distributed. It selects among
+**multiple** {arch x compiler version x C++ library} combinations via `-V`;
+each image variant has exactly one of each. The direct driver already sets every
+QNX define, sysroot, CRT and specs and links correctly.
 
 But `mkifs` build files (and some Makefiles) literally invoke `qcc`, so
 `tools/qcc/bin/qcc` is a small **qcc-to-gcc translator** (validated against the
@@ -686,10 +649,8 @@ docker build --platform=linux/amd64 --target full \
 ```
 
 `--target` picks the language layer (`base-env` = compiler only, `with-go`,
-`with-rust`, `full` = both); `--build-arg BASE=base-{4.4,4.9,8.5}` picks the
-compiler underneath it (default `base-8.5`). `:4.4` has no language layer -
-Go/Rust need options the stock 4.4.2 driver does not accept (see the tag
-table).
+`with-rust`, `full` = both); `--build-arg BASE=base-{4.9,8.5}` picks the
+compiler underneath it (default `base-8.5`).
 
 **Requirements**
 - Docker with `linux/amd64` support (native on x86-64; emulated via QEMU/Rosetta
@@ -713,17 +674,16 @@ table).
 - **GCC 4.9.4 source** pinned by **sha256** (`GCC49_SHA256`) - same mechanism,
   taken from `gcc/4.9`.
 - **binutils 2.38 source** pinned by **sha256** (`BINUTILS_SHA256`) - builds
-  only `as`; see [GCC 4.4.2 -> 8.5.0, in place](#gcc-442---850-in-place) for why.
+  only `as`; see [GCC 8.5.0 toolchain](#gcc-850-toolchain) for why.
 - **Go bootstrap** pinned by version (`GO_BOOTSTRAP`) **and sha256** (`GO_BOOTSTRAP_SHA256`).
 - **Rust nightly** pinned by **date** - `RUST_NIGHTLY` at install + the same date
   in `rust/rust-toolchain.toml`; rustup verifies component checksums.
 - GCC 8.5.0 and 4.9.4 are each **built from source**, in `gcc-8.5-build` and
   `gcc-4.9-build`, from vanilla upstream plus their respective vendored ports
-  (`gcc/port`, `gcc/4.9/port`); `sdp/host` carries only binutils. The 4.4.2
-  compiler is the opposite - restored as binaries from the 6.5.0 SDP tarball
-  (`gcc/stock-4.4.2/`), not rebuilt. Source tarballs are fetched from
-  ftp.gnu.org (byte-identical to the canonical releases, checksum-checked);
-  vendor them under `gcc/`/`binutils/` for a fully offline build.
+  (`gcc/port`, `gcc/4.9/port`); `sdp/host` carries only binutils. Source
+  tarballs are fetched from ftp.gnu.org (byte-identical to the canonical
+  releases, checksum-checked); vendor them under `gcc/`/`binutils/` for a fully
+  offline build.
 - Still floats: **`apt` package versions** (from the Debian mirror). The digest-
   pinned base fixes the pre-installed set, but `apt-get install` pulls current
   versions. For bit-reproducibility, point `sources.list` at snapshot.debian.org
@@ -737,7 +697,6 @@ build stage, not a ready polyglot image; see
 docker build --platform=linux/amd64 --target qnx-sdp        -t _sdp .    # binutils + sysroot, no gcc
 docker build --platform=linux/amd64 --target base-8.5       -t _base85 . # + GCC 8.5.0 + gas 2.38
 docker build --platform=linux/amd64 --target base-4.9       -t _base49 . # + GCC 4.9.4, stock gas
-docker build --platform=linux/amd64 --target base-4.4       -t _base44 . # + the stock compiler, restored
 docker build --platform=linux/amd64 --target base-env       -t _env .    # + tools/, cross/, entrypoint
 docker build --platform=linux/amd64 --target with-go        -t _go .     # base-env + Go
 docker build --platform=linux/amd64 --target with-rust      -t _rust .   # base-env + Rust
@@ -863,14 +822,12 @@ why that swap is format-safe. The full tool list is in the [Inventory](#inventor
 - **Rust** - **full `std`** via `build-std=std,panic_abort` (threads, fs, net,
   Command, collections), runtime-validated on real QNX 6.5 QEMU. `panic=abort`,
   no unwind/backtrace. Port baked into the image (`build-std <crate>`).
-- **Three compilers** - 8.5 is the default; `:4.9` and `:4.4` exist for work
-  that must stay close to what the device shipped with. All three share one
-  `sdp/` sysroot, so a header tweak for one can break another - that is what
-  `qnx-selftest.sh` guards (it has caught exactly that twice).
-- **Known rough edges** - Rust on `:4.9` is untested; Go and Rust are not
-  offered on `:4.4` (the stock driver warns on the options cgo passes, and Go
-  treats stderr output as failure, though pure `CGO_ENABLED=0` Go does build
-  there). QNX's `<xtgmath.h>` collides with GNU `<complex>` when a program
+- **Two compilers** - 8.5 is the default and `:4.9` is the legacy baseline.
+  Both share one `sdp/` sysroot, so a header tweak for one can break another;
+  `qnx-selftest.sh` checks both directions. Stock GCC 4.4.2 is reference-only
+  and documented under `tests/reference/`.
+- **Known rough edges** - Rust on `:4.9` is untested. QNX's `<xtgmath.h>`
+  collides with GNU `<complex>` when a program
   defines its own `arg`/`conj`/`pow` for its own types and does
   `using namespace std`; ordinary `<complex>` is fine.
 - **One arch** - `armle-v7` only (other SDP arches trimmed from the tree).

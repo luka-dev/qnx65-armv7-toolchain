@@ -11,9 +11,7 @@
 #   ./qnx-run.sh build                                           # (re)build the image
 #   ./qnx-run.sh build 8.5                                       # C/C++ only
 #   ./qnx-run.sh build 4.9-go                                    # 4.9 + Go
-#   ./qnx-run.sh build 4.4                                       # stock SDP compiler
 #   ./qnx-run.sh -V4.9   arm-unknown-nto-qnx6.5.0eabi-g++ ...    # run in a variant
-#   ./qnx-run.sh -V4.4   qcc -Vgcc_ntoarmv7le_gpp ...            # stock qcc
 #
 # Run it from the project dir you want mounted (cwd -> /src).
 #
@@ -27,28 +25,22 @@ IMG=qnx65-armv7-toolchain
 CTX="$(cd "$(dirname "$0")/.." && pwd)"   # repo root (Dockerfile / build context)
 PLAT=linux/amd64
 
-# Variants are <ver>[-<lang>]: ver = 4.4 | 4.9 | 8.5, lang = go | rust | full.
+# Variants are <ver>[-<lang>]: ver = 4.9 | 8.5, lang = go | rust | full.
 # The compiler half is picked with --build-arg BASE, the language half with
 # --target, so any combination is one build. Tag == variant name.
 #   8.5-full  GCC 8.5 + gas 2.38 + Go + Rust   (also tagged :latest)
 #   4.9       GCC 4.9.4 + stock gas 2.19, C/C++ only
-#   4.4       the SDP's own GCC 4.4.2 + qcc
-# Go/Rust are only offered on 4.9 and 8.5: the stock 4.4.2 driver rejects the
-# options cgo passes (-pthread, -rdynamic), so those images would be half-dead.
 variant_split() {   # sets $ver and $lang, or fails with a message
     ver=${1%%-*}
     lang=${1#"$ver"}; lang=${lang#-}
     case "$ver" in
-        4.4|4.9|8.5) ;;
-        *) echo "unknown compiler '$ver' (4.4|4.9|8.5)" >&2; return 1 ;;
+        4.9|8.5) ;;
+        *) echo "unknown compiler '$ver' (4.9|8.5)" >&2; return 1 ;;
     esac
     case "$lang" in
         ""|go|rust|full) ;;
         *) echo "unknown language variant '$lang' (go|rust|full)" >&2; return 1 ;;
     esac
-    if [ "$ver" = 4.4 ] && [ -n "$lang" ]; then
-        echo "4.4 is C/C++ only - Go/Rust need 4.9 or 8.5" >&2; return 1
-    fi
 }
 
 build() {
@@ -69,8 +61,8 @@ build() {
 if [ "$1" = "build" ]; then shift; build "$1"; exit $?; fi
 
 # -V<variant> picks which compiler to run in; without it, :latest (= 8.5-full).
-# Different jobs genuinely need different compilers - old ABI-compatible hooks
-# against 4.4.2/4.9, modern C++ against 8.5 - so this is a per-command choice.
+# Different jobs genuinely need different compilers - legacy work against 4.9,
+# modern C++ against 8.5 - so this is a per-command choice.
 case "${1:-}" in
     -V*) TAG=${1#-V}; shift ;;
     *)   TAG=${QNX_VARIANT:-latest} ;;

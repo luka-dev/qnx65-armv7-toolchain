@@ -41,21 +41,6 @@
 #      to override the drivers, QCC_DEBUG=1 to echo the rewritten command.
 set -u
 
-# The stock SDP qcc, when this image actually ships one (the :4.4 variant does;
-# the ports do not). entrypoint puts /opt/tools/*/bin ahead of the SDP bin dir,
-# so without this the shim would shadow the real driver in the one image whose
-# entire point is the stock toolchain. Defer to it; QCC_NO_STOCK=1 forces the
-# shim for an A/B comparison.
-# NOTE the self-check: images without a real qcc symlink THIS SHIM to that very
-# path, because mkifs and the BSP makefiles invoke qcc by absolute path. Without
-# comparing canonical paths the shim would exec itself forever.
-STOCK_QCC=/opt/qnx650/host/linux/x86/usr/bin/qcc
-if [ -x "$STOCK_QCC" ] && [ "${QCC_NO_STOCK:-0}" != 1 ]; then
-    _self=$(readlink -f "$0" 2>/dev/null || echo "$0")
-    _stock=$(readlink -f "$STOCK_QCC" 2>/dev/null || echo "$STOCK_QCC")
-    [ "$_stock" != "$_self" ] && exec "$STOCK_QCC" "$@"
-    unset _self _stock
-fi
 : "${QCC_TARGET:=arm-unknown-nto-qnx6.5.0eabi}"
 CC="${QCC_CC:-${QCC_TARGET}-gcc}"
 CXX="${QCC_CXX:-${QCC_TARGET}-g++}"

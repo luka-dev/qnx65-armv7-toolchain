@@ -6,7 +6,7 @@
 # the real suite links against DejaGnu harness objects (testsuite_hooks,
 # __gnu_test::) that we are not reproducing - see the note on residue below.
 #
-#   tests/libstdcxx.sh [variant ...]     default: 4.9 8.5  (4.4 with --stock)
+#   tests/libstdcxx.sh [variant ...]     default: 4.9 8.5
 #   tests/libstdcxx.sh --update [...]    rewrite the baselines
 #
 # Tests carrying dg-error are NEGATIVE: the source is invalid on purpose and
@@ -45,7 +45,7 @@ RES="$CACHE/cxxresults"; rm -rf "$RES"; mkdir -p "$RES"
 
 for v in "$@"; do
     docker image inspect "$IMG:$v" >/dev/null 2>&1 || { echo "skip $v: not built"; continue; }
-    case "$v" in 4.4) STD=gnu++98 ;; 4.9) STD=gnu++11 ;; *) STD=gnu++17 ;; esac
+    case "$v" in 4.9) STD=gnu++11 ;; *) STD=gnu++17 ;; esac
     printf '%-5s (-std=%s) ' "$v" "$STD"
     docker run --rm --platform=linux/amd64 -v "$SUITE":/suite:ro \
         -v "$HERE/libstdcxx-inner.sh":/inner.sh:ro -e STD="$STD" \

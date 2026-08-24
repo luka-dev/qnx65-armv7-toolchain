@@ -5,16 +5,14 @@
 # One tag per compiler, optionally extended with a language runtime:
 #
 #   TAG        STAGE       WHAT
-#   :4.4       base-env    the SDP's own GCC 4.4.2 + qcc  (gcc/stock-4.4.2)
 #   :4.9       base-env    GCC 4.9.4 (gcc/4.9)  + stock gas 2.19
 #   :8.5       base-env    GCC 8.5.0 (gcc/port) + gas 2.38
 #   :<ver>-go       with-go     + the Go toolchain
 #   :<ver>-rust     with-rust   + the Rust toolchain
 #   :<ver>-full     full        + both
 #
-# The compiler is picked with --build-arg BASE=base-{4.4,4.9,8.5}; the language
-# stages sit on top of whichever one that names. Go/Rust need 4.9 or 8.5 - the
-# stock 4.4.2 driver rejects the options cgo passes, so those stages refuse it.
+# The compiler is picked with --build-arg BASE=base-{4.9,8.5}; the language
+# stages sit on top of whichever one that names.
 #
 # Builder stages (pulled in automatically, never built by hand):
 #   qnx-sdp          QNX 6.5 SDP tree: binutils 2.19 + armle-v7 sysroot, no gcc
@@ -73,8 +71,8 @@ FROM qnx-sdp AS gcc-8.5-build
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential libgmp-dev libmpfr-dev libmpc-dev flex bison texinfo file && \
     rm -rf /var/lib/apt/lists/*
-# Only the 8.5 recipe - NOT all of gcc/, which also holds the 4.9 port and the
-# 20M stock-4.4.2 tree; a wide COPY here rebuilds GCC on any of their edits.
+# Only the 8.5 recipe - NOT all of gcc/, which also holds the 4.9 port; a wide
+# COPY here would rebuild GCC on any of its edits.
 COPY gcc/build.sh /opt/gcc-src/build.sh
 COPY gcc/port/   /opt/gcc-src/port/
 ARG GCC_VER=8.5.0
@@ -144,7 +142,7 @@ RUN cd /opt/rust/tests/stdhello && \
 # The previous toolchain generation, kept as an A/B baseline for tests/. Same
 # port mechanism as 8.5 but its own tree (gcc/4.9/{build.sh,port}), taken from
 # the gcc4.9.4-* release tag. Built against the CURRENT sdp/, not the tag's, so
-# all three compilers share one sysroot and stay comparable. ~20-40 min.
+# both compilers share one sysroot and stay comparable. ~20-40 min.
 FROM qnx-sdp AS gcc-4.9-build
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential libgmp-dev libmpfr-dev libmpc-dev flex bison texinfo file && \
@@ -165,27 +163,6 @@ COPY --from=gcc-4.9-build /gcc49-out /opt/qnx650/host/linux/x86/usr
 RUN arm-unknown-nto-qnx6.5.0eabi-gcc --version | head -1 && \
     arm-unknown-nto-qnx6.5.0eabi-as  --version | head -1
 
-# ------------------ variant stock442: the SDP's own 4.4.2 + qcc ----------------
-# Restored, not built: drivers, cc1/cc1plus, libgcc, crt, fixed headers and qcc
-# with its .conf profiles, exactly as the 2010 SDP shipped them. The base stage
-# deliberately carries "no gcc" because 4.4.2 and 8.5 both claim the plain
-# ...eabi-gcc name, so this lives in its own stage and never merges with the
-# others. Exists purely as the A/B baseline for tests/ - not a working toolchain.
-FROM qnx-sdp AS base-4.4
-COPY gcc/stock-4.4.2/ /opt/qnx650/
-# The 4.4.2 driver invokes a bare `as`/`ld` and its baked-in tooldir is an
-# absolute path that gets pasted onto the install prefix, so it searches a
-# nonexistent .../4.4.2//opt/qnx650/... and falls through to Debian's x86
-# assembler, dying on "unrecognized option '-EL'" (-B and COMPILER_PATH do not
-# override it). The SDP bin dir is already first on PATH, so unprefixed
-# symlinks there are what the driver actually picks up. Safe in this stage
-# only, which never builds host code.
-RUN cd /opt/qnx650/host/linux/x86/usr/bin && \
-    for t in as ld ar nm objcopy objdump ranlib strip; do \
-        ln -sf arm-unknown-nto-qnx6.5.0eabi-$t $t; done && \
-    arm-unknown-nto-qnx6.5.0eabi-gcc --version | head -1 && \
-    as --version | head -1
-
 # ---------------- ctoolchain: C/C++ only (GCC 8.5.0 + gas 2.38) ----------------
 # The compiler half of the final image, without Go and Rust: all the test
 # harness needs, and a far smaller image to spin up once per test run.
@@ -205,8 +182,7 @@ RUN cd /opt/qnx650/host/linux/x86/usr/bin && \
 # ------------------- base-env: the chosen compiler + build obvyazka ------------
 # Everything that is not a compiler and not a language runtime: cross-build
 # drivers, the tools/ drop-ins, cross/ helper files and the entrypoint. Sits on
-# whichever compiler BASE names, so every variant gets the same environment -
-# `:4.4` is as usable as `:8.5`, just with an older compiler.
+# whichever compiler BASE names, so every variant gets the same environment.
 #
 # Downside of putting tools/ here rather than dead last: editing it now
 # invalidates the Go/Rust copy layers above it. That is the price of them not
@@ -222,10 +198,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY tools/ /opt/tools/
 # mkifs and the BSP makefiles invoke qcc by ABSOLUTE path ($QNX_HOST/usr/bin/qcc),
 # not through PATH, so the shim being on PATH is not enough - without this,
-# building a QNX BSP or an IFS fails with "qcc: Command not found". The stock
-# variant already has the real driver there and is left alone.
-RUN [ -x /opt/qnx650/host/linux/x86/usr/bin/qcc ] || \
-    ln -sf /opt/tools/qcc/bin/qcc /opt/qnx650/host/linux/x86/usr/bin/qcc
+# building a QNX BSP or an IFS fails with "qcc: Command not found".
+RUN ln -sf /opt/tools/qcc/bin/qcc /opt/qnx650/host/linux/x86/usr/bin/qcc
 COPY cross/ /opt/qnx-cross/
 COPY entrypoint.sh /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint
@@ -235,21 +209,11 @@ CMD ["bash"]
 
 # --------------------------- with-go: + the Go toolchain -----------------------
 FROM base-env AS with-go
-# Stock 4.4.2 is C/C++ only here. Pure Go would in fact build (CGO_ENABLED=0
-# never invokes the target gcc), but cgo cannot: the stock driver rejects
-# -pthread and -rdynamic, which our 4.9 and 8.5 ports declare. Rather than ship
-# a half-working image, the language variants start at 4.9.
-RUN case "$(arm-unknown-nto-qnx6.5.0eabi-gcc -dumpversion)" in \
-      4.4*) echo "Go/Rust variants need 4.9 or 8.5, not the stock 4.4.2" >&2; exit 1 ;; \
-    esac
 COPY --from=go-build /opt/go /opt/go
 ENV GOROOT=/opt/go GOTOOLCHAIN=local PATH=/opt/go/bin:${PATH}
 
 # ------------------------- with-rust: + the Rust toolchain ---------------------
 FROM base-env AS with-rust
-RUN case "$(arm-unknown-nto-qnx6.5.0eabi-gcc -dumpversion)" in \
-      4.4*) echo "Go/Rust variants need 4.9 or 8.5, not the stock 4.4.2" >&2; exit 1 ;; \
-    esac
 COPY --from=rust-build /opt/rustup /opt/rustup
 COPY --from=rust-build /opt/cargo  /opt/cargo
 COPY --from=rust-build /opt/rust   /opt/rust

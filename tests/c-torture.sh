@@ -1,13 +1,13 @@
 #!/bin/sh
 # Compile GCC's own gcc.c-torture/execute suite with each toolchain variant and
 # report pass/fail per variant. This is a compiler comparison, not a pass/fail
-# gate: 4.4.2 is expected to lose tests that need newer C, and that IS the
-# result we are after.
+# gate: 4.9 is expected to lose tests that need newer C, and that difference is
+# part of the result we are after.
 #
 # Runtime (running the binaries under QEMU) is a separate step - this one only
 # answers "does it build".
 #
-#   tests/c-torture.sh [variant ...]      default: 4.4 4.9 8.5
+#   tests/c-torture.sh [variant ...]      default: 4.9 8.5
 #   tests/c-torture.sh --update [...]     rewrite the baselines
 #
 # Chasing zero failures here would mean either reimplementing DejaGnu (which
@@ -42,7 +42,7 @@ fi
 total=$(find "$SUITE" -maxdepth 1 -name '*.c' | wc -l | tr -d ' ')
 echo ">> suite: $total tests, flags: $OPT"
 
-[ $# -eq 0 ] && set -- 4.4 4.9 8.5
+[ $# -eq 0 ] && set -- 4.9 8.5
 RES="$CACHE/results"; rm -rf "$RES"; mkdir -p "$RES"
 built=""
 
