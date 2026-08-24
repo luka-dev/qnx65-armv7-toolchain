@@ -153,4 +153,56 @@ echo ">> widening libstdc++ crossconfig qnx target case (6.1/6.2 -> 6.x)"
 sed -i 's/\*-qnx6\.1\* | \*-qnx6\.2\*)/*-qnx6.*)/' \
     libstdc++-v3/crossconfig.m4 libstdc++-v3/configure
 
+echo ">> declaring the float/long-double math QNX libm actually has"
+# libstdc++ does not probe the target libm when cross-compiling: it reads a
+# hardcoded table in crossconfig.m4. The qnx case there lists only 6 of the 23
+# functions in src/c++98/math_stubs_{float,long_double}.cc, so libstdc++ builds
+# "compatibility" stubs for the other 17 - and those stubs are written as
+#   float powf(float x, float y) { return pow(x, y); }
+# which C++ overload resolution sends straight back to powf. GCC tail-folds
+# that into `b .`, a one-instruction infinite loop, and libstdc++ EXPORTS it.
+# Anything linking libstdc++ ahead of libm then hangs on the first call.
+#
+# All 23 are present in this SDP's libm.so.2 (verified with nm -D), float and
+# long double alike, so declare them and the stubs are never compiled. This
+# removes the problem at the source, for both libstdc++.a and libstdc++.so.
+#
+# Both files are edited because autoconf is not re-run: crossconfig.m4 is the
+# source of truth, configure is the pre-generated script actually executed.
+# The HAVE_SINHL anchor appears in more than one OS branch of configure, so the
+# insert is confined to the qnx case rather than matched globally.
+QNX_MATH_FNS="acos asin atan atan2 ceil exp fabs floor fmod frexp hypot ldexp modf pow sqrt tan tanh"
+
+qnx_math_insert() {   # <file> <m4|sh>
+    awk -v fns="$QNX_MATH_FNS" -v mode="$2" '
+        /\*-qnx6\./ && /\)/ { inqnx = 1 }
+        inqnx && /^[[:space:]]*;;[[:space:]]*$/ { inqnx = 0 }
+        { print }
+        inqnx && /HAVE_SINHL/ {
+            n = split(fns, a, " ")
+            for (i = 1; i <= n; i++) {
+                u = toupper(a[i])
+                if (mode == "m4") {
+                    printf "    AC_DEFINE(HAVE_%sF)\n", u
+                    printf "    AC_DEFINE(HAVE_%sL)\n", u
+                } else {
+                    printf "    $as_echo \"#define HAVE_%sF 1\" >>confdefs.h\n\n", u
+                    printf "    $as_echo \"#define HAVE_%sL 1\" >>confdefs.h\n\n", u
+                }
+            }
+        }
+    ' "$1" > "$1.qnxmath" && mv "$1.qnxmath" "$1"
+}
+
+qnx_math_insert libstdc++-v3/crossconfig.m4 m4
+qnx_math_insert libstdc++-v3/configure     sh
+
+for macro in HAVE_POWF HAVE_SQRTF HAVE_FABSF HAVE_POWL HAVE_SQRTL; do
+    grep -q "$macro" libstdc++-v3/crossconfig.m4 \
+      || { echo ">> ERROR: $macro not added to crossconfig.m4" >&2; exit 1; }
+    grep -q "$macro" libstdc++-v3/configure \
+      || { echo ">> ERROR: $macro not added to configure" >&2; exit 1; }
+done
+echo ">> qnx crossconfig now declares all 23 float + 23 long-double functions"
+
 echo ">> done. arm*-*-nto-qnx* port applied (gcc 8.5)."

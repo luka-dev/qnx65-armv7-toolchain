@@ -141,6 +141,24 @@ if [ -f "$DEST" ]; then
   echo ">> static libstdc++.a math stubs removed; float math resolves to libm"
 fi
 
+# The stubs should not exist at all now that crossconfig declares the real libm
+# functions (gcc/port/apply.sh). Guard the SHARED library too: that is the path
+# the test suite never exercised - libstdcxx.sh is -fsyntax-only, the runtime
+# suite is pure C, and the self-test only inspects libstdc++.a - which is how
+# 15 self-branching stubs shipped inside libstdc++.so.6 unnoticed.
+for SO in $(find "$PREFIX" -name "libstdc++.so.6*" -type f 2>/dev/null); do
+  if "$QNX_HOST/usr/bin/$TGT-nm" -D --defined-only "$SO" 2>/dev/null \
+       | grep -Eq " [TW] (powf|sqrtf|fabsf|ceilf|floorf|acosf|tanf|fmodf|hypotf)$"; then
+    echo ">> ERROR: $SO still defines QNX libm float functions (math stubs built)" >&2
+    exit 1
+  fi
+  if "$QNX_HOST/usr/bin/$TGT-objdump" -d "$SO" 2>/dev/null | grep -q "eafffffe"; then
+    echo ">> ERROR: $SO contains self-branching stubs (b .)" >&2
+    exit 1
+  fi
+done
+echo ">> shared libstdc++.so carries no math stubs either"
+
 # C++17 <filesystem> lives in libstdc++fs.a in GCC 8 (moved into libstdc++.so
 # only in GCC 9) - users link -lstdc++fs. Verify it was installed.
 if ls "$PREFIX/$TGT/lib"/libstdc++fs.a >/dev/null 2>&1; then
