@@ -57,6 +57,14 @@ func sysFaultOS(v unsafe.Pointer, n uintptr) {
 // Indicates not to reserve swap space for the mapping.
 const _sunosMAP_NORESERVE = 0x40
 
+// QNX backs anonymous mappings with real memory as soon as they are made, even
+// PROT_NONE ones, so a reservation is not free the way it is elsewhere. On the MHI2Q
+// head unit that turned mallocinit's 512 MB 32-bit heap reservation into 516 MB of
+// committed memory out of 2 GB -- measured by killing the daemon and watching free
+// memory jump by 533 MB. MAP_LAZY (<sys/mman.h>, 0x80) defers allocation to first
+// touch, which is what a reservation is supposed to mean.
+const _qnxMAP_LAZY = 0x80
+
 func sysReserveOS(v unsafe.Pointer, n uintptr, _ string) unsafe.Pointer {
 	flags := int32(_MAP_ANON | _MAP_PRIVATE)
 	if GOOS == "solaris" || GOOS == "illumos" {
@@ -64,6 +72,9 @@ func sysReserveOS(v unsafe.Pointer, n uintptr, _ string) unsafe.Pointer {
 		// for PROT_NONE anonymous mappings. This avoids an issue
 		// wherein large mappings can cause fork to fail.
 		flags |= _sunosMAP_NORESERVE
+	}
+	if GOOS == "qnx" {
+		flags |= _qnxMAP_LAZY
 	}
 	p, err := mmap(v, n, _PROT_NONE, flags, -1, 0)
 	if err != 0 {
