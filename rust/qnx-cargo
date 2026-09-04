@@ -1,0 +1,39 @@
+#!/bin/sh
+# One entry point for ANY cargo invocation targeting QNX 6.5 armv7:
+#   qnx-cargo build -p mycrate [--manifest-path ...] [...]
+# Sets the cross environment, guarantees the libc nto-arm port is applied to
+# whatever CARGO_HOME the caller chose (apply_std_port.sh self-seeds a fresh
+# registry), folds in the build-std flags, and verifies the port afterwards.
+#
+# build-std (build_std.sh) remains the porcelain for "build this crate dir";
+# this is the plumbing for callers that need their own cargo arguments
+# (workspaces, several crates, custom CARGO_TARGET_DIR).
+set -eu
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+TOOLCHAIN=$(sed -n 's/^channel *= *"\(.*\)"/\1/p' "$HERE/rust-toolchain.toml")
+
+export RUSTUP_HOME="${RUSTUP_HOME:-/opt/rustup}"
+export PATH="$RUSTUP_HOME/toolchains/$TOOLCHAIN-x86_64-unknown-linux-gnu/bin:$HERE:/opt/qnx650/host/linux/x86/usr/bin:$PATH"
+export RUSTFLAGS="${RUSTFLAGS:--C linker=$HERE/qnx-cc}"
+export CC="${CC:-arm-unknown-nto-qnx6.5.0eabi-gcc}"
+export AR="${AR:-arm-unknown-nto-qnx6.5.0eabi-ar}"
+
+# The port is calibrated to the pinned nightly; apply is idempotent and
+# self-seeding, so a caller-owned CARGO_HOME is safe.
+bash "$HERE/port/apply_std_port.sh" >/dev/null
+
+command="$1"
+shift
+cargo "$command" \
+    -Z build-std=std,panic_abort -Z build-std-features= -Z json-target-spec \
+    --target "$HERE/armv7-unknown-nto-qnx650.json" --release "$@"
+
+# Loud post-check: if something re-extracted pristine libc mid-build the
+# binary is silently wrong for 32-bit time_t; refuse to call that success.
+CARGO="${CARGO_HOME:-$HOME/.cargo}"
+ARM_RS=$(find "$CARGO/registry/src" -maxdepth 7 -path '*libc-0.2.185/src/unix/nto/arm.rs' 2>/dev/null | head -1)
+[ -n "$ARM_RS" ] || {
+    echo "qnx-cargo: libc nto-arm port missing after build; rerun apply_std_port.sh" >&2
+    exit 1
+}

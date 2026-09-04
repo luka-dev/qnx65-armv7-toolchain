@@ -316,7 +316,16 @@ is **baked into the image** - no per-machine setup.
 # one command: build-std compiles std + your crate and links via the QNX gcc
 build-std path/to/crate
 # -> path/to/crate/target/armv7-unknown-nto-qnx650/release/<crate>  (ARM QNX ELF)
+
+# need your own cargo arguments (workspace members, --manifest-path, custom
+# CARGO_HOME/CARGO_TARGET_DIR)? qnx-cargo is the same environment as plumbing:
+/opt/rust/qnx-cargo build -p mycrate --manifest-path /src/Cargo.toml
 ```
+
+Both entry points apply the libc nto-arm port to whichever `CARGO_HOME` the
+caller uses — `apply_std_port.sh` is idempotent and self-seeds a fresh
+registry from the image's patched copy, so project-local cargo caches are
+safe without any per-project setup.
 
 Under the hood it runs `cargo build -Z build-std=std,panic_abort` with
 `RUSTFLAGS="-C linker=/opt/rust/qnx-cc"`; `qnx-cc` is a linker shim that calls the

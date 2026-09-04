@@ -14,8 +14,33 @@ CARGO="${CARGO_HOME:-$HOME/.cargo}"
 RUSTUP="${RUSTUP_HOME:-$HOME/.rustup}"
 
 # --- 1) libc: sync our nto fork into the registry copy build-std actually reads
-REG=$(find "$CARGO/registry/src" -maxdepth 2 -type d -name 'libc-0.2.185' | head -1)
-[ -n "$REG" ] || { echo "libc-0.2.185 not in cargo registry; run a build once first"; exit 1; }
+REG=$(find "$CARGO/registry/src" -maxdepth 2 -type d -name 'libc-0.2.185' 2>/dev/null | head -1 || true)
+if [ -z "$REG" ]; then
+  # Self-seed. A consumer pointing CARGO_HOME at a fresh directory (project-
+  # local caches do this) starts with an empty registry; without seeding, the
+  # first build compiles pristine crates.io libc and fails 30 ways on time_t.
+  # Prefer the .crate tarball already in this CARGO_HOME's cache; fall back to
+  # the image's baked (already patched) registry copy.
+  crate=$(find "$CARGO/registry/cache" -maxdepth 2 -name 'libc-0.2.185.crate' 2>/dev/null | head -1 || true)
+  if [ -n "$crate" ]; then
+    dest="$CARGO/registry/src/$(basename "$(dirname "$crate")")"
+    mkdir -p "$dest"
+    tar -xzf "$crate" -C "$dest"
+    printf '{"v":1}' > "$dest/libc-0.2.185/.cargo-ok"
+    REG="$dest/libc-0.2.185"
+    echo "libc-0.2.185 seeded from $crate"
+  else
+    baked=$(find /opt/cargo/registry/src -maxdepth 2 -type d -name 'libc-0.2.185' 2>/dev/null | head -1 || true)
+    if [ -n "$baked" ] && [ "$CARGO" != "/opt/cargo" ]; then
+      dest="$CARGO/registry/src/$(basename "$(dirname "$baked")")"
+      mkdir -p "$dest"
+      cp -R "$baked" "$dest/"
+      REG="$dest/libc-0.2.185"
+      echo "libc-0.2.185 seeded from image registry ($baked)"
+    fi
+  fi
+fi
+[ -n "$REG" ] || { echo "libc-0.2.185 not in cargo registry and nothing to seed from; run a build once first"; exit 1; }
 cp "$HERE/vendor/libc/src/unix/nto/arm.rs" "$REG/src/unix/nto/arm.rs"
 cp "$HERE/vendor/libc/src/unix/nto/mod.rs" "$REG/src/unix/nto/mod.rs"
 echo "libc nto fork -> $REG"
