@@ -23,19 +23,11 @@ SRC=$(ls -d "$WORK"/gcc-8.*)
 bash "$PORT/apply.sh" "$SRC"
 
 cd "$WORK/obj"
-# Mirror port/qnx-os_defines.h's Dinkum gates for libstdc++'s configure
-# probes, which include QNX headers RAW (no os_defines in the chain). Without
-# this the probes and the library/user view of <math.h>/<stdio.h> diverge -
-# e.g. the obsolete-isinf probe found Dinkum's template isinf (raw view) while
-# the library build had it disabled, leaving 'using ::isinf' dangling.
-#   _HAS_C9X=1: C99 declarations visible (=> _GLIBCXX_USE_C99*, to_string/stoi)
-#   _NO_CPP_INLINES: Dinkum's abs/sqrt-style C++ inlines off, exactly as
-#     os_defines.h sets for every libstdc++ TU. (The classification templates
-#     stay ON - the probes reach fpclassify/isnan through Dinkum's _CSTD
-#     wrapper macros, and <cmath> consumes them via the __CORRECT_ISO_CPP11_
-#     MATH_H_PROTO knobs in os_defines.h.)
+# Match the compiler's Dinkum gates in configure probes and target builds.
+# GNU cmath owns classification and arithmetic overloads; raw QNX templates
+# would otherwise make the obsolete-isinf/isnan probes lie about libc symbols.
 # The -g -O2 defaults must be repeated: setting *FLAGS_FOR_TARGET replaces them.
-QNX_DINKUM_GATES='-D_HAS_C9X=1 -D_NO_CPP_INLINES=1'
+QNX_DINKUM_GATES='-D_HAS_C9X=1 -D_NO_CPP_INLINES=1 -D_HAS_GENERIC_TEMPLATES=0'
 export CFLAGS_FOR_TARGET="-g -O2 $QNX_DINKUM_GATES"
 export CXXFLAGS_FOR_TARGET="-g -O2 $QNX_DINKUM_GATES"
 
@@ -46,9 +38,10 @@ export CXXFLAGS_FOR_TARGET="-g -O2 $QNX_DINKUM_GATES"
 # relocation type", library refuses to load). -Bsymbolic binds them locally
 # so they resolve at link time (QEMU-verified: the REL32s disappear). The
 # stock 4.4 libstdc++.so.6.0.13 shipped with zero dynamic relocs in extab -
-# same convention. Ceiling: a global operator new/delete replacement in the
-# program is not seen by allocations made INSIDE libstdc++.so; use
-# -static-libstdc++ if you need that.
+# same convention. Exported non-RTTI data is exempted in a second link below:
+# otherwise COPY relocations split cout/call_once state between executable/DSO.
+# A global new/delete replacement still does not interpose inside this DSO;
+# use -static-libstdc++ if you need that.
 export LDFLAGS_FOR_TARGET='-Wl,-Bsymbolic'
 
 # Same flag set as the 4.9 build. configure probes the REAL gas/ld 2.19, so
@@ -67,6 +60,11 @@ export LDFLAGS_FOR_TARGET='-Wl,-Bsymbolic'
 
 J=$(nproc)
 make -j"$J" all-gcc
+
+# Configure must see working C++ classification macros even before GNU cmath
+# is installed. Keep this adapter in the compiler include-fixed directory so
+# stock QNX/GCC 4.9 and C translation units retain their existing headers.
+cp "$PORT/qnx-math.h" "$WORK/obj/gcc/include-fixed/math.h"
 
 # wchar_t fix: fixincludes regenerates include-fixed/stdlib.h from the QNX
 # sysroot on every all-gcc; <malloc.h> pre-sets _GCC_WCHAR_T without the typedef
@@ -88,6 +86,24 @@ rm -f "$WORK/obj/gcc/include-fixed/unistd.h" \
 
 make -j"$J" all-target-libgcc
 make -j"$J" all-target-libstdc++-v3
+
+# Keep RTTI bound locally for QNX EHABI, but allow public data to interpose.
+# With blanket -Bsymbolic, e.g. __once_functor is written via an executable
+# COPY relocation while __once_proxy reads the DSO private copy and throws
+# bad_function_call. Derive the list from the actual exports rather than a
+# hand-maintained subset (iostream/locale/allocator state needs this too).
+LV="$WORK/obj/$TGT/libstdc++-v3"
+DYNAMIC_LIST="$WORK/libstdcxx-data.list"
+{
+  echo '{'
+  "$QNX_HOST/usr/bin/$TGT-nm" -D --defined-only "$LV/src/.libs/libstdc++.so" \
+    | awk '$2 ~ /^[BDGRSV]$/ && $3 !~ /^_ZT/ { sub(/@.*/, "", $3); print "  " $3 ";" }'
+  echo '};'
+} > "$DYNAMIC_LIST"
+grep -q '__once_functor;' "$DYNAMIC_LIST"
+rm -f "$LV/src/libstdc++.la"
+make -C "$LV/src" -j"$J" \
+  "LDFLAGS=$LDFLAGS_FOR_TARGET -Wl,--dynamic-list=$DYNAMIC_LIST"
 make install-gcc install-target-libgcc install-target-libstdc++-v3
 
 # Static libstdc++.a: same story as 4.9 - the shared-enabled libtool build

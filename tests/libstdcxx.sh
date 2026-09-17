@@ -13,19 +13,12 @@
 # rejecting it is the pass condition. Scoring them like the rest would count a
 # compiler that accepts broken C++ as better, which is backwards.
 #
-# What the residue means (checked, not assumed):
-#   performance_* (65), experimental_filesystem (26)  need the DejaGnu harness
-#       we deliberately do not reproduce - they measure the harness, not us.
-#   26_numerics (24)  REAL, but narrow: QNX's <xtgmath.h> collides with GNU
-#       <complex> when a program defines its own arg/conj/imag/pow for its own
-#       types and does `using namespace std` (26_numerics/complex/51083.cc).
-#       Plain <complex>, including with <cmath>, compiles fine on 4.9 and 8.5 -
-#       verified separately - so this does not affect ordinary code.
-#   5 negative tests on 8.5 are still unexplained; that is the one place left
-#       where the compiler might be accepting something it should reject.
-#
-# Chasing the count to zero is not the goal - most of what is left is not about
-# the compiler at all. The baseline is, so a NEW failure stands out.
+# The 2026-09-17 GCC 8.5 run has 7038/7198 positive and 245/249 negative
+# passes: 32 old failures fixed, no new failures (164 residual failures).
+# Residue includes omitted DejaGnu support and unavailable target features;
+# not every remaining failure is classified. Four accepted negative tests
+# remain unexplained. Keep the baseline comparison, do not call this a full
+# conformance suite or replace execution tests with these compile results.
 set -eu
 UPDATE=0
 [ "${1:-}" = --update ] && { UPDATE=1; shift; }

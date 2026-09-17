@@ -55,33 +55,29 @@
 #define _HAS_C9X 1
 #endif
 
-// (1) Ordering: QNX's C headers declare ptrdiff_t/size_t inside namespace std
-//     and export them to the global namespace via per-header `using` gated on
-//     _STD_USING. If a QNX C header (e.g. <stdlib.h>, pulled by <cstdlib>) is
-//     seen before <cstddef>, the stddef guards get set without ::ptrdiff_t
-//     ever reaching the global namespace, and libsupc++/cxxabi.h then fails
-//     ("ptrdiff_t does not name a type"). Establish the global C types up
-//     front, before any QNX header can poison the ordering.
+// Establish both global types even when a QNX C header has already consumed
+// its namespace/type carriers. GCC's stddef also defines __SIZE_T as an empty
+// guard; QNX malloc.h mistakes that for a type, so do not leak those guards.
 #include <stddef.h>
+typedef __SIZE_TYPE__ size_t;
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
+#undef __SIZE_T
+#undef __PTRDIFF_T
+// wchar_t is a keyword in C++; GCC also uses this spelling as an empty guard.
+#undef __WCHAR_T
 
-// (2) QNX's <math.h> provides its own C++ inline overloads of abs/fabs/...,
-//     gated on _NO_CPP_INLINES. Disable them so the GNU <cmath> supplies the
-//     complete, authoritative set without redefinition clashes.
+// GNU <cmath> owns all C++ overloads, including classification. Keep the
+// Dinkum concrete AND generic overloads off. The compiler predefines these
+// before C headers can be included; repeat here for configure/bootstrap use.
 #define _NO_CPP_INLINES 1
-//     ... and with _HAS_C9X on (see (0)), Dinkum's math.h adds the C++
-//     overload set for the C99 classification interface (inline fpclassify/
-//     signbit for float/double/long double + isnan/isinf/isgreater/...
-//     templates, all in std, reachable from global scope through
-//     '#define isnan(x) (_CSTD isnan(x))' wrapper macros that <cmath>
-//     #undefs). That set IS the C++11-conformant one, so tell <cmath> to use
-//     it instead of defining its own constexpr versions on top (redefinition
-//     errors otherwise) - the same knob mechanism as the string/wchar protos
-//     above, C++11-math flavor. Ceiling: integer-argument classification
-//     (std::isnan(5)) resolves through Dinkum's unconstrained template into
-//     fpclassify(int), which is ambiguous across the three FP overloads -
-//     classify FP values, not ints.
-#define __CORRECT_ISO_CPP11_MATH_H_PROTO_FP 1
-#define __CORRECT_ISO_CPP11_MATH_H_PROTO_INT 1
+#define _HAS_GENERIC_TEMPLATES 0
+// QNX has classification macros, not old libc isinf/isnan function symbols.
+#define _GLIBCXX_NO_OBSOLETE_ISINF_ISNAN_DYNAMIC 1
+
+// QNX synchronization state is keyed by object address. Static initializer
+// + a trivial destructor leaks that state across destroyed/reused objects.
+#define _GTHREAD_USE_MUTEX_INIT_FUNC 1
+#define _GTHREAD_USE_RECURSIVE_MUTEX_INIT_FUNC 1
 
 // (3) QNX's <string.h> and <wchar.h> unconditionally provide the ISO C++
 //     overloads of memchr/strchr/... and wcschr/... (no _NO_CPP_INLINES gate),

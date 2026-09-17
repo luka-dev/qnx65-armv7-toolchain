@@ -1,0 +1,89 @@
+{
+  "date": "2026-09-17",
+  "scope": "GCC 8.5 ARM QNX 6.5 C++ repairs",
+  "source_base_commit": "4440b75d",
+  "image_repository": "qnx65-armv7-toolchain",
+  "images": {
+    "8.5-cxx-fix": {
+      "image_id": "sha256:0d587cff28e6d572e9cc477e1047d664fcf840c600282a35d5226d49db998799",
+      "hashes": {
+        "libstdc++.so": "e92610a288cb327cd5c60493992db656d65a3569fc3eef19ef4438f0ebcf82e6",
+        "libstdc++.a": "40fc9b66eab11344c7fe18f3181ab48b0665ea2a2307ef171f9be222c95ce290",
+        "libgcc.a": "105e3d2df26e9145351abe21c2e500bd0f4f12eabac29c993836b21e32a1dfa4",
+        "cc1plus": "16061645c63bce2f63ecf9669e1abe95fdebff7970d10499d98631cce0a2b363",
+        "os_defines.h": "c94e0b6fa3b30e745b9dc5ca582209f5d522cf6fee294c30cb3b18b6cdf2081d",
+        "cmath": "ecfc4fce10525c96bed21c9151faa7434e08aa1381205b188cdf2ba4c34aa1f0",
+        "math-adapter.h": "7ec032af24a40373979c95e3340e4a909756d08ca16e24f6f78ba8e0c4707fca"
+      }
+    },
+    "8.5-full-cxx-fix": {
+      "image_id": "sha256:59cf5a575d69869e3983f136bdcf9e7e7d997e1206dcfc912e0d1988c68ad213",
+      "hashes": {
+        "libstdc++.so": "e92610a288cb327cd5c60493992db656d65a3569fc3eef19ef4438f0ebcf82e6",
+        "libstdc++.a": "40fc9b66eab11344c7fe18f3181ab48b0665ea2a2307ef171f9be222c95ce290",
+        "libgcc.a": "105e3d2df26e9145351abe21c2e500bd0f4f12eabac29c993836b21e32a1dfa4",
+        "cc1plus": "16061645c63bce2f63ecf9669e1abe95fdebff7970d10499d98631cce0a2b363",
+        "os_defines.h": "c94e0b6fa3b30e745b9dc5ca582209f5d522cf6fee294c30cb3b18b6cdf2081d",
+        "cmath": "ecfc4fce10525c96bed21c9151faa7434e08aa1381205b188cdf2ba4c34aa1f0",
+        "math-adapter.h": "7ec032af24a40373979c95e3340e4a909756d08ca16e24f6f78ba8e0c4707fca"
+      }
+    }
+  },
+  "installed_tags": {
+    "8.5": "8.5-cxx-fix",
+    "8.5-full": "8.5-full-cxx-fix",
+    "latest": "8.5-full-cxx-fix"
+  },
+  "previous_images": {
+    "8.5": "sha256:d3a1485fa996bb1473e7f614b85540d8bd1c38947f9c53f1f7b300e143b20776",
+    "8.5-full": "sha256:5d9d97c0944b54f96b28c9a5d7a458035b9c23663d0a849f6932fdd44f65501f",
+    "latest": "sha256:5d9d97c0944b54f96b28c9a5d7a458035b9c23663d0a849f6932fdd44f65501f"
+  },
+  "results": {
+    "math": {
+      "cases": 168,
+      "pass": 168,
+      "fail": 0
+    },
+    "headers": {
+      "cases": 300,
+      "pass": 300,
+      "fail": 0
+    },
+    "runtime_static": "pass",
+    "runtime_shared": "pass",
+    "runtime_init_control": "pass",
+    "clock": {
+      "cases": 4,
+      "pass": 4,
+      "fail": 0
+    },
+    "libstdcxx_compile": {
+      "positive_pass": 7038,
+      "positive_total": 7198,
+      "negative_pass": 245,
+      "negative_total": 249,
+      "failures_before": 196,
+      "failures_after": 164,
+      "fixed": 32,
+      "new_failures": 0
+    },
+    "base_selftest": "pass",
+    "full_selftest": "pass",
+    "base_full_component_hashes_match": true,
+    "mhi2_renderers_build": "pass",
+    "maneuver_cpu_qnx": {
+      "geometry_cases": 729,
+      "camera_fit_cases": 32,
+      "result": "pass",
+      "diagnostic_alarm_seconds": 60,
+      "note": "Original 10-second alarm expires for both old and new binaries in this emulator."
+    }
+  },
+  "limits": [
+    "164 pre-existing compile failures remain; not all classified.",
+    "GCC 4.9 runtime not repaired or revalidated.",
+    "No full Go/Rust runtime rerun.",
+    "No HU deployment or restart."
+  ]
+}

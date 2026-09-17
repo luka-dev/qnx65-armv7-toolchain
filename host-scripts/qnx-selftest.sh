@@ -1,15 +1,17 @@
 #!/bin/sh
-# Toolchain self-check: the two things that silently miscompile if they regress.
+# Toolchain self-check: header, assembler and runtime configuration regressions.
 #   1. gas encodes the VFP multiply-accumulate family correctly (2.19 did not:
 #      it emitted vnmls for vmls, vmls for vnmla, vnmla for vnmls).
 #   2. static libstdc++.a does not define QNX's libm float entry points - the
 #      libstdc++ math_stubs recurse forever on this target.
 #   3. the shared sdp/ headers still build C and C++ with both supported GCCs.
 # Skipped when a variant image is not built.
-# Usage: ./qnx-selftest.sh   (needs the qnx65-armv7-toolchain image)
+# Usage: ./qnx-selftest.sh [--runtime] (QEMU required for --runtime)
 set -e
 IMG=qnx65-armv7-toolchain
-docker run --rm --platform=linux/amd64 "$IMG" sh -c '
+IMAGE=${QNX_SELFTEST_IMAGE:-$IMG}
+ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+docker run --rm --platform=linux/amd64 -v "$ROOT/tests/cxx-audit":/audit:ro "$IMAGE" sh -c '
 set -e
 B=/opt/qnx650/host/linux/x86/usr/bin
 P=$B/arm-unknown-nto-qnx6.5.0eabi
@@ -27,6 +29,18 @@ L=/opt/qnx650/host/linux/x86/usr/arm-unknown-nto-qnx6.5.0eabi/lib/libstdc++.a
 $P-nm -A --defined-only "$L" 2>/dev/null | grep -E " [TW] (ceilf|expf|floorf|powf|sqrtf)$" \
   && { echo "FAIL: libstdc++.a defines libm float functions (math_stubs recurse)" >&2; exit 1; }
 echo "ok: libstdc++.a leaves float math to libm"
+SO=$($P-g++ -print-file-name=libstdc++.so)
+$P-nm -D --defined-only "$SO" 2>/dev/null | grep -E " [TW] (ceilf|expf|floorf|powf|sqrtf)$" \
+  && { echo "FAIL: shared libstdc++ defines recursive math stubs" >&2; exit 1; }
+echo "ok: shared libstdc++ leaves float math to libm"
+
+$P-g++ -std=c++17 -O2 -c /audit/smoke.cpp -o smoke.o
+# Require real libm references, not just a successful compile. fmin/round
+# previously optimized into loops with no external relocation at all.
+$P-nm -u smoke.o > smoke.undefined
+grep -q " U fminf$" smoke.undefined
+grep -q " U roundf$" smoke.undefined
+echo "ok: C-header-first C++, math dispatch, mutex and chrono configuration"
 '
 
 # --- 3. the __PTRDIFF_T carrier, both directions, on every built variant ------
@@ -79,3 +93,12 @@ done
 ' || exit 1
     echo "ok: driver accepts -pthread and -rdynamic on $tag"
 done
+
+if [ "${1:-}" = --runtime ]; then
+    case "$IMAGE" in *:*) variant=${IMAGE##*:} ;; *) variant=latest ;; esac
+    QNX_AUDIT_IMAGE="$IMAGE" QNX_AUDIT_GUEST_VARIANT="$variant" \
+        bash "$ROOT/tests/cxx-audit/run.sh"
+elif [ -n "${1:-}" ]; then
+    echo "usage: $0 [--runtime]" >&2
+    exit 2
+fi

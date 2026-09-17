@@ -28,6 +28,10 @@ WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 NAME=$(basename "$BIN")
 cp "$BIN" "$WORK/$NAME"
 cp "$Q/startup-virt" "$Q/libstartup.a" "$Q/devc-serdebug" "$WORK/"
+# Optional candidate runtime for linker regression tests before image install.
+if [ -n "${QNX_TEST_LIBSTDCXX:-}" ]; then
+    cp "$QNX_TEST_LIBSTDCXX" "$WORK/libstdc++.so.6"
+fi
 
 # mkifs needs libc and procnto from the sysroot; take them from the image.
 cat > "$WORK/test.build" <<EOF
@@ -57,15 +61,23 @@ devc-serdebug
 $NAME
 EOF
 
-docker run --rm --platform=linux/amd64 -v "$WORK":/w -w /w "$IMG" sh -c '
+docker run --rm --platform=linux/amd64 -v "$WORK":/w -w /w -e QNX_TEST_BIN="$NAME" "$IMG" sh -c '
 T=/opt/qnx650/target/qnx6/armle-v7
 cp $T/lib/libc.so.3 $T/lib/libm.so.2 $T/boot/sys/procnto-smp /w/ 2>/dev/null || true
 # Rust std and the Go runtime both pull in libsocket.
 # NOTE: no apostrophes anywhere in this block - it is inside a single-quoted
 # sh -c, so one apostrophe ends the command and silently drops the rest.
 cp $T/lib/libsocket.so.3 /w/ 2>/dev/null || cp $T/usr/lib/libsocket.so.3 /w/ 2>/dev/null || true
-# a dynamically linked C++ binary also needs libstdc++, ship it when present
-if [ -f /w/NEEDS_CXX ]; then cp $T/usr/lib/libstdc++.so.6 /w/ 2>/dev/null || true; fi
+# Inspect the actual binary; the old NEEDS_CXX sentinel was never created and
+# the library was never added to the IFS manifest. Use this compiler runtime,
+# not the stock SDP GCC 4.4 runtime in the target usr/lib directory.
+P=arm-unknown-nto-qnx6.5.0eabi
+if $P-readelf -d "/w/$QNX_TEST_BIN" | grep -q "Shared library: .libstdc++.so.6."; then
+    if [ ! -f /w/libstdc++.so.6 ]; then
+        cp "$($P-g++ -print-file-name=libstdc++.so)" /w/libstdc++.so.6 || exit 1
+    fi
+    echo libstdc++.so.6 >> /w/test.build
+fi
 export MKIFS_PATH=/w:$T/boot/sys:$T/bin:$T/lib:$T/usr/lib
 mkifs test.build ifs.bin' >"$WORK/mkifs.log" 2>&1 || {
     echo "mkifs failed:" >&2; tail -6 "$WORK/mkifs.log" >&2; exit 1; }
@@ -116,7 +128,7 @@ if ! grep -q '@@QNXRUN-END@@' "$LOG"; then
 fi
 # With procnto -vvv the kernel does report process exits, so a real exit code
 # is available after all - use it when present.
-code=$(grep -oE "Process [0-9]+ \($NAME\) exited status=[0-9]+" "$LOG" | tail -1 | grep -oE '[0-9]+$')
+code=$(grep -oE "Process [0-9]+ \($NAME\) exited status=[0-9]+" "$LOG" | tail -1 | grep -oE '[0-9]+$' || true)
 # procnto -vvv announces abnormal termination; without that verbosity it says
 # nothing at all and a segfaulting program looks like a clean run.
 if [ -n "${code:-}" ] && [ "$code" != 0 ]; then
@@ -125,6 +137,10 @@ if [ -n "${code:-}" ] && [ "$code" != 0 ]; then
 fi
 if grep -qE 'terminated SIG' "$LOG"; then
     grep -oE 'Process [0-9]+ \([^)]*\) terminated SIG[A-Z]+[^ ]*( [a-z]+=[0-9a-fx]+)*' "$LOG" | tail -1 >&2
+    exit 1
+fi
+if [ -z "$code" ]; then
+    echo "program exit status missing (possible loader failure)" >&2
     exit 1
 fi
 exit 0

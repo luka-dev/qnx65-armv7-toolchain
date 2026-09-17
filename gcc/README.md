@@ -61,12 +61,21 @@ hand-written ARM asm carries unconditional `.cfi_*` - stripped by apply.sh
   - function-like `is*/to*` ctype macro undefs (their bodies reference the
     `_UP/_LO/...` masks the port already removes; calls fall through to the
     real libc functions - all present in libc.so.3, isblank included).
-  - `__CORRECT_ISO_CPP11_MATH_H_PROTO_FP/_INT`: Dinkum math.h (with
-    `_HAS_C9X`) already provides the C++11 classification overload set
-    (fpclassify/signbit/isnan/... in std, reachable through `_CSTD` wrapper
-    macros that `<cmath>` #undefs); these knobs stop `<cmath>` from
-    redefining it. Ceiling: `std::isnan(int)` (integer-arg classification)
-    is ambiguous - classify FP values, not ints.
+  - `_HAS_GENERIC_TEMPLATES=0` + `_NO_CPP_INLINES=1`: disable Dinkum C++
+    overloads so GNU `<cmath>` owns arithmetic and classification, including
+    integer arguments. The old `__CORRECT_ISO_CPP11_MATH_H_PROTO_FP/_INT`
+    flags suppressed GNU arithmetic overloads too, producing recursive QNX
+    templates for 34 functions with float/long-double arguments.
+  - The three Dinkum gates are also compiler C++ builtins, so C-header-first
+    include orders see the same configuration as GNU headers.
+  - `port/qnx-math.h` supplies builtin classification macros for configure
+    probes reading raw QNX headers; the C-only Dinkum typeof fallback does not
+    compile as C++. It is installed in GCC include-fixed and leaves C unchanged.
+  - Restore global `size_t`/`ptrdiff_t` and remove GCC empty guard macros that
+    QNX otherwise consumes as type carriers (`__SIZE_T`, `__PTRDIFF_T`,
+    `__WCHAR_T`).
+  - `_GTHREAD_USE_MUTEX_INIT_FUNC` and `_GTHREAD_USE_RECURSIVE_MUTEX_INIT_FUNC`:
+    explicit pthread init/destroy for QNX address-based synchronization state.
 - **`port/apply.sh`**
   - config.gcc / libgcc stanzas re-anchored on the 8.5 case labels;
     `target_cpu_cname=generic-armv7-a` (8.x defaults `with_cpu` from it).
@@ -75,14 +84,22 @@ hand-written ARM asm carries unconditional `.cfi_*` - stripped by apply.sh
   - libgcc arm `.S`: strip `.cfi_*` (unconditional `.cfi_sections`).
   - `stl_map.h`/`stl_multimap.h`: template param `_C2` -> `_Cmp2` (QNX
     yvals.h defines `_C2`; undef would break math.h's `FP_ILOGB0`).
+  - Remove QNX suffixed libm macros from `<cmath>` so qualified function calls
+    work (`std::cosf`, `::logf`, and their long-double equivalents).
+  - QNX crossconfig declares CLOCK_MONOTONIC, CLOCK_REALTIME, nanosleep and
+    sched_yield. Both chrono clocks must call clock_gettime instead of time().
   - `system_error.cc`: guard the `EALREADY` case (QNX 6.5: == `EBUSY`).
 - **`build.sh`**
   - GCC 8.5.0 tar.xz; `--enable-libstdcxx-filesystem-ts` (else no
     `libstdc++fs.a` in a cross build).
-  - `*FLAGS_FOR_TARGET += -D_HAS_C9X=1 -D_NO_CPP_INLINES=1`: libstdc++'s
+  - `*FLAGS_FOR_TARGET` mirror `_HAS_C9X=1`, `_NO_CPP_INLINES=1`,
+    `_HAS_GENERIC_TEMPLATES=0`: libstdc++'s
     configure probes include QNX headers RAW (no os_defines in their chain);
     without mirroring the gates the probes and the library disagree about
     what `<math.h>`/`<stdio.h>` declare.
+  - shared-library relink keeps RTTI local for QNX EHABI, but allows exported
+    non-RTTI data to interpose. Blanket `-Bsymbolic` split `std::__once_functor`
+    between executable COPY relocations and the DSO, breaking promise/call_once.
   - same wchar_t/size_t fixincludes fixes and static-`libstdc++.a` assembly
     as `gcc/build.sh`.
 
@@ -94,3 +111,12 @@ C++17 core (structured bindings, init-if, fold expressions), `std::variant`/
 the `--target2=rel` default), `std::sqrt`/classification, `std::to_string`,
 packed-struct access under strict alignment. `<filesystem>` links via
 `-lstdc++fs` (degrades per configure: no `d_type`, no `*at` on 6.5).
+
+## Regression tests
+
+`host-scripts/qnx-selftest.sh` checks both static/shared libstdc++ for recursive
+math stubs, C-header-first C++ compilation, real float math symbol references,
+and mutex/chrono configuration. Add `--runtime` to execute the full C++ audit
+under QNX, including shared libstdc++ and synchronization address reuse.
+See [the original audit and reproducers](../tests/cxx-audit/README.md).
+GCC 4.9 remains the historical comparison port; these C++17 fixes target 8.5.

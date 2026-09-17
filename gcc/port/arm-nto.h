@@ -30,6 +30,13 @@
 	   otherwise). Stock QNX's own libstdc++ predefines it too; it gates	\
 	   declarations, not struct layout, so it's ABI-safe. */		\
 	builtin_define ("_QNX_SOURCE");			\
+	/* Set Dinkum gates before ANY C header, including C-header-first C++. */ \
+	if (c_dialect_cxx ())                                    \
+	  {                                                     \
+	    builtin_define ("_HAS_C9X=1");                      \
+	    builtin_define ("_NO_CPP_INLINES=1");               \
+	    builtin_define ("_HAS_GENERIC_TEMPLATES=0");         \
+	  }                                                     \
 	builtin_assert ("system=qnx");			\
 	builtin_assert ("system=qnxnto");		\
 	builtin_assert ("system=nto");			\

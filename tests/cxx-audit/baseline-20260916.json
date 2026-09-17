@@ -1,0 +1,68 @@
+{
+  "date": "2026-09-16",
+  "source_head": "4440b75d",
+  "image": "qnx65-armv7-toolchain:latest",
+  "image_id": "sha256:5d9d97c0944b54f96b28c9a5d7a458035b9c23663d0a849f6932fdd44f65501f",
+  "compiler": "GCC 8.5.0",
+  "math": {
+    "cases": 168,
+    "pass": 100,
+    "timeout": 68,
+    "affected_types": [
+      "float",
+      "long double"
+    ],
+    "affected_functions": [
+      "acosh",
+      "asinh",
+      "atanh",
+      "cbrt",
+      "copysign",
+      "erf",
+      "erfc",
+      "exp2",
+      "expm1",
+      "fdim",
+      "fma",
+      "fmax",
+      "fmin",
+      "hypot",
+      "ilogb",
+      "lgamma",
+      "llrint",
+      "llround",
+      "log1p",
+      "log2",
+      "logb",
+      "lrint",
+      "lround",
+      "nearbyint",
+      "nextafter",
+      "nexttoward",
+      "remainder",
+      "remquo",
+      "rint",
+      "round",
+      "scalbln",
+      "scalbn",
+      "tgamma",
+      "trunc"
+    ]
+  },
+  "headers": {
+    "c++11": {
+      "cases": 150,
+      "fail": 77
+    },
+    "gnu++11": {
+      "cases": 150,
+      "fail": 76
+    }
+  },
+  "runtime": {
+    "raw": "SIGABRT / std::system_error Invalid argument at second sync lifetime",
+    "mutex_init_control": "32 reuse cycles, future/promise, TLS and atomic64 pass; clock check fails",
+    "chrono": "200 ms pauses produce 0 or 1000000000 ns; CLOCK_MONOTONIC advances about 203000000 ns"
+  },
+  "scope": "C++ headers and runtime audit, not an exhaustive compiler validation; no toolchain fixes applied"
+}

@@ -37,6 +37,12 @@ ARG BASE=base-8.5
 # -------------------- base: QNX 6.5 SDP (binutils + sysroot, no gcc) ------------
 # Pinned by digest for reproducible builds (bullseye-slim as of 2026-07).
 FROM --platform=linux/amd64 debian:bullseye-slim@sha256:cba95a21c96c1f5fc2470081829363eed57706634f7dc26e8c6712934303d57a AS qnx-sdp
+# Bullseye security pool URLs started returning 404 after LTS ended. Pin the
+# signed repositories as well as the base image. Expired Valid-Until is expected
+# for a historical snapshot; package signatures/checksums remain enforced.
+ARG DEBIAN_SNAPSHOT=20260831T235959Z
+RUN printf 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/%s/ bullseye main\ndeb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/%s/ bullseye-security main\ndeb [check-valid-until=no] http://snapshot.debian.org/archive/debian/%s/ bullseye-updates main\n' \
+    "$DEBIAN_SNAPSHOT" "$DEBIAN_SNAPSHOT" "$DEBIAN_SNAPSHOT" > /etc/apt/sources.list
 # i386: QNX binutils (as/ld) are 32-bit x86. gmp/mpfr/mpc: GCC host binaries
 # link them. gcc: host C compiler for Cargo build scripts/proc-macros (NOT the
 # QNX cross-gcc). curl/ca-certificates/xz: fetch Go bootstrap + rustup.

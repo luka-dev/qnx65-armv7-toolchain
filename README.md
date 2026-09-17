@@ -382,8 +382,17 @@ name so a NEW failure stands out):
 |---|---|---|
 | gcc.c-torture (compile+link) | 1475/1507 | 1493/1507 |
 | gcc.c-torture (**executed** on QNX) | 1447 ok, **5 wrong**, 23 crash | 1476 ok, **0 wrong**, 17 crash |
-| libstdc++ (compile) | 5621/7198 | 7006/7198 |
+| libstdc++ (compile, positive tests) | 5621/7198 | 7038/7198 |
+| C++ math overloads (QNX execution) | - | 168/168 |
+| C/C++ header probes (strict + GNU C++11) | - | 300/300 |
 | binutils ARM suite | - | 0 regressions vs 2.19 |
+
+The 2026-09-17 C++ repair also passes static/shared runtime tests for mutex
+address reuse (four mutex types), futures, TLS, atomic64, exceptions, iostream
+state and subsecond chrono clocks. The full compile suite fixes 32 prior
+failures with no new failures; 164 existing failures remain. Run
+`host-scripts/qnx-selftest.sh --runtime` for the targeted QNX regressions;
+see [the audit](tests/cxx-audit/README.md) and [repair results](tests/cxx-audit/FIXES.md).
 
 The stock GCC 4.4.2 reference compiled 1458/1507 C tests. Its fingerprints, 49
 expected failures, and comparison notes are recorded in
@@ -396,15 +405,13 @@ reproduce, not the compiler - each script documents its own residue. The value
 is the baseline: it is how the `__PTRDIFF_T` boundary and the missing
 `-pthread`/`-rdynamic` were caught.
 
-**The executed row is the one that matters most** - it is the only check in
-this repo that runs a large test suite and verifies the *answer*, not just
-that the build succeeded. "Crash" means the process reached `terminated
+**Executed results verify the answer**, not just that the build succeeded. "Crash" means the process reached `terminated
 SIG...` (mostly nested-function trampolines on QNX's non-executable stack, and
 `eeprof-1` needing a profiling runtime `:4.9`/`:8.5` do not have - both known
 platform limits, not codegen bugs). "Wrong" means it ran to completion and
 returned a nonzero status.
 
-8.5 is clean: 0 wrong answers. 4.9's 5 were investigated by hand
+The recorded GCC 8.5 C runtime suite has 0 wrong answers. GCC 4.9's 5 were investigated by hand
 (`tests/baseline/runtime-notes.md`). One (`pr90949`) is not a compiler bug at
 all: its `main()` relies on the C99+ implicit `return 0`, which is undefined
 behaviour under GCC 4.9's *default* dialect (`-std=gnu90`) - proven by getting

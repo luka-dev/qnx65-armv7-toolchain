@@ -147,6 +147,29 @@ echo ">> installing QNX ctype_base.h (undef leaked _UP/_LO/... ctype macros)"
 cmp -s "$SRC/qnx-ctype_base.h" libstdc++-v3/config/os/qnx/qnx6.1/ctype_base.h \
   || cp "$SRC/qnx-ctype_base.h" libstdc++-v3/config/os/qnx/qnx6.1/ctype_base.h
 
+# QNX math.h also defines suffixed C libm names as macros. GNU cmath only
+# undefines the unsuffixed ones; leave real function declarations usable as
+# ::cosf(x), std::cosf(x), etc. Do this in cmath, after its include_next math.h,
+# not in os_defines (including math.h there recurses into c++config/cmath).
+if ! grep -q 'QNX suffixed libm macros' libstdc++-v3/include/c_global/cmath; then
+  sed -i '/^#undef tanh$/a\
+// QNX suffixed libm macros\
+#undef cosf\
+#undef coshf\
+#undef sinf\
+#undef sinhf\
+#undef logf\
+#undef log10f\
+#undef log2f\
+#undef cosl\
+#undef coshl\
+#undef sinl\
+#undef sinhl\
+#undef logl\
+#undef log10l\
+#undef log2l' libstdc++-v3/include/c_global/cmath
+fi
+
 echo ">> widening libstdc++ crossconfig qnx target case (6.1/6.2 -> 6.x)"
 # crossconfig.m4 (source) + the already-generated configure both hardcode
 # '*-qnx6.1* | *-qnx6.2*' and error out for 6.5; broaden both to '*-qnx6.*'.
@@ -179,6 +202,16 @@ qnx_math_insert() {   # <file> <m4|sh>
         inqnx && /^[[:space:]]*;;[[:space:]]*$/ { inqnx = 0 }
         { print }
         inqnx && /HAVE_SINHL/ {
+            # QNX libc exports clock_gettime (both clocks), nanosleep and
+            # sched_yield. The auto time probe only enables known OS cases;
+            # without these, chrono silently falls back to second-only time().
+            nc = split("_GLIBCXX_USE_CLOCK_MONOTONIC _GLIBCXX_USE_CLOCK_REALTIME _GLIBCXX_USE_NANOSLEEP _GLIBCXX_USE_SCHED_YIELD", clocks, " ")
+            for (c = 1; c <= nc; c++) {
+                if (mode == "m4")
+                    printf "    AC_DEFINE(%s)\n", clocks[c]
+                else
+                    printf "    $as_echo \"#define %s 1\" >>confdefs.h\n\n", clocks[c]
+            }
             n = split(fns, a, " ")
             for (i = 1; i <= n; i++) {
                 u = toupper(a[i])
