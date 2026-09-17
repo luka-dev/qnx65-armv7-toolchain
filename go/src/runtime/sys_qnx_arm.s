@@ -125,11 +125,6 @@ TEXT runtime·tstart(SB),NOSPLIT,$0
 	MOVW	m_g0(R0), g        // g register (R10) = mp.g0
 	MOVW	R0, g_m(g)         // g0.m = mp
 
-	// QNX has no CP15 TLS; commandeer TPIDRURW as the g TLS base = &mp.tls[0]
-	// (save_g/load_g read it, tls_g offset 0). Must precede any save_g/load_g.
-	ADD	$m_tls, R0, R1
-	MCR	15, 0, R1, C13, C0, 2
-
 	// g0 stack bounds from the current (pthread-provided) SP.
 	MOVW	R13, R1
 	MOVW	R1, (g_stack+stack_hi)(g)

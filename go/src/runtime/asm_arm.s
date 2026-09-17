@@ -147,13 +147,6 @@ TEXT runtime·rt0_go(SB),NOSPLIT|NOFRAME|TOPFRAME,$0
 	BL	runtime·save_g(SB)
 #endif
 
-#ifdef GOOS_qnx
-	// QNX has no CP15 TLS; set TPIDRURW = &m0.tls[0] as the g TLS base before
-	// the first save_g (which happens inside _initcgo via setg_gcc).
-	MOVW	$runtime·m0+m_tls(SB), R0
-	MCR	15, 0, R0, C13, C0, 2
-#endif
-
 	BL	runtime·_initcgo(SB)	// will clobber R0-R3
 
 	// update stackguard after _cgo_init

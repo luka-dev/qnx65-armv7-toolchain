@@ -24,12 +24,21 @@
 #endif
 
 // On QNX, ldqnx uses a proprietary TLS scheme and does not relocate ELF TLS
-// (R_ARM_TLS_TPOFF32) in dynamically-loaded shared objects, so buildmode=shared
-// would leave tls_g's offset unresolved. Treat tls_g as a normal variable
-// holding a fixed offset (8, the free CP15 TLS slot the static build already
-// uses) — works for both the static and the shared runtime.
+// (R_ARM_TLS_TPOFF32), so tls_g is a plain variable holding a fixed offset.
+//
+// QNX 6.5 procnto never touches the CP15 thread-ID registers (TPIDRURO/URW):
+// it neither sets them nor saves/restores them on a context switch, so they
+// are per-CPU scratch shared by every process on that core. The kernel's real
+// per-thread pointer is cpupage->tls (kernel.S sets cpupageptr[RUNCPU]->tls on
+// every switch; libc's __tls() is exactly *(*_cpupage_ptr)). g lives in the
+// __reserved3 word of that struct _thread_local_storage (sys/storage.h), which
+// neither libc nor procnto use. Base = **_cpupage_ptr, tls_g = 56.
 #ifdef GOOS_qnx
 #define TLSG_IS_VARIABLE
+#define QNX_TLS_BASE(r) \
+	MOVW	runtime·qnx_cpupage_ptr(SB), r; \
+	MOVW	(r), r; \
+	MOVW	(r), r
 #endif
 
 // save_g saves the g register into pthread-provided
@@ -45,11 +54,7 @@ TEXT runtime·save_g(SB),NOSPLIT,$0
 	// To make stack unwinding work, this function should NOT be marked as NOFRAME,
 	// as it may contain a call, which clobbers LR even just temporarily.
 #ifdef GOOS_qnx
-	// QNX 6.5 does not use the CP15 TLS registers (both TPIDRURO and TPIDRURW
-	// read 0); its own TLS is reached through __tls(). We commandeer TPIDRURW
-	// (user read-write, unused by QNX) as the g TLS base — set per-thread in
-	// tstart and rt0_go to &m.tls[0]. tls_g is 0 (g lives at m.tls[0]).
-	MRC	15, 0, R0, C13, C0, 2 // fetch TPIDRURW (our g TLS base)
+	QNX_TLS_BASE(R0) // **_cpupage_ptr = this thread's _thread_local_storage
 #else
 	MRC	15, 0, R0, C13, C0, 3 // fetch TLS base pointer
 #endif
@@ -66,7 +71,7 @@ TEXT runtime·save_g(SB),NOSPLIT,$0
 TEXT runtime·load_g(SB),NOSPLIT,$0
 	// See save_g
 #ifdef GOOS_qnx
-	MRC	15, 0, R0, C13, C0, 2 // fetch TPIDRURW (our g TLS base)
+	QNX_TLS_BASE(R0) // see save_g
 #else
 	MRC	15, 0, R0, C13, C0, 3 // fetch TLS base pointer
 #endif
@@ -116,8 +121,9 @@ TEXT setg_gcc<>(SB),NOSPLIT,$0
 DATA runtime·tls_g+0(SB)/4, $8
 #endif
 #ifdef GOOS_qnx
-// g lives at m.tls[0]; TPIDRURW already points at &m.tls[0], so offset is 0.
-DATA runtime·tls_g+0(SB)/4, $0
+// offsetof(struct _thread_local_storage, __reserved3): unused by libc/procnto.
+DATA runtime·tls_g+0(SB)/4, $56
+// runtime·qnx_cpupage_ptr (os_qnx.go) = &_cpupage_ptr, resolved by ldqnx.
 #endif
 GLOBL runtime·tls_g+0(SB), NOPTR, $4
 #else

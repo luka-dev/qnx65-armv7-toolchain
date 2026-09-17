@@ -277,6 +277,18 @@ func sysvicall6(fn *libcFunc, a1, a2, a3, a4, a5, a6 uintptr) uintptr {
 //
 //go:cgo_import_dynamic libc__init_libc _init_libc "libc.so.3"
 
+// _cpupage_ptr is libc's pointer to this CPU's cpupage; cpupage->tls is the
+// kernel-maintained per-thread TLS block that save_g/load_g (tls_arm.s) use as
+// the g base. Data import: referenced from tls_arm.s via R_ARM_GLOB_DAT.
+//
+//go:cgo_import_dynamic libc__cpupage_ptr _cpupage_ptr "libc.so.3"
+//go:linkname libc__cpupage_ptr libc__cpupage_ptr
+var libc__cpupage_ptr uintptr
+
+// Address-of from a data initializer: the linker turns this into an
+// R_ARM_GLOB_DAT (from code it would hand back a PLT stub instead).
+var qnx_cpupage_ptr = &libc__cpupage_ptr
+
 // The cgo_import_dynamic directive above binds to an unqualified symbol name
 // (e.g. "libc_malloc"). Our vars are runtime.libc_malloc; //go:linkname makes
 // the linker names match so the dynamic import actually attaches (-> SDYNIMPORT
