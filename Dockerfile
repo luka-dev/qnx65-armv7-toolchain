@@ -209,6 +209,16 @@ RUN ln -sf /opt/tools/qcc/bin/qcc /opt/qnx650/host/linux/x86/usr/bin/qcc
 COPY cross/ /opt/qnx-cross/
 COPY entrypoint.sh /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint
+# Patch the QNX 6.5 sysroot headers so modern C++ builds cleanly against this NBT Evo head unit (its libstdc++ is
+# GCC-4.4-era, 6.0.13). Two sysroot bugs otherwise break the GCC 4.9 build (both ABI-neutral, idempotent):
+#   1. compiler_gnu.h builds the fixed-width int types from __aligned__-attributed typedefs; GCC 4.9.4 then collapses
+#      T& and const T& for such a typedef, so std::vector<uint8_t> fails ("new_allocator::address cannot be
+#      overloaded"). __aligned__(N) is redundant on armle-v7 (natural alignment already) -> strip it.
+#   2. In C++, target_nto.h sets __WCHAR_T to wchar_t, so wchar.h/stddef.h emit "typedef wchar_t wchar_t;" which 4.9
+#      rejects. wchar_t is a built-in keyword in C++ -> guard those typedefs with !defined(__cplusplus).
+RUN set -eu; H="$QNX_TARGET/usr/include"; \
+    sed -E -i 's/ *__attribute__\(\(__aligned__\([0-9]+\)\)\)//g' "$H/sys/compiler_gnu.h"; \
+    sed -i 's/#if defined(__WCHAR_T)$/#if defined(__WCHAR_T) \&\& !defined(__cplusplus)/' "$H/wchar.h" "$H/stddef.h"
 WORKDIR /src
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 CMD ["bash"]
